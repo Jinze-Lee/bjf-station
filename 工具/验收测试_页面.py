@@ -342,8 +342,9 @@ with sync_playwright() as p:
     en_ax = page.eval_on_selector_all(".highcharts-xaxis-labels text", "e=>e.slice(0,2).map(x=>x.textContent)")
     check("1-i18n-l. 英文下 x 轴日期格式", "Jul" in "".join(en_ax), str(en_ax))
     check("1-i18n-m. 切换语言后仍保留当前选中的树",
-          page.evaluate("SiteChart.currentTree()") == "DT3-SY2-1138",
-          page.evaluate("SiteChart.currentTree()"))
+          page.evaluate("SiteChart.currentTree()") == page.evaluate("SiteChart.defaultTree"),
+          "当前=%s 默认=%s" % (page.evaluate("SiteChart.currentTree()"),
+                              page.evaluate("SiteChart.defaultTree")))
 
     # 语言选择要能持久化
     page.reload(wait_until="networkidle")
@@ -424,8 +425,11 @@ with sync_playwright() as p:
         const t = document.querySelector('.leaflet-popup-content');
         return t ? t.textContent : '';
     }""")
-    check("3h2. 首屏默认展开 DT3 山杨弹窗",
-          "DT3-SY2-1138" in dflt and "Populus davidiana" in dflt, repr(dflt[:40]))
+    # 默认树是会调整的（换过一次），所以断言不写死树号 ——
+    # 从代码导出的 SiteChart.defaultTree 取，只验「地图弹窗和图表指的是同一棵」。
+    DEFAULT_TREE = page.evaluate("SiteChart.defaultTree")
+    check("3h2. 首屏默认弹窗就是默认树",
+          DEFAULT_TREE in dflt, "默认树=%s 弹窗=%r" % (DEFAULT_TREE, dflt[:40]))
     fit = page.evaluate("""() => {
         const m = document.getElementById('map_canvas').getBoundingClientRect();
         const q = document.querySelector('.leaflet-popup');
@@ -436,8 +440,26 @@ with sync_playwright() as p:
     }""")
     check("3h3. 默认弹窗完整落在地图内", fit)
     check("3h4. 图表默认树与地图弹窗一致",
-          page.evaluate("SiteChart.currentTree()") == "DT3-SY2-1138",
-          page.evaluate("SiteChart.currentTree()"))
+          page.evaluate("SiteChart.currentTree()") == DEFAULT_TREE,
+          "图表=%s 默认=%s" % (page.evaluate("SiteChart.currentTree()"), DEFAULT_TREE))
+
+    # chart.js 的 DEFAULT_TREE 与 map.js 的 DEFAULT_POPUP_TREE 是两个常量，
+    # 注释里互相声明「必须一致」。改一处忘另一处，页面上就会是
+    # 图表画着一棵树、地图弹窗指着另一棵，而两者看着都正常。
+    src_default = page.evaluate("""async () => {
+        const grab = async (f, name) => {
+            const s = await (await fetch(f)).text();
+            const m = s.match(new RegExp('var\\\\s+' + name + "\\\\s*=\\\\s*'([^']+)'"));
+            return m ? m[1] : null;
+        };
+        return { chart: await grab('js/chart.js', 'DEFAULT_TREE'),
+                 map:   await grab('js/map.js', 'DEFAULT_POPUP_TREE') };
+    }""")
+    check("3h5. 两个源文件里的默认树常量一致",
+          src_default["chart"] and src_default["chart"] == src_default["map"],
+          "chart.js=%s  map.js=%s" % (src_default["chart"], src_default["map"]))
+    check("3h6. 默认树确实存在于树木清单里",
+          page.evaluate("TREES.some(t => t.id === '%s')" % DEFAULT_TREE), DEFAULT_TREE)
 
     # 点开另一棵树的弹窗
     page.evaluate("SiteMap.markers['DT1-BH1-1137'].openPopup()")

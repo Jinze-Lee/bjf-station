@@ -23,8 +23,9 @@
     var DEFAULT_ZOOM = 16;
 
     /* 首屏默认展开这棵树的弹窗 —— 不这样的话用户可能根本不知道标记可以点。
-     * 选 DT3 样点最大的一棵山杨，与图表的默认树保持一致。 */
-    var DEFAULT_POPUP_TREE = 'DT3-SY2-1138';
+     * （窄屏不弹，见下方 openPopup 处的说明。）
+     * 必须与 chart.js 的 DEFAULT_TREE 一致。 */
+    var DEFAULT_POPUP_TREE = 'DT1-BH1-1137';
 
     function t(k) { return window.Lang ? Lang.t(k) : k; }
     function plotName(k) {

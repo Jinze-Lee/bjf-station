@@ -54,9 +54,10 @@
         };
     }
 
-    /* 首屏默认展示的树：DT3 样点最大的一棵山杨。
-     * 选它是因为地图上也默认打开这棵树的弹窗，两处保持一致。 */
-    var DEFAULT_TREE = 'DT3-SY2-1138';
+    /* 首屏默认展示的树：DT1 样点的白桦。
+     * 地图上默认打开的也是这棵（map.js 的 DEFAULT_POPUP_TREE），两处必须一致 ——
+     * 不一致的话，图表画着一棵树、地图弹窗指着另一棵，会让人以为是同一棵。 */
+    var DEFAULT_TREE = 'DT1-BH1-1137';
 
     var chart = null;
     var current = null;
