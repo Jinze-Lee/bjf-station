@@ -122,8 +122,11 @@ with sync_playwright() as p:
                    + Object.values(OBS_RAD).reduce((a,v)=>a+v.length,0),
             envDays: (Math.max(...env) - Math.min(...env)) / 86400000,
             declaredPublicDays: (OBS_META.public||{}).days,
-            declaredFullDays:   (OBS_META.full||{}).days,
-            declaredFullPoints: (OBS_META.full||{}).points,
+            /* 公开的元信息里**不该**出现完整数据集的规模 —— 那等于当面
+               告诉人锁后面有多少东西。这个文件是按 URL 就能下的。 */
+            leaksFullSize: !!(OBS_META.full || OBS_META.batches),
+            metaKeys: Object.keys(OBS_META),
+            barText: (document.getElementById('unlockBar')||{}).textContent || '',
             unlocked: window.Unlock ? Unlock.isUnlocked() : null
         };
     }""")
@@ -132,12 +135,15 @@ with sync_playwright() as p:
           pub["days"] <= win + 0.05, "实际 %.2f 天，窗口 %s 天" % (pub["days"], win))
     check("8b. 环境数据同样只有窗口内的",
           pub["envDays"] <= win + 0.05, "实际 %.2f 天" % pub["envDays"])
-    check("8c. 公开点数明显少于完整数据集",
-          pub["points"] < pub["declaredFullPoints"] * 0.6,
-          "公开 %d / 完整 %s" % (pub["points"], pub["declaredFullPoints"]))
-    check("8d. 元信息声明了完整数据集的规模（提示条要用）",
-          bool(pub["declaredFullDays"] and pub["declaredFullPoints"]),
-          str(pub))
+    check("8c. 公开元信息不泄露完整数据集规模",
+          not pub["leaksFullSize"], str(pub["metaKeys"]))
+    # 提示条也不能把总量说出来。41044/21.98 是当前值，换批数据会变，
+    # 所以按「四位以上数字」和「总天数」这类形态查，而不是查具体数值。
+    import re as _re2
+    big = [x for x in _re2.findall(r"[\d,]{4,}", pub["barText"])
+           if int(x.replace(",", "")) > 999]
+    check("8d. 锁定状态的提示条不提完整数据集有多大",
+          not big, "提到了 %s | 文案=%r" % (big, pub["barText"].strip()[:70]))
     check("8e. 默认处于未解锁状态", pub["unlocked"] is False, str(pub["unlocked"]))
 
     check("8f. 解锁提示条已渲染",
@@ -179,9 +185,14 @@ with sync_playwright() as p:
         }""")
         check("8j. 正确口令解锁成功，跨度扩到完整数据集",
               full["days"] > win + 1, "%.2f 天" % full["days"])
-        check("8k. 解锁后点数等于元信息声明的完整规模",
-              full["points"] == pub["declaredFullPoints"],
-              "%d vs %s" % (full["points"], pub["declaredFullPoints"]))
+        # 完整规模不再预先声明在公开元信息里（见 8c），所以改成验
+        # 「解锁后确实多出来一大截」以及「与密文里那份 meta 自洽」
+        check("8k. 解锁后点数远多于公开窗口",
+              full["points"] > pub["points"] * 2,
+              "公开 %d -> 解锁 %d" % (pub["points"], full["points"]))
+        check("8k2. 解锁后点数与密文里的元信息一致",
+              full["points"] == page.evaluate("OBS_META.points"),
+              "%d vs %s" % (full["points"], page.evaluate("OBS_META.points")))
         check("8l. 解锁后图表真的重画了（不是只换了变量）",
               full["chartPts"] > 2 * (pub["points"] / 40),
               "图上 %d 点" % full["chartPts"])

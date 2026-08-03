@@ -165,15 +165,13 @@
         }
 
         var pub = meta.public || {};
-        var fl = meta.full || {};
         box.className = 'unlock-bar';
         box.innerHTML =
             '<div class="ub-text">' +
                 '<strong>' + esc(t('unlock.title').replace('{days}', pub.days || 7)) +
                 '</strong> ' +
-                esc(t('unlock.body')
-                    .replace('{days}', String(fl.days || '—'))
-                    .replace('{points}', fmtNum(fl.points || 0))) +
+                /* 锁定状态下**不提**完整数据集有多大 —— 见 i18n 的 unlock.body 说明 */
+                esc(t('unlock.body')) +
             '</div>' +
             '<form class="ub-form" id="unlockForm" autocomplete="off">' +
                 '<input type="password" class="ub-input" id="unlockInput"' +

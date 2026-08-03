@@ -222,19 +222,20 @@ def write_public(full, days, pub_since):
     meta["span"] = [pub_since, span_all[1]]
     meta["points"] = n_pub
     meta["trees"] = len(set(fd) | set(rad))
-    # 前端用这几项显示「公开 7 天 / 完整 XX 天」的提示，以及解锁后的对比
+    # 前端用它显示「当前展示最近 N 天」
     meta["public"] = {
         "days": days,
         "since": pub_since,
         "points": n_pub,
     }
-    meta["full"] = {
-        "span": span_all,
-        "points": n_all,
-        "trees": len(set(full["fd"]) | set(full["rad"])),
-        "days": round((span_all[1] - span_all[0]) / DAY_MS, 2),
-    }
-    # batches 里含原始 CSV 文件名与行数，属于内部信息，公开版不带
+    # 这里**故意不写**完整数据集的规模（天数、点数、时间跨度）。
+    # 页面上的提示语已经不提「完整数据集有多大」了 —— 等于当面告诉人
+    # 锁后面有多少东西，是招人惦记。那就不能又在这个公开文件里写一遍：
+    # obs-meta.js 是任何人按 URL 就能下的。
+    #
+    # 解锁后前端拿到的是密文里那份完整 meta，规模信息在那里，不影响功能。
+    #
+    # batches 里含原始 CSV 文件名与行数，同理，公开版不带。
     meta.pop("batches", None)
 
     (JS / "observations.js").write_text(

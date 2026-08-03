@@ -199,7 +199,10 @@ zh: {
        这里只放外壳文案。 */
     /* 完整数据集解锁条。{days}/{points}/{from}/{to} 由 js/unlock.js 填。 */
     'unlock.title':         '当前显示最近 {days} 天。',
-    'unlock.body':          '完整数据集覆盖 {days} 天、{points} 个观测点，需管理员密钥。如需用于研究，请通过下方联系方式申请。',
+    /* 这里原本还有一句「完整数据集覆盖 X 天、Y 个观测点」。去掉了 ——
+       等于当面告诉人锁后面有多少东西，是招人惦记。旁边的输入框写着
+       「管理员密钥」，按钮写着「解锁」，意思已经足够清楚。 */
+    'unlock.body':          '如需用于研究，请通过下方联系方式申请完整数据集。',
     'unlock.placeholder':   '管理员密钥',
     'unlock.go':            '解锁',
     'unlock.working':       '正在校验密钥并解密…（需要一两秒）',
@@ -442,7 +445,7 @@ en: {
     'site.updatedLabel':    'data updated to',
 
     'unlock.title':         'Showing the last {days} days.',
-    'unlock.body':          'The full dataset covers {days} days and {points} observations, and needs an administrator key. For research use, please request access via the contact details below.',
+    'unlock.body':          'For research use, please request the full dataset via the contact details below.',
     'unlock.placeholder':   'Administrator key',
     'unlock.go':            'Unlock',
     'unlock.working':       'Checking the key and decrypting — this takes a second or two.',
