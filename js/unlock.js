@@ -85,7 +85,21 @@
     }
 
     async function fetchAndDecrypt(pass) {
-        var res = await fetch(ENC_URL, { cache: 'force-cache' });
+        /* 走正常缓存协商，**不能**用 force-cache。
+         *
+         * force-cache 的语义是「只要本地有副本就用，过期也用，永不回源」。
+         * 结果是：一个解锁过的浏览器会把当时那份密文一直用下去 ——
+         * 数据更新后再解锁，解出来的还是旧数据。实测过：服务器换成新密文，
+         * 同一浏览器再解锁仍拿到旧的（07-31 而非 08-03），换个空缓存的浏览器才对。
+         *
+         * 也不能用默认策略：默认只在缓存「过期」后才回源，而在新鲜期内
+         * 同样不问服务器。实测默认策略下这个 bug 依旧复现。
+         *
+         * 'no-cache' 才是要的语义 —— 它不是不缓存，而是**每次都先校验**：
+         * 带 ETag 问一句，没变则 304、零字节，省流量的目的一样达到；
+         * 变了就拿新的。这个文件是数据本体，宁可每次多一个往返，
+         * 也不能让人解出一份过期的数据还以为是最新的。 */
+        var res = await fetch(ENC_URL, { cache: 'no-cache' });
         if (!res.ok) { throw new Error('fetch ' + res.status); }
         var buf = new Uint8Array(await res.arrayBuffer());
 

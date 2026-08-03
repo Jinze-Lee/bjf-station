@@ -193,6 +193,19 @@ with sync_playwright() as p:
         check("8k2. 解锁后点数与密文里的元信息一致",
               full["points"] == page.evaluate("OBS_META.points"),
               "%d vs %s" % (full["points"], page.evaluate("OBS_META.points")))
+        # 密文必须每次都向服务器校验，不能吃缓存。
+        # 出过一次事故：fetch 用了 cache:'force-cache'（有副本就用、过期也用、
+        # 永不回源），于是解锁过的浏览器把当时那份密文一直用下去 ——
+        # 数据更新到 08-03 之后再解锁，解出来的还是 07-31 的旧数据。
+        # 默认策略同样不行：新鲜期内也不问服务器。只有 no-cache 每次都校验。
+        cache_mode = page.evaluate("""async () => {
+            const src = await (await fetch('js/unlock.js')).text();
+            const m = src.match(/fetch\\(\\s*ENC_URL\\s*(?:,\\s*(\\{[^}]*\\}))?\\s*\\)/);
+            if (!m) return 'NOT_FOUND';
+            return m[1] || 'DEFAULT';
+        }""")
+        check("8q. 密文请求每次都向服务器校验（不吃过期缓存）",
+              "no-cache" in (cache_mode or ""), "实际写法: %s" % cache_mode)
         check("8l. 解锁后图表真的重画了（不是只换了变量）",
               full["chartPts"] > 2 * (pub["points"] / 40),
               "图上 %d 点" % full["chartPts"])
