@@ -34,7 +34,16 @@
 
     var ENC_URL = 'data/full.enc';
     var MAGIC = 'BFERSENC';
-    var SS_KEY = 'bfers-unlock';     /* sessionStorage：本次会话内刷新不用重输 */
+
+    /* 口令**不做任何持久化**。
+     *
+     * 早先版本存进 sessionStorage，刷新不用重输，图省事。但那等于把口令留在
+     * 浏览器里：同一台机器上的下一个人按 F5 就直接看到完整数据，
+     * 而他从没输入过任何东西。在共用电脑、投屏演示、借给学生看的场景下，
+     * 「关掉页面就等于锁上」是唯一说得清的规则。
+     *
+     * 代价是每次刷新都要重输，以及每次都要重跑一遍 PBKDF2 六十万轮（一两秒）。
+     * 这个代价是有意付的。 */
 
     var unlocked = false;
     var busy = false;
@@ -212,7 +221,6 @@
             var full = await fetchAndDecrypt(pass);
             unlocked = true;
             apply(full);
-            try { sessionStorage.setItem(SS_KEY, pass); } catch (e) { /* 隐私模式 */ }
             paint();
             return true;
         } catch (err) {
@@ -220,7 +228,6 @@
              * 两者的处置完全不同，混成一句话会让人白试很多次。 */
             var net = /fetch|magic|version/i.test(String(err && err.message));
             if (!quiet) { say(t(net ? 'unlock.failFetch' : 'unlock.failPass'), 'err'); }
-            try { sessionStorage.removeItem(SS_KEY); } catch (e) { /* 同上 */ }
             return false;
         } finally {
             busy = false;
@@ -230,7 +237,6 @@
     }
 
     function lock() {
-        try { sessionStorage.removeItem(SS_KEY); } catch (e) { /* 同上 */ }
         /* 内存里的完整数据没法「收回」—— 已经在这个页面里了。
          * 干脆重新载入页面，回到只有公开窗口的干净状态。 */
         location.reload();
@@ -241,10 +247,8 @@
         paint();
         if (window.Lang) { Lang.onChange(paint); }
 
-        /* 本次会话内已经解过锁：静默重放，别让人每次刷新都重输 */
-        var saved = null;
-        try { saved = sessionStorage.getItem(SS_KEY); } catch (e) { /* 同上 */ }
-        if (saved) { unlock(saved, true); }
+        /* 这里**故意什么都不恢复**：每次载入页面都从锁定状态开始。
+         * 见文件顶部关于不做持久化的说明。 */
 
         window.Unlock = {
             isUnlocked: function () { return unlocked; },

@@ -315,11 +315,23 @@ with sync_playwright() as p:
               page.evaluate("document.documentElement.scrollWidth"),
               page.evaluate("document.documentElement.clientWidth")))
 
+    # 窄屏下轴标题是**故意**收掉的（竖排长文本在手机上要吃掉几十像素宽度，
+    # 见 js/chart-metrics.js），所以这里先回到宽屏再验轴归属，
+    # 顺带确认宽屏的轴标题还在。
+    page.set_viewport_size({"width": 1280, "height": 900})
+    page.wait_for_timeout(1200)
+    narrow_titles = page.evaluate("""() => {
+        const c = Highcharts.charts.filter(Boolean)[0];
+        return c.series.slice(0,2).map(s => !!s.yAxis.axisTitle);
+    }""")
+    check("9c. 回到宽屏后轴标题恢复", all(narrow_titles), str(narrow_titles))
+
     # 补充：两序列坐标轴归属
     axinfo = page.evaluate("""() => {
         const c = Highcharts.charts.filter(Boolean)[0];
         return c.series.slice(0,2).map(s => ({
-            name: s.name, opposite: s.yAxis.opposite, title: s.yAxis.axisTitle.textStr
+            name: s.name, opposite: s.yAxis.opposite,
+            title: s.yAxis.axisTitle ? s.yAxis.axisTitle.textStr : null
         }));
     }""")
     ok_ax = (axinfo[0]["name"] == "Sap flux density" and axinfo[0]["opposite"] is False and

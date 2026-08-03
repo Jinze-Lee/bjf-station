@@ -42,8 +42,14 @@
 
     /* 与 chart.js 里 chart.marginLeft / marginRight 必须**一致**。
      * 两张图上下叠着看，绘图区左右不对齐的话，同一时刻不在同一条竖线上，
-     * 对比就没意义了。改这里要同步改 chart.js。 */
-    var PLOT_MARGIN = 92;
+     * 对比就没意义了 —— 而且跨图指针是直接把 chartX 像素传过去的，错位会直接看出来。
+     *
+     * 所以数值不在这里定，从 js/chart-metrics.js 取，与 chart.js 同一个来源。
+     * 原先是两处各写一个 92，一改自适应就必然分叉。
+     * 每次建图时现取，因为它随窗口宽度变（转屏、桌面拉窗口）。 */
+    function plotMargin() {
+        return window.ChartMetrics ? ChartMetrics.plotMargin() : 92;
+    }
 
     var chart = null;
     var active = {};          // key -> true/false
@@ -144,6 +150,11 @@
         var C = palette();
         var keys = activeKeys();
         var showAxes = keys.length > 0 && keys.length <= 2;
+        /* 窄屏收掉竖排轴标题（"Light (klux)" 这种），它在手机上要吃掉
+         * 几十像素宽度，而变量名已经写在下方的彩色标签上了。
+         * 刻度数字保留 —— 没有数字的曲线读不出量级。 */
+        var showTitles = showAxes &&
+                         (window.ChartMetrics ? ChartMetrics.showAxisTitles() : true);
 
         var yAxes = [], series = [];
         keys.forEach(function (key, i) {
@@ -160,7 +171,7 @@
                     x: i === 0 ? 4 : -4
                 },
                 title: {
-                    text: (showAxes && !isArrow) ? label(key) + ' (' + unitOf(key) + ')' : null,
+                    text: (showTitles && !isArrow) ? label(key) + ' (' + unitOf(key) + ')' : null,
                     style: { color: col, fontSize: '12px' }
                 },
                 opposite: i !== 0,
@@ -214,12 +225,12 @@
                 plotBorderColor: C.bg,
                 style: { fontFamily: 'inherit' },
                 zooming: { type: 'x' },
-                /* 与上方图表左右对齐，见 PLOT_MARGIN 的说明 */
-                marginLeft: PLOT_MARGIN,
-                marginRight: PLOT_MARGIN,
+                /* 与上方图表左右对齐，见 plotMargin() 的说明 */
+                marginLeft: plotMargin(),
+                marginRight: plotMargin(),
                 spacingTop: 2,
                 /* 时间轴已搬到上方图表底部，这里只留绘图区 + 日期刻度 */
-                height: 340
+                height: window.ChartMetrics ? ChartMetrics.heights().env : 340
             },
             time: {
                 timezoneOffset: -(typeof ENV_META !== 'undefined' &&
@@ -432,7 +443,7 @@
      *
      * 实现要点
      *   · 竖线用 crosshair 且 snap:false —— 直接跟鼠标像素位置走。
-     *     两张图的绘图区左右边距是写死对齐的（PLOT_MARGIN），所以同一个
+     *     两张图的绘图区左右边距取自同一个来源（ChartMetrics.plotMargin），所以同一个
      *     chartX 在两张图上就是同一时刻，可以直接把像素值递过去。
      *   · 提示框只出现在鼠标所在那张图上（两个框同时弹会互相遮挡），
      *     但内容是两张图合并的 —— formatter 里主动去另一张图取值。
@@ -644,6 +655,11 @@
         /* 语言或主题变了都要重建：Highcharts 把文案与配色烤进已生成的 SVG */
         if (window.Lang) { Lang.onChange(function () { buildTags(); rebuild(); }); }
         if (window.Theme) { Theme.onChange(rebuild); }
+
+        /* 跨过窄屏断点：由 chart.js 在**它自己重建完之后**派发，
+         * 这样顺序是确定的 —— 主图先就位，这里的 linkMain() 才挂得上。
+         * 边距必须两张图同时变，只变一张就错位了。 */
+        document.addEventListener('charts:breakpoint', rebuild);
 
         window.EnvChart = {
             chart: function () { return chart; },

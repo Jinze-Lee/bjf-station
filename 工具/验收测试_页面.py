@@ -187,20 +187,35 @@ with sync_playwright() as p:
               "图上 %d 点" % full["chartPts"])
         check("8m. 环境面板同样扩到完整数据集",
               full["envPts"] > 2 * 3707, "%d 点" % full["envPts"])
-        # 解锁状态在本次会话内保持，刷新不用重输
+        # 刷新必须回到锁定状态：口令不做任何持久化。
+        # 共用电脑上，「关掉页面就等于锁上」是唯一说得清的规则。
         page.reload(wait_until="networkidle")
         ensure_lazy()
         page.wait_for_function("window.Unlock", timeout=60000)
-        page.wait_for_function("Unlock.isUnlocked()", timeout=120000)
-        check("8n. 刷新后仍保持解锁（sessionStorage 记住了口令）",
-              page.evaluate("Unlock.isUnlocked()"))
-        page.evaluate("sessionStorage.removeItem('bfers-unlock')")
-        page.reload(wait_until="networkidle")
-        ensure_lazy()
-        page.wait_for_function("window.Unlock", timeout=60000)
-        page.wait_for_timeout(1500)
-        check("8o. 清掉会话后回到未解锁状态",
+        page.wait_for_timeout(2500)
+        check("8n. 刷新后回到锁定状态（口令不持久化）",
               not page.evaluate("Unlock.isUnlocked()"))
+        check("8o. 刷新后数据退回公开窗口",
+              page.evaluate(
+                  "Object.values(OBS_FD).reduce((a,v)=>a+v.length,0)"
+                  " + Object.values(OBS_RAD).reduce((a,v)=>a+v.length,0)")
+              == pub["points"])
+        # 口令没有留在任何浏览器存储里
+        leaked = page.evaluate("""() => {
+            const hit = [];
+            for (const s of ['localStorage', 'sessionStorage']) {
+                try {
+                    const st = window[s];
+                    for (let i = 0; i < st.length; i++) {
+                        const k = st.key(i);
+                        if (/unlock|pass|key|pwd/i.test(k) ||
+                            /unlock|pass/i.test(st.getItem(k) || '')) hit.push(s + ':' + k);
+                    }
+                } catch (e) { /* 隐私模式 */ }
+            }
+            return hit;
+        }""")
+        check("8p. 浏览器存储里没有口令残留", not leaked, str(leaked))
     else:
         print("  跳过解锁流程断言：未设环境变量 BFERS_PASS")
 
@@ -1307,6 +1322,98 @@ with sync_playwright() as p:
     page.wait_for_timeout(500)
     check("10k. 换过主题后图表仍可切树",
           page.evaluate("SiteChart.currentTree()") == "DT2-LYS1-1144")
+
+    # ---------------- 手机端 ----------------
+    # 用真实设备描述符（含触摸、dpr、UA），不是简单改视口宽度 ——
+    # 触摸设备上 Highcharts 走的是另一套指针逻辑。
+    for dev_name in ("iPhone SE", "iPhone 12", "Pixel 5"):
+        dev = p.devices[dev_name]
+        mctx = browser.new_context(**dev)
+        mp = mctx.new_page()
+        mp.goto(URL, wait_until="networkidle")
+        mp.evaluate("LazyLoad.ensureChart(); LazyLoad.ensureMap()")
+        mp.wait_for_function(
+            "window.SiteChart && window.EnvChart && window.EnvChart.chart()",
+            timeout=90000)
+        mp.wait_for_timeout(2500)
+        tag = dev_name.replace(" ", "")
+
+        m = mp.evaluate("""() => {
+            const c = SiteChart.chart, e = EnvChart.chart();
+            const tags = [...document.querySelectorAll('.env-tag')];
+            const rows = new Set(tags.map(t => Math.round(t.getBoundingClientRect().top)));
+            const small = [];
+            document.querySelectorAll('a,button,select,input').forEach(el => {
+                const r = el.getBoundingClientRect();
+                const cs = getComputedStyle(el);
+                if (!r.width || !r.height) return;
+                if (cs.display === 'none' || cs.visibility === 'hidden') return;
+                /* 量的是**有效点击目标**：单选/复选框包在 <label> 里时，
+                   点标签任意位置都生效，所以该按标签的尺寸算，
+                   而不是按那个 13x13 的小圆点算。 */
+                const lab = el.closest('label');
+                const box = (lab && lab !== el) ? lab.getBoundingClientRect() : r;
+                /* Leaflet 自己的版权署名（"Leaflet" 那个 12px 小链接）不算 ——
+                   它是第三方必须保留的署名，各家地图库都是这个尺寸，
+                   放大它反而会挡住地图。 */
+                if (el.closest('.leaflet-control-attribution')) return;
+                if (box.height < 36) small.push((el.id || el.className || el.tagName) +
+                                                ' ' + Math.round(box.width) + 'x' + Math.round(box.height));
+            });
+            const w = document.querySelector('.env-tags');
+            return {
+                scrollW: document.documentElement.scrollWidth,
+                clientW: document.documentElement.clientWidth,
+                mainPlotPct: Math.round(100 * c.plotWidth / c.chartWidth),
+                envPlotPct: Math.round(100 * e.plotWidth / e.chartWidth),
+                mainLeft: c.plotLeft, envLeft: e.plotLeft,
+                mainRight: c.chartWidth - c.plotLeft - c.plotWidth,
+                envRight: e.chartWidth - e.plotLeft - e.plotWidth,
+                totalH: c.chartHeight + e.chartHeight,
+                vh: innerHeight,
+                tagRows: rows.size,
+                tagsScrollable: w ? w.scrollWidth > w.clientWidth + 2 : false,
+                small: small.slice(0, 6),
+                smallN: small.length,
+                axisTitles: [...document.querySelectorAll('.highcharts-axis-title')]
+                              .map(t => t.textContent).filter(Boolean)
+            };
+        }""")
+
+        check("11a.[%s] 无横向溢出" % tag,
+              m["scrollW"] <= m["clientW"] + 1,
+              "溢出 %d px" % (m["scrollW"] - m["clientW"]))
+        check("11b.[%s] 上图绘图区占比 >= 65%%" % tag,
+              m["mainPlotPct"] >= 65, "%d%%" % m["mainPlotPct"])
+        check("11c.[%s] 下图绘图区占比 >= 65%%" % tag,
+              m["envPlotPct"] >= 65, "%d%%" % m["envPlotPct"])
+        # 这条是硬约束：两图边距不等 -> 跨图联动指针错位
+        check("11d.[%s] 两图绘图区左右严格对齐" % tag,
+              m["mainLeft"] == m["envLeft"] and m["mainRight"] == m["envRight"],
+              "上 %s+%s / 下 %s+%s" % (m["mainLeft"], m["mainRight"],
+                                       m["envLeft"], m["envRight"]))
+        check("11e.[%s] 两图合计高度不超过 1.1 屏" % tag,
+              m["totalH"] <= m["vh"] * 1.1,
+              "%d px / 视口 %d px" % (m["totalH"], m["vh"]))
+        check("11f.[%s] 环境标签收成单行横滑" % tag,
+              m["tagRows"] == 1 and m["tagsScrollable"],
+              "占 %d 行, 可横滑=%s" % (m["tagRows"], m["tagsScrollable"]))
+        check("11g.[%s] 窄屏不显示竖排轴标题" % tag,
+              not m["axisTitles"], str(m["axisTitles"]))
+        check("11h.[%s] 可点元素高度都不小于 36px" % tag,
+              m["smallN"] == 0, "%d 个偏小: %s" % (m["smallN"], m["small"]))
+
+        # 触摸能不能真的操作图表
+        cel = mp.query_selector("#chartDIASF")
+        cel.scroll_into_view_if_needed()
+        mp.wait_for_timeout(400)
+        bb = cel.bounding_box()
+        mp.touchscreen.tap(bb["x"] + bb["width"] * 0.5, bb["y"] + bb["height"] * 0.5)
+        mp.wait_for_timeout(800)
+        check("11i.[%s] 触摸点击图表能出提示框" % tag,
+              mp.evaluate("!!document.querySelector('.highcharts-tooltip text')"))
+
+        mctx.close()
 
     browser.close()
 

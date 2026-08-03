@@ -2397,8 +2397,177 @@ footer {
     #primary-container { padding: 0 12px; }
     #primary-container:first-of-type { padding-top: 24px; }
     h3 { font-size: 22px; padding-bottom: 16px; }
-    #chartDIASF { height: 380px; }
     #map_canvas { height: 460px; }
     .chart-note span + span { margin-left: 0; display: block; margin-top: 6px; }
     .site-facts { padding: 16px 16px; }
+}
+
+/* ==========================================================================
+   手机端适配
+
+   实测出的问题（iPhone SE 320px / iPhone 12 390px / Pixel 5 393px）：
+     · 绘图区只剩 41%（310 px 宽的图，两边各 92 px 边距）—— 见 js/chart-metrics.js
+     · 两张图合计 720 px，比 568 px 的视口还高，看曲线时看不到时间轴
+     · 11 个环境标签折成 6 行，标签栏独占 248 px
+     · 48~50 个可点元素小于 40 px（主题按钮 32×32、地图标记 38×20…）
+     · #chartEnv 的 min-width:300px 在 296 px 的容器里撑出 2 px 横向溢出
+
+   断点 700 与 js/chart-metrics.js 的 NARROW 一致，改一处要同步改另一处。
+   ========================================================================== */
+
+@media (max-width: 700px) {
+
+    /* --- 图表 ------------------------------------------------------------ */
+
+    /* 高度改由 js/chart-metrics.js 给（它同时要算边距，必须同一个来源），
+       这里只保证容器不反过来撑住图表。300px 的 min-width 正是 320 屏
+       横向溢出的来源 —— 容器本身只有 296px。 */
+    #chartDIASF, #chartEnv {
+        height: auto;
+        min-height: 0;
+        min-width: 0;
+    }
+
+    /* --- 环境标签栏：11 个标签改成横向滑动条 ------------------------------ */
+    /* 折行版在 320px 上要占 6 行 248px，是整个屏幕高度的 44%。
+       改成单行横滑 —— 这是移动端筛选条的通行做法，右侧渐隐提示还能再滑。 */
+    .env-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        /* 必须显式写 nowrap 覆盖上面 600px 那条 flex-wrap:wrap。
+           column + wrap 会变成**多列换行**：每一列的宽度取该列最宽的项，
+           于是 .env-tags 按 max-content 撑到 1277px，把整页横向撑爆
+           （实测 320px 屏上溢出 971px）。 */
+        flex-wrap: nowrap;
+    }
+
+    .env-tags {
+        /* 显式给宽度，不指望 align-items:stretch —— 一旦哪天父级又被
+           改成 wrap，stretch 就不作数了，而 width:100% 一直作数。 */
+        width: 100%;
+        flex: 0 1 auto;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding: 2px 0;
+        /* 右缘渐隐：告诉用户右边还有，比滚动条更省地方 */
+        -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+                mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+    }
+
+    .env-tags::-webkit-scrollbar { display: none; }
+
+    .env-tag {
+        flex: 0 0 auto;          /* 不许被压扁，压扁了文字就断行 */
+        padding: 9px 13px;       /* 触摸目标高度到 38px */
+        font-size: 12.5px;
+    }
+
+    .env-actions { justify-content: flex-end; }
+
+    /* --- 触摸目标：一律不小于 40px -------------------------------------- */
+    /* 40 是能稳定点中的下限。头部空间紧张，这里取 40 而不是 44。 */
+    .theme-toggle,
+    .nav-toggle {
+        width: 40px;
+        height: 40px;
+    }
+
+    .lang-toggle,
+    .env-btn,
+    .ub-btn,
+    .cl-btn,
+    .net-btn {
+        min-height: 40px;
+    }
+
+    .ub-input { min-height: 40px; }
+
+    /* 微信那行原先只有 16px 高，撑开成可点的一条 */
+    .social-corner a {
+        display: inline-block;
+        padding: 10px 0;
+    }
+
+    /* 台标那一整块是链接，原先只有 34px 高 */
+    .logo { min-height: 40px; }
+
+    /* 导航展开后的二级链接（各样点），原先 34px */
+    .sub-menu a,
+    .main-menu > li > a { min-height: 40px; display: flex; align-items: center; }
+
+    /* Leaflet 自带控件在触屏上偏小：缩放按钮 30×30、弹窗关闭 24×24。
+       这些是第三方样式，只能在这里覆盖。 */
+    .leaflet-control-zoom a {
+        width: 40px !important;
+        height: 40px !important;
+        line-height: 40px !important;
+        font-size: 20px !important;
+    }
+
+    .leaflet-popup-close-button {
+        width: 40px !important;
+        height: 40px !important;
+        font-size: 22px !important;
+        padding: 9px 8px 0 0 !important;
+    }
+
+    /* 图层切换里的单选框本身只有 13×13。真正的点击目标是包着它的 <label>，
+       所以把整行撑到 40px 高、单选框适当放大即可，不必把 input 本身做成 40px
+       （那会把圆点画得很怪）。 */
+    .leaflet-control-layers-list label {
+        display: flex;
+        align-items: center;
+        min-height: 40px;
+        gap: 8px;
+    }
+
+    .leaflet-control-layers-selector {
+        width: 18px;
+        height: 18px;
+        flex: 0 0 auto;
+    }
+
+    .popup-btn,
+    #locateTree { min-height: 40px; }
+
+    /* 邮箱（在 .site-facts 的 dd 里）与页脚机构链接，原先只有 16px / 14px 高。
+       padding 要够把行高撑到 40 —— 12.5px 的字撑 40 需要上下各 12px。 */
+    .site-facts dd a,
+    .copyright a {
+        display: inline-block;
+        padding: 12px 0;
+    }
+
+    /* 样点标记原先 38×20，指头点不准 */
+    .leaflet-marker-icon .plot-marker,
+    .leaflet-marker-icon {
+        min-width: 44px;
+        min-height: 30px;
+    }
+
+    /* --- 解锁条：竖排，输入框占满 ---------------------------------------- */
+    .unlock-bar { flex-direction: column; align-items: stretch; }
+    .ub-form    { width: 100%; }
+    .ub-input   { flex: 1 1 auto; width: auto; min-width: 0; }
+
+    /* --- 物种表：给出「可横滑」的提示 ------------------------------------- */
+    /* 表格 620px 宽，屏幕只有 296~369px，本来就要横滑。
+       但没有任何视觉提示时，用户只会以为右边两列不见了。 */
+    .table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 20px), transparent);
+                mask-image: linear-gradient(90deg, #000 calc(100% - 20px), transparent);
+    }
+}
+
+/* 更窄的一档：320px 这类小屏 */
+@media (max-width: 380px) {
+    .env-tag  { padding: 9px 11px; font-size: 12px; }
+    .ub-text  { font-size: 12px; }
+    .fc-item b { font-size: 14px; }
 }

@@ -169,6 +169,14 @@
 
         var C = palette();
 
+        /* 尺寸按屏幕宽度取，与下方环境图共用同一个来源（js/chart-metrics.js）。
+         * 取不到时回退成宽屏的老值，图仍能画出来，只是手机上不好看。 */
+        var M = window.ChartMetrics;
+        var MARGIN = M ? M.plotMargin() : 92;
+        var HEIGHTS = M ? M.heights() : { main: null };
+        var AXIS_TITLES = M ? M.showAxisTitles() : true;
+        var NARROW = M ? M.isNarrow() : false;
+
         chart = Highcharts.stockChart(CONTAINER, {
 
             chart: {
@@ -176,14 +184,17 @@
                 plotBorderColor: C.bg,
                 style: { fontFamily: 'inherit' },
                 zooming: { type: 'x' },       // 横向点击拖拽框选缩放
-                /* 左右边距写死，为的是让本图与下方环境图的**绘图区左右对齐**。
+                /* 左右边距固定，为的是让本图与下方环境图的**绘图区左右对齐**。
                  * 不固定的话，两张图各自按自己的轴标签宽度算边距（气压是四位数、
                  * 光照是两位数），绘图区会差出几十像素 —— 上下叠着看时，
                  * 同一时刻在两张图上不在同一条竖线上，对比就失去意义了。
-                 * 数值同步改 chart-env.js 里的 PLOT_MARGIN。 */
-                marginLeft: 92,
-                marginRight: 92,
-                spacingBottom: 6
+                 *
+                 * 具体数值由 js/chart-metrics.js 按屏幕宽度给出，两张图读同一个来源。
+                 * 别在这里写字面量 —— 之前是 92 写死两处，手机上绘图区只剩 41%。 */
+                marginLeft: MARGIN,
+                marginRight: MARGIN,
+                spacingBottom: 6,
+                height: HEIGHTS.main          /* null 时沿用 CSS 高度 */
             },
 
             /* 台站在北京，数据时间戳的当地时区是 UTC+8。
@@ -233,7 +244,17 @@
                     { type: 'week', count: 1, text: t('chart.btn1w') },
                     { type: 'all',            text: t('chart.btnAll') }
                 ],
-                buttonTheme: {
+                /* 窄屏收掉 From/To 日期输入框。它们在手机上是两个约 100x24 的
+                 * 小方块，点不准也基本不会有人在手机上手打日期；
+                 * 拖 navigator 才是移动端选区间的自然方式。
+                 * 收掉后 rangeSelector 从两行变一行，省出约 40 px。 */
+                inputEnabled: !NARROW,
+                /* 手机上按钮要够大才点得中。
+                 * 注意不能写成 `height: NARROW ? 22 : undefined` —— 显式的
+                 * undefined 一样会参与合并、把 Highcharts 的默认值盖掉，
+                 * 结果是按钮矩形算出 NaN，控制台刷 "<rect> width: NaN"。
+                 * 所以宽屏时这两个键必须**根本不存在**。 */
+                buttonTheme: Highcharts.merge({
                     fill: C.surface,
                     stroke: C.ruleHi,
                     'stroke-width': 1,
@@ -243,7 +264,7 @@
                         hover:  { fill: C.rule,    stroke: C.ruleHi, style: { color: C.text } },
                         select: { fill: C.heading, stroke: C.heading, style: { color: '#ffffff' } }
                     }
-                },
+                }, NARROW ? { height: 20, padding: 9 } : {}),
                 inputBoxBorderColor: C.ruleHi,
                 inputStyle: { backgroundColor: C.surface, color: C.text },
                 labelStyle: { color: C.soft },
@@ -293,7 +314,9 @@
                 tickColor: C.ruleHi,
                 tickWidth: 1,
                 title: {
-                    text: t('chart.rad'),
+                    /* 窄屏收掉：22px 的竖排长文本在手机上要吃掉几十像素宽度，
+                     * 而图例已经写明了哪条线是什么。见 js/chart-metrics.js */
+                    text: AXIS_TITLES ? t('chart.rad') : null,
                     style: { color: C.rad, fontSize: '22px' }
                 },
                 labels: {
@@ -313,7 +336,7 @@
                 tickColor: C.ruleHi,
                 tickWidth: 1,
                 title: {
-                    text: t('chart.fd'),
+                    text: AXIS_TITLES ? t('chart.fd') : null,
                     style: { color: C.fd, fontSize: '22px' }
                 },
                 labels: {
@@ -450,6 +473,29 @@
         /* 解锁完整数据后（js/unlock.js 换掉 OBS_FD / OBS_RAD）也要重建 ——
          * setData 只能换当前这棵树的点，换不掉「哪些树有数据」和时间轴范围。 */
         window.SiteChart.reload = rebuild;
+
+        /* 跨过窄屏断点时重建：边距、高度、轴标题、日期输入框都是建图时定型的，
+         * Highcharts 自己的 reflow 改不动它们。
+         *
+         * 只在**真的跨过断点**时才重建。手机上滚动会收起/展开地址栏，
+         * 这也会触发 resize —— 每次都重建的话，一滚动图表就不停闪。
+         *
+         * 重建完派发事件让环境图跟上，顺序是确定的：本图先好，
+         * 环境图的 linkMain() 才有东西可挂。 */
+        function narrowNow() {
+            return window.ChartMetrics ? ChartMetrics.isNarrow() : false;
+        }
+        var wasNarrow = narrowNow();
+        var resizeTimer = null;
+        window.addEventListener('resize', function () {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function () {
+                if (narrowNow() === wasNarrow) { return; }
+                wasNarrow = narrowNow();
+                rebuild();
+                document.dispatchEvent(new CustomEvent('charts:breakpoint'));
+            }, 200);
+        });
     }
 
     if (document.readyState === 'loading') {

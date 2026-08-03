@@ -65,6 +65,8 @@
                   /* 本地优先的原因：code.highcharts.com 在国内常被拒（实测 403），
                      所以这条回退多半用不上，留着只是防本地文件缺失。 */
                   fallback: 'https://code.highcharts.com/stock/highstock.js' },
+                /* 尺寸度量要在两张图之前：它们建图时就要读边距与高度 */
+                'js/chart-metrics.js',
                 'js/observations.js', 'js/chart.js',
                 'js/environment.js', 'js/chart-env.js',
                 /* 解锁模块要在两张图之后：它解开数据后要调 SiteChart.reload

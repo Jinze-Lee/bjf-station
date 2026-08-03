@@ -25,6 +25,29 @@
     /* 倒序：最新的在最前面 */
     var LOG = [
         {
+            v: '1.8', date: '2026-08-03', kind: 'ui',
+            zh: {
+                title: '手机端适配',
+                items: [
+                    '图表绘图区在手机上原先只占宽度的 41%，两侧边距吃掉了六成。收掉竖排轴标题后边距减半，绘图区回到 70%。',
+                    '两张图合计高度从 720 像素压到 520，小屏上一屏之内能同时看到曲线和时间轴。',
+                    '环境变量的 11 个标签原先折成 6 行、独占 248 像素，改成单行横向滑动。',
+                    '按钮、链接、地图控件的可点区域统一放大到 40 像素以上。',
+                    '解锁完整数据后刷新页面会回到锁定状态 —— 口令不再保存在浏览器里。'
+                ]
+            },
+            en: {
+                title: 'Mobile layout',
+                items: [
+                    'On a phone the plot area used to take only 41% of the chart width, with the margins eating the rest. Dropping the rotated axis titles halved the margins and brought the plot back to 70%.',
+                    'The two charts together came down from 720 px to 520 px, so on a small screen you can see the curves and the time axis at once.',
+                    'The 11 environment tags used to wrap onto 6 rows and occupy 248 px; they are now a single horizontally scrolling strip.',
+                    'Buttons, links and map controls were enlarged to at least 40 px of touch target.',
+                    'Reloading the page after unlocking now returns to the locked state — the key is no longer kept in the browser.'
+                ]
+            }
+        },
+        {
             v: '1.7', date: '2026-08-03', kind: 'data',
             zh: {
                 title: '公开最近 7 天，完整数据集需密钥',
