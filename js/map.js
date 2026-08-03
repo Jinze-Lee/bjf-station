@@ -286,10 +286,34 @@
             });
             overlays[t('map.loggers')] = loggerLayer;
 
+            /* 窄屏折叠成一个图标，点开才展开。
+             *
+             * 展开态有 3 个底图 + 4 个图层共 7 行，宽屏上摊在右上角不碍事；
+             * 手机上实测直接盖住大半张地图，地图本身反而看不见了
+             * （每行还因为触摸目标要求撑到了 40px，更高）。
+             * Leaflet 自带的折叠态在触屏上是点击展开，不是悬停，正合适。
+             *
+             * 断点 700 与 css/style.css、js/chart-metrics.js 保持一致。 */
+            var narrow = (window.innerWidth || 1024) < 700;
             layerControl = L.control.layers(bases, overlays,
-                { position: 'topright', collapsed: false }).addTo(map);
+                { position: 'topright', collapsed: narrow }).addTo(map);
         }
         buildLayerControl();
+
+        /* 转屏或改窗口宽度跨过断点时重建控件 —— collapsed 是创建时定型的。
+         * 只在真的跨过断点时重建：手机滚动收起地址栏也会触发 resize。 */
+        (function () {
+            function isNarrow() { return (window.innerWidth || 1024) < 700; }
+            var was = isNarrow(), timer = null;
+            window.addEventListener('resize', function () {
+                clearTimeout(timer);
+                timer = setTimeout(function () {
+                    if (isNarrow() === was) { return; }
+                    was = isNarrow();
+                    buildLayerControl();
+                }, 200);
+            });
+        }());
 
         L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
 
@@ -337,8 +361,12 @@
 
         if (window.Theme) { Theme.onChange(repaintTheme); }
 
-        /* 默认展开一棵树的弹窗，提示用户标记是可以点的 */
-        if (markers[DEFAULT_POPUP_TREE]) {
+        /* 默认展开一棵树的弹窗，提示用户标记是可以点的。
+         *
+         * 窄屏不开：弹窗有十来行字段，在手机上宽度几乎顶满，把地图盖住 ——
+         * 本来是「提示可以点」，结果变成挡着不让看。手机上标记本身已经够显眼，
+         * 而且触屏用户对「点一下试试」的预期比鼠标用户更强。 */
+        if (markers[DEFAULT_POPUP_TREE] && (window.innerWidth || 1024) >= 700) {
             markers[DEFAULT_POPUP_TREE].openPopup();
         }
 

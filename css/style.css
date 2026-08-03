@@ -2531,6 +2531,21 @@ footer {
         flex: 0 0 auto;
     }
 
+    /* 折叠态那个图标按钮：Leaflet 默认 36×36，撑到 44 */
+    .leaflet-control-layers-toggle {
+        width: 44px !important;
+        height: 44px !important;
+        background-size: 22px 22px !important;
+    }
+
+    /* 展开后限高。7 行 × 40px 再加内边距，在 568px 高的屏上仍会盖掉大半张地图；
+       限成视口高度的 45% 并允许内部滚动，地图始终留得下大半。 */
+    .leaflet-control-layers-expanded {
+        max-height: 45vh;
+        overflow-y: auto;
+        max-width: calc(100vw - 80px);
+    }
+
     .popup-btn,
     #locateTree { min-height: 40px; }
 

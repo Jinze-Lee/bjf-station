@@ -33,6 +33,7 @@
                     '两张图合计高度从 720 像素压到 520，小屏上一屏之内能同时看到曲线和时间轴。',
                     '环境变量的 11 个标签原先折成 6 行、独占 248 像素，改成单行横向滑动。',
                     '按钮、链接、地图控件的可点区域统一放大到 40 像素以上。',
+                    '地图的图层切换在手机上原先默认展开，几乎盖住整张地图，现改为折叠成一个图标，点开才展开；首屏也不再自动弹出树木信息框。电脑端维持原样。',
                     '解锁完整数据后刷新页面会回到锁定状态 —— 口令不再保存在浏览器里。'
                 ]
             },
@@ -43,6 +44,7 @@
                     'The two charts together came down from 720 px to 520 px, so on a small screen you can see the curves and the time axis at once.',
                     'The 11 environment tags used to wrap onto 6 rows and occupy 248 px; they are now a single horizontally scrolling strip.',
                     'Buttons, links and map controls were enlarged to at least 40 px of touch target.',
+                    'The map’s layer switcher used to open expanded on phones and covered almost the whole map; it now collapses to a single icon that opens on tap, and no tree popup opens on arrival. Desktop is unchanged.',
                     'Reloading the page after unlocking now returns to the locked state — the key is no longer kept in the browser.'
                 ]
             }

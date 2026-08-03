@@ -1414,6 +1414,70 @@ with sync_playwright() as p:
         check("11h.[%s] 可点元素高度都不小于 36px" % tag,
               m["smallN"] == 0, "%d 个偏小: %s" % (m["smallN"], m["small"]))
 
+        # 地图不能被自己的控件/弹窗盖住 —— 手机上实测图层控件默认展开时
+        # 占掉大半张地图，首屏自动弹开的树木弹窗又压掉另一半。
+        # 地图在页面很下面（实测 y≈11000），先滚过去再量与点，
+        # 否则控件在视口外，click 会一直等不到可交互而超时。
+        mel = mp.query_selector("#map_canvas, .leaflet-container")
+        if mel:
+            mel.scroll_into_view_if_needed()
+            mp.wait_for_timeout(700)
+
+        mapinfo = mp.evaluate("""() => {
+            const mc = document.getElementById('map_canvas') ||
+                       document.querySelector('.leaflet-container');
+            if (!mc) return null;
+            const mb = mc.getBoundingClientRect();
+            const area = mb.width * mb.height;
+            let covered = 0;
+            document.querySelectorAll(
+                '.leaflet-control-layers-expanded, .leaflet-popup').forEach(el => {
+                const r = el.getBoundingClientRect();
+                const w = Math.max(0, Math.min(r.right, mb.right) - Math.max(r.left, mb.left));
+                const h = Math.max(0, Math.min(r.bottom, mb.bottom) - Math.max(r.top, mb.top));
+                covered += w * h;
+            });
+            const tog = document.querySelector('.leaflet-control-layers-toggle');
+            return {
+                pct: area ? Math.round(100 * covered / area) : 0,
+                collapsed: !document.querySelector('.leaflet-control-layers-expanded'),
+                togH: tog ? Math.round(tog.getBoundingClientRect().height) : 0,
+                popupOpen: !!document.querySelector('.leaflet-popup')
+            };
+        }""")
+        if mapinfo:
+            check("11j.[%s] 图层控件默认折叠" % tag, mapinfo["collapsed"])
+            check("11k.[%s] 首屏不自动弹开树木弹窗" % tag, not mapinfo["popupOpen"])
+            check("11l.[%s] 地图被遮挡面积 < 15%%" % tag,
+                  mapinfo["pct"] < 15, "遮挡 %d%%" % mapinfo["pct"])
+            check("11m.[%s] 折叠按钮不小于 40px" % tag,
+                  mapinfo["togH"] >= 40, "%d px" % mapinfo["togH"])
+
+            # 点开之后仍要留得下大半张地图。
+            # 用 touchscreen.tap 而不是 element.click()：这是触屏设备，
+            # 而且 Leaflet 控件上 click() 的可交互性判定会卡住超时
+            # （实测点击点没被遮挡，elementFromPoint 命中的就是它自己）。
+            tog_el = mp.query_selector(".leaflet-control-layers-toggle")
+            tog_el.scroll_into_view_if_needed()
+            mp.wait_for_timeout(400)
+            tb = tog_el.bounding_box()
+            mp.touchscreen.tap(tb["x"] + tb["width"] / 2, tb["y"] + tb["height"] / 2)
+            mp.wait_for_timeout(700)
+            after = mp.evaluate("""() => {
+                const mc = document.getElementById('map_canvas') ||
+                           document.querySelector('.leaflet-container');
+                const mb = mc.getBoundingClientRect();
+                const el = document.querySelector('.leaflet-control-layers-expanded');
+                if (!el) return { open: false, pct: 0 };
+                const r = el.getBoundingClientRect();
+                const w = Math.max(0, Math.min(r.right, mb.right) - Math.max(r.left, mb.left));
+                const h = Math.max(0, Math.min(r.bottom, mb.bottom) - Math.max(r.top, mb.top));
+                return { open: true, pct: Math.round(100 * w * h / (mb.width * mb.height)) };
+            }""")
+            check("11n.[%s] 图层控件可展开" % tag, after["open"])
+            check("11o.[%s] 展开后遮挡 < 55%%" % tag,
+                  after["pct"] < 55, "遮挡 %d%%" % after["pct"])
+
         # 触摸能不能真的操作图表
         cel = mp.query_selector("#chartDIASF")
         cel.scroll_into_view_if_needed()
