@@ -1,0 +1,77 @@
+/* 被监测树木元数据 —— 由 工具/生成树木数据.py 生成，请勿手工编辑。
+ *
+ * 坐标转换：原始为 CGCS2000 高斯-克吕格投影（中央子午线 117°E，长度比 1.0，
+ * 东向加常数 500000），经 EPSG:4548 转为 WGS-84 经纬度。
+ * 注意：若误按 UTM 50N（长度比 0.9996）换算，位置会北偏 1771 m。
+ *
+ * 地图上显示 GCJ-02 偏移由 map.js 在运行时完成，本文件只存 WGS-84 原始值。
+ */
+
+var PLOTS = {
+    DT1: { name: 'Mixed forest plot', nameZh: '综合林样地', color: '#4a7c59', lat: 39.9575558, lon: 115.4252819 },
+    DT2: { name: 'Larch plot', nameZh: '落叶松样地', color: '#2c6e8f', lat: 39.9584771, lon: 115.4259859 },
+    DT3: { name: 'Plot below the meteorological station', nameZh: '气象站下方样地', color: '#c2703d', lat: 39.9599965, lon: 115.4286265 },
+};
+
+var TREES = [
+    { id: 'DT1-BH1-1137', plot: 'DT1', probe: 'BH1', gateway: 1137,
+      species: 'Betula platyphylla', speciesZh: '白桦', commonName: 'Asian white birch', wood: 'diffuse-porous',
+      circumference: 45.65, dbh: 14.58, lat: 39.9575453, lon: 115.4254010 },
+    { id: 'DT1-BH2-1132', plot: 'DT1', probe: 'BH2', gateway: 1132,
+      species: 'Betula platyphylla', speciesZh: '白桦', commonName: 'Asian white birch', wood: 'diffuse-porous',
+      circumference: 58.46, dbh: 18.59, lat: 39.9576542, lon: 115.4253168 },
+    { id: 'DT1-HH1-1140', plot: 'DT1', probe: 'HH1', gateway: 1140,
+      species: 'Betula dahurica', speciesZh: '黑桦', commonName: 'Dahurian birch', wood: 'diffuse-porous',
+      circumference: 44.93, dbh: 14.32, lat: 39.9575886, lon: 115.4253832 },
+    { id: 'DT1-LDL1-1155', plot: 'DT1', probe: 'LDL1', gateway: 1155,
+      species: 'Quercus wutaishanica', speciesZh: '辽东栎', commonName: 'Liaodong oak', wood: 'ring-porous',
+      circumference: 69.51, dbh: 22.08, lat: 39.9575176, lon: 115.4253373 },
+    { id: 'DT1-LDL2-1134', plot: 'DT1', probe: 'LDL2', gateway: 1134,
+      species: 'Quercus wutaishanica', speciesZh: '辽东栎', commonName: 'Liaodong oak', wood: 'ring-porous',
+      circumference: 96.31, dbh: 31.05, lat: 39.9574671, lon: 115.4253594 },
+    { id: 'DT1-MD1-1149', plot: 'DT1', probe: 'MD1', gateway: 1149,
+      species: 'Tilia mongolica', speciesZh: '蒙椴', commonName: 'Mongolian lime', wood: 'diffuse-porous',
+      circumference: 71.10, dbh: 22.34, lat: 39.9576414, lon: 115.4253010 },
+    { id: 'DT1-WJF1-1135', plot: 'DT1', probe: 'WJF1', gateway: 1135,
+      species: 'Acer pictum subsp. mono', speciesZh: '五角枫', commonName: 'Painted maple', wood: 'diffuse-porous',
+      circumference: 89.91, dbh: 28.62, lat: 39.9575336, lon: 115.4253438 },
+    { id: 'DT2-HTQ1-1248', plot: 'DT2', probe: 'HTQ1', gateway: 1248,
+      species: 'Juglans mandshurica', speciesZh: '胡桃楸', commonName: 'Manchurian walnut', wood: 'semi-ring-porous',
+      circumference: 74.55, dbh: 24.32, lat: 39.9585702, lon: 115.4259100 },
+    { id: 'DT2-HTQ2-1157', plot: 'DT2', probe: 'HTQ2', gateway: 1157,
+      species: 'Juglans mandshurica', speciesZh: '胡桃楸', commonName: 'Manchurian walnut', wood: 'semi-ring-porous',
+      circumference: 90.03, dbh: 28.64, lat: 39.9584522, lon: 115.4260718 },
+    { id: 'DT2-LYS1-1144', plot: 'DT2', probe: 'LYS1', gateway: 1144,
+      species: 'Larix gmelinii var. principis-rupprechtii', speciesZh: '落叶松', commonName: 'Prince Rupprecht larch', wood: 'coniferous',
+      circumference: 48.15, dbh: 15.27, lat: 39.9584872, lon: 115.4260582 },
+    { id: 'DT2-LYS2-1151', plot: 'DT2', probe: 'LYS2', gateway: 1151,
+      species: 'Larix gmelinii var. principis-rupprechtii', speciesZh: '落叶松', commonName: 'Prince Rupprecht larch', wood: 'coniferous',
+      circumference: 60.78, dbh: 19.34, lat: 39.9585288, lon: 115.4259710 },
+    { id: 'DT2-MD1-1131', plot: 'DT2', probe: 'MD1', gateway: 1131,
+      species: 'Tilia mongolica', speciesZh: '蒙椴', commonName: 'Mongolian lime', wood: 'diffuse-porous',
+      circumference: 77.03, dbh: 24.46, lat: 39.9585078, lon: 115.4260702 },
+    { id: 'DT2-MD2-1249', plot: 'DT2', probe: 'MD2', gateway: 1249,
+      species: 'Tilia mongolica', speciesZh: '蒙椴', commonName: 'Mongolian lime', wood: 'diffuse-porous',
+      circumference: 74.82, dbh: 23.73, lat: 39.9585859, lon: 115.4258996 },
+    { id: 'DT2-WJF1-1141', plot: 'DT2', probe: 'WJF1', gateway: 1141,
+      species: 'Acer pictum subsp. mono', speciesZh: '五角枫', commonName: 'Painted maple', wood: 'diffuse-porous',
+      circumference: 43.12, dbh: 13.72, lat: 39.9584472, lon: 115.4261338 },
+    { id: 'DT3-HH1-1142', plot: 'DT3', probe: 'HH1', gateway: 1142,
+      species: 'Betula dahurica', speciesZh: '黑桦', commonName: 'Dahurian birch', wood: 'diffuse-porous',
+      circumference: 43.88, dbh: 13.64, lat: 39.9598936, lon: 115.4284421 },
+    { id: 'DT3-HTQ1-1153', plot: 'DT3', probe: 'HTQ1', gateway: 1153,
+      species: 'Juglans mandshurica', speciesZh: '胡桃楸', commonName: 'Manchurian walnut', wood: 'semi-ring-porous',
+      circumference: 61.49, dbh: 19.75, lat: 39.9600336, lon: 115.4286269 },
+    { id: 'DT3-HTQ2-1139', plot: 'DT3', probe: 'HTQ2', gateway: 1139,
+      species: 'Juglans mandshurica', speciesZh: '胡桃楸', commonName: 'Manchurian walnut', wood: 'semi-ring-porous',
+      circumference: 79.44, dbh: 25.26, lat: 39.9599445, lon: 115.4286448 },
+    { id: 'DT3-LYS1-1150', plot: 'DT3', probe: 'LYS1', gateway: 1150,
+      species: 'Larix gmelinii var. principis-rupprechtii', speciesZh: '落叶松', commonName: 'Prince Rupprecht larch', wood: 'coniferous',
+      circumference: 50.82, dbh: 16.17, lat: 39.9598622, lon: 115.4284625 },
+    { id: 'DT3-SY1-1152', plot: 'DT3', probe: 'SY1', gateway: 1152,
+      species: 'Populus davidiana', speciesZh: '山杨', commonName: 'David poplar', wood: 'diffuse-porous',
+      circumference: 80.49, dbh: 25.55, lat: 39.9599487, lon: 115.4285583 },
+    { id: 'DT3-SY2-1138', plot: 'DT3', probe: 'SY2', gateway: 1138,
+      species: 'Populus davidiana', speciesZh: '山杨', commonName: 'David poplar', wood: 'diffuse-porous',
+      circumference: 115.34, dbh: 36.89, lat: 39.9599814, lon: 115.4285418 },
+];

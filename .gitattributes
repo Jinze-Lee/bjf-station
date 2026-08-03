@@ -1,0 +1,19 @@
+# 统一按 LF 存进仓库，检出到 Windows 时由 git 转成 CRLF。
+# 不设这个的话，在 Windows 上提交会一路刷 "LF will be replaced by CRLF" 警告，
+# 而且换台机器改同一个文件容易产生整篇文件的假 diff。
+* text=auto eol=lf
+
+# PowerShell 脚本只在 Windows 上跑，用 CRLF（它的原生形式）。
+# 注意：.ps1 必须存成**带 BOM 的 UTF-8**。Windows PowerShell 5.1 只有见到 BOM
+# 才知道文件是 UTF-8，否则按系统 ANSI(GBK) 读 —— 中文变乱码、引号错配、
+# 脚本直接解析失败。用 pwsh(7) 跑则没这问题，但不能指望用户一定敲 pwsh。
+*.ps1 text eol=crlf working-tree-encoding=UTF-8
+
+# 二进制文件不做任何行尾转换 —— 转了就损坏了
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.woff2 binary
+*.xlsx binary

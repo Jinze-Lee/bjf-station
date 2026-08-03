@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>中国科学院北京森林生态系统定位研究站</title>
+	<meta name="description" content="中国科学院北京森林生态系统定位研究站（北京门头沟东灵山）20 棵树木的液流通量密度与树干直径变化监测。" />
+
+	<link rel="icon" href="images/logo-bfers.webp" />
+
+	<!-- 字体自托管，不引 fonts.googleapis.com —— 国内加载不到，会卡到超时。
+	     详见 css/fonts.css 顶部说明。 -->
+	<link rel="stylesheet" href="css/fonts.css" />
+	<link rel="stylesheet" href="css/leaflet.css" />
+	<link rel="stylesheet" href="css/style.css" />
+
+	<!-- 主题必须在首屏绘制**之前**定下来。
+	     放到 js/theme.js 里就晚了 —— 那时页面已经按默认的深色画了一帧，
+	     偏好是浅色的访客每次都会看到一下深色闪屏。
+	     所以这段同步内联脚本必须留在 <head> 里、样式表之后。
+	     逻辑与 js/theme.js 保持一致，改一处要同步改另一处。 -->
+	<script>
+		(function () {
+			try {
+				var saved = localStorage.getItem('bfers-theme');
+				if (saved === 'light' || saved === 'dark') {
+					document.documentElement.setAttribute('data-theme', saved);
+				}
+				/* 没存过就用默认的深色，不跟随系统 —— 这个站的深色是主视觉，
+				   不是「夜间模式」，不该被系统设置悄悄改掉。 */
+			} catch (e) { /* 隐私模式下 localStorage 会抛错，忽略即可 */ }
+		}());
+	</script>
+</head>
+<body data-lang="en">
+
+<!-- =========================================================================
+     文案统一走 js/i18n.js：
+       data-i18n       -> 替换 textContent
+       data-i18n-html  -> 替换 innerHTML（段落里有行内标签时用这个）
+     改文字请改 i18n.js，不要直接改本文件里的默认内容。
+     ========================================================================= -->
+
+<!-- ============================== HEADER ============================== -->
+<header id="header-container">
+	<div class="header-inner">
+		<a class="logo" href="index.html">
+			<img src="images/logo-bfers.webp" alt="中国科学院北京森林生态系统定位研究站" />
+			<span class="logo-text"><span data-i18n="brand.line1">中国科学院</span><em data-i18n="brand.line2">北京森林生态系统定位研究站</em></span>
+		</a>
+
+		<nav class="primary-menu" aria-label="Primary">
+			<ul class="main-menu">
+				<li class="has-children">
+					<a href="#location" data-i18n="nav.locations">样点</a>
+					<ul class="sub-menu">
+						<li><a href="#location"><span class="key dt1">DT1</span> <span class="plot-label" data-plot="DT1"></span></a></li>
+						<li><a href="#location"><span class="key dt2">DT2</span> <span class="plot-label" data-plot="DT2"></span></a></li>
+						<li><a href="#location"><span class="key dt3">DT3</span> <span class="plot-label" data-plot="DT3"></span></a></li>
+					</ul>
+				</li>
+				<li><a href="#about" data-i18n="nav.about">台站概况</a></li>
+				<li><a href="#trees" data-i18n="nav.trees">监测树木</a></li>
+				<li><a href="#methods" data-i18n="nav.methods">观测方法</a></li>
+				<li><a href="#network" data-i18n="nav.network">数据传输</a></li>
+				<li><a href="#treedata" data-i18n="nav.treedata">树木数据</a></li>
+				<li><a href="#contact" data-i18n="nav.contact">联系我们</a></li>
+			</ul>
+		</nav>
+
+		<!-- 日/夜主题切换。图标全用 CSS 画（见 style.css 的 .theme-toggle），
+		     所以这里只要一个空 span 当画布。 -->
+		<button type="button" id="themeToggle" class="theme-toggle"
+		        data-i18n-aria="theme.switch" data-i18n-title="theme.switch"
+		        aria-label="Switch to light theme" title="Switch to light theme">
+			<span class="ti" aria-hidden="true"></span>
+		</button>
+
+		<button type="button" id="langToggle" class="lang-toggle"
+		        data-i18n="lang.switch" data-i18n-title="lang.switchTitle" title="Switch to English">EN</button>
+
+		<button class="nav-toggle" data-i18n-aria="nav.menu" aria-label="菜单" aria-expanded="false">
+			<span></span><span></span><span></span>
+		</button>
+	</div>
+</header>
+
+<!-- ============================== MAIN =============================== -->
+<div id="primary-container">
+	<div class="row">
+
+		<div class="social-corner">
+			<a href="#contact" data-i18n="social.wechat">微信公众号 · 北京森林站</a>
+		</div>
+
+		<h2 data-i18n="page.title">中国科学院北京森林生态系统定位研究站</h2>
+
+		<!-- ---------------------- 台站概况 ---------------------- -->
+		<section id="about">
+			<figure class="station-photo">
+				<img src="images/station.webp" alt="台站周边的暖温带落叶阔叶林" />
+				<figcaption data-i18n="about.photoCaption"></figcaption>
+			</figure>
+
+			<h3 data-i18n="about.h3"></h3>
+
+			<p data-i18n="about.p1"></p>
+			<p data-i18n="about.p2"></p>
+			<p data-i18n-html="about.p3"></p>
+			<p data-i18n="about.p4"></p>
+
+			<dl class="site-facts">
+				<div><dt data-i18n="about.f.location"></dt><dd data-i18n="about.v.location"></dd></div>
+				<div><dt data-i18n="about.f.coords"></dt><dd>39.9588&deg;N, 115.4270&deg;E <span class="muted" data-i18n="about.v.coordsNote"></span></dd></div>
+				<div><dt data-i18n="about.f.elevation"></dt><dd data-i18n="about.v.elevation"></dd></div>
+				<div><dt data-i18n="about.f.mat"></dt><dd><span data-i18n="about.v.mat"></span> <span class="muted"><span data-i18n="about.regional"></span><sup>*</sup></span></dd></div>
+				<div><dt data-i18n="about.f.map"></dt><dd><span data-i18n="about.v.map"></span> <span class="muted"><span data-i18n="about.regional"></span><sup>*</sup></span></dd></div>
+				<div><dt data-i18n="about.f.forest"></dt><dd data-i18n="about.v.forest"></dd></div>
+				<div><dt data-i18n="about.f.founded"></dt><dd data-i18n="about.v.founded"></dd></div>
+				<div><dt data-i18n="about.f.operator"></dt><dd data-i18n="about.v.operator"></dd></div>
+				<div><dt data-i18n="about.f.networks"></dt><dd data-i18n="about.v.networks"></dd></div>
+			</dl>
+			<p class="footnote" data-i18n="about.footnote"></p>
+		</section>
+
+		<!-- ---------------------- 监测树木 ---------------------- -->
+		<section id="trees">
+			<h3 data-i18n="trees.h3"></h3>
+
+			<p data-i18n-html="trees.p1"></p>
+
+			<div id="plotSummary" class="plot-grid"></div>
+
+			<p data-i18n="trees.p2"></p>
+
+			<div class="table-wrap">
+				<table class="data-table">
+					<thead>
+						<tr>
+							<th data-i18n="trees.th.species"></th>
+							<th data-i18n="trees.th.common"></th>
+							<th data-i18n="trees.th.wood"></th>
+							<th class="num" data-i18n="trees.th.count"></th>
+							<th class="num" data-i18n="trees.th.dbh"></th>
+						</tr>
+					</thead>
+					<tbody id="speciesTableBody"></tbody>
+				</table>
+			</div>
+
+			<p class="footnote" data-i18n="trees.footnote"></p>
+		</section>
+
+		<!-- ---------------------- 观测方法 ---------------------- -->
+		<section id="methods">
+			<h3 data-i18n="methods.h3"></h3>
+
+
+			<!-- 三个小节标题。原先是写在段首的「液流通量密度。」这类粗体短语，
+			     它们本身不成句，读起来像病句；改成真正的小节标题，
+			     段落也就从完整的句子起头了。 -->
+			<h4 class="m-sub" data-i18n="methods.sub.fd"></h4>
+			<p data-i18n-html="methods.fd"></p>
+
+			<p class="equation">K = (&Delta;T<sub>0</sub> &minus; &Delta;T) / &Delta;T</p>
+
+			<p data-i18n-html="methods.k.where"></p>
+
+			<p class="equation">F<sub>d</sub> = 4.284 &middot; K<sup>1.231</sup> &nbsp;&nbsp;[dm&sup3; dm<sup>&minus;2</sup> h<sup>&minus;1</sup>] &nbsp;=&nbsp; 0.0119 &middot; K<sup>1.231</sup> &nbsp;&nbsp;[cm&sup3; cm<sup>&minus;2</sup> s<sup>&minus;1</sup>]</p>
+
+			<!-- 仪器安装图集：左侧主图 + 右侧三张缩略图，点击可放大看
+			     行为在 js/gallery.js，图注走 i18n 的 gal.capN -->
+			<figure class="gallery" id="methodGallery">
+				<div class="gallery-main">
+					<button type="button" class="gm-btn" id="galleryMainBtn"
+					        data-i18n-aria="gal.openHint">
+						<span class="gm-bg" id="galleryMainBg" aria-hidden="true"></span>
+						<img id="galleryMainImg" src="images/install-1.webp" alt="" />
+						<span class="gm-zoom" aria-hidden="true"></span>
+					</button>
+					<!-- 自动轮播进度条：走满即翻页。放大、悬停、滚出视野时暂停 -->
+					<div class="gm-progress-row">
+						<div class="gm-progress" role="presentation">
+							<span class="gm-bar" id="galleryBar"></span>
+						</div>
+						<span class="gm-count" id="galleryCount"></span>
+					</div>
+				</div>
+				<div class="gallery-thumbs" id="galleryThumbs"></div>
+				<figcaption id="galleryCaption"></figcaption>
+			</figure>
+			<p><span data-i18n="methods.caveat"></span> <span data-i18n-html="methods.calib"></span></p>
+
+			<p data-i18n-html="methods.why"></p>
+
+			<h4 class="m-sub" data-i18n="methods.sub.dendro"></h4>
+			<p data-i18n-html="methods.dendro"></p>
+
+			<h4 class="m-sub" data-i18n="methods.sub.sampling"></h4>
+			<p data-i18n-html="methods.sampling"></p>
+		</section>
+
+		<!-- ---------------------- 数据传输 ---------------------- -->
+		<section id="network">
+			<h3 data-i18n="net.h3"></h3>
+			<p data-i18n-html="net.p"></p>
+
+			<div class="net-wrap">
+				<div class="net-toolbar">
+					<button type="button" id="netToggle" class="net-btn" aria-pressed="false">
+						<span class="net-ico" aria-hidden="true"></span>
+						<span id="netToggleLabel" data-i18n="net.pause"></span>
+					</button>
+					<div class="net-legend">
+						<span><i class="lg sf"></i><span data-i18n="net.legendSf"></span></span>
+						<span><i class="lg dr"></i><span data-i18n="net.legendDr"></span></span>
+						<span><i class="lg mix"></i><span data-i18n="net.legendMix"></span></span>
+					</div>
+					<!-- 「图里能点」的明说提示。图上还有个幽灵光标在演示（见 SVG 末尾
+					     的 #netGhost），但动画会在用户上手后停掉，这句文字不会。 -->
+					<p class="net-tip" id="netTip">
+						<i class="cur" aria-hidden="true"></i>
+						<span data-i18n="net.clickHint"></span>
+					</p>
+				</div>
+
+				<div class="net-scroll">
+				<svg id="netDiagram" viewBox="0 0 1060 540" role="img"
+				     preserveAspectRatio="xMidYMid meet">
+
+					<!-- ============ 连线：先画，压在节点下方 ============
+					     通路 A（下）：液流 —— 有线汇聚到 DT80，再统一无线回传
+					     通路 B（上）：径向变化仪 —— 各自独立无线，直达工作站
+					     两条通路不相交于任何设备，只在图面上有少量视觉交叉。 -->
+					<g class="wires">
+						<!-- 通路 A：有线段 -->
+						<path id="wS1" class="wire wired" d="M 152 218 C 250 218, 300 334, 386 326" />
+						<path id="wS2" class="wire wired" d="M 152 338 C 250 338, 310 334, 386 334" />
+						<path id="wS3" class="wire wired" d="M 152 458 C 250 458, 300 334, 386 342" />
+						<!-- 通路 A：数采 -> 无线单元 -> 工作站 -->
+						<path id="wLM" class="wire wired" d="M 560 334 L 632 334" />
+						<path id="wML" class="wire radio" d="M 724 334 C 786 334, 824 334, 870 334" />
+						<!-- 通路 B：三台径向变化仪各自独立上行 -->
+						<path id="wD1" class="wire radio dr" d="M 180 180 C 214 180, 222 130, 240 108 C 258 92, 290 92, 350 92 L 856 92 C 902 92, 916 180, 916 254" />
+						<path id="wD2" class="wire radio dr" d="M 180 300 C 220 300, 232 200, 250 160 C 268 122, 300 114, 380 114 L 876 114 C 926 114, 942 192, 942 254" />
+						<path id="wD3" class="wire radio dr" d="M 180 420 C 228 420, 244 280, 262 200 C 280 152, 316 136, 412 136 L 896 136 C 950 136, 968 202, 968 254" />
+					</g>
+
+					<!-- ============ 流动的数据包 ============
+					     ⚠️ 错开出发时间必须用**负** begin，不能用正的。
+					     正的 begin（如 begin="2.7s"）在到点之前，SMIL 让元素停在它的
+					     静态位置上 —— <circle> 没写 cx/cy 就是 (0,0)，于是开头几秒钟
+					     会有 3 个小圆点堆在图的左上角，像脏点（实测确实如此）。
+					     负的 begin 表示「动画已经跑了这么久」，元素从第一帧起就在路径上，
+					     错开效果完全一样，左上角干干净净。 -->
+					<g class="packets">
+						<circle class="pkt sf" r="3.6"><animateMotion dur="5.4s" repeatCount="indefinite" begin="0s"><mpath href="#wS1"/></animateMotion></circle>
+						<circle class="pkt sf" r="3.6"><animateMotion dur="5.4s" repeatCount="indefinite" begin="-2.7s"><mpath href="#wS2"/></animateMotion></circle>
+						<circle class="pkt sf" r="3.6"><animateMotion dur="5.4s" repeatCount="indefinite" begin="-1.35s"><mpath href="#wS3"/></animateMotion></circle>
+
+						<rect class="pkt mix" x="-5" y="-3.2" width="10" height="6.4" rx="1.6"><animateMotion dur="2.6s" repeatCount="indefinite" begin="0s"><mpath href="#wLM"/></animateMotion></rect>
+						<rect class="pkt mix" x="-5.5" y="-3.4" width="11" height="6.8" rx="1.7"><animateMotion dur="3.8s" repeatCount="indefinite" begin="0s"><mpath href="#wML"/></animateMotion></rect>
+						<rect class="pkt mix" x="-5.5" y="-3.4" width="11" height="6.8" rx="1.7"><animateMotion dur="3.8s" repeatCount="indefinite" begin="-1.9s"><mpath href="#wML"/></animateMotion></rect>
+
+						<circle class="pkt dr" r="3.6"><animateMotion dur="7.4s" repeatCount="indefinite" begin="0s"><mpath href="#wD1"/></animateMotion></circle>
+						<circle class="pkt dr" r="3.6"><animateMotion dur="7.4s" repeatCount="indefinite" begin="-2.4s"><mpath href="#wD2"/></animateMotion></circle>
+						<circle class="pkt dr" r="3.6"><animateMotion dur="7.4s" repeatCount="indefinite" begin="-4.8s"><mpath href="#wD3"/></animateMotion></circle>
+					</g>
+
+					<!-- ============ 上方走廊标注 ============ -->
+					<text class="corridor-t" x="556" y="62" data-i18n="net.corridor"></text>
+
+					<!-- ============ 三棵树 ============ -->
+					<!-- 树 1 -->
+					<g class="node tree" data-node="tree" tabindex="0" role="button">
+						<ellipse class="canopy" cx="96" cy="177" rx="30" ry="22" />
+						<ellipse class="canopy c2" cx="78" cy="189" rx="20" ry="15" />
+						<rect class="trunk" x="92" y="191" width="8" height="52" rx="2" />
+						<rect class="chip sf" x="102" y="211" width="48" height="14" rx="2.5" />
+						<text class="chip-t" x="126" y="218.5" data-i18n="net.sfShort"></text>
+					</g>
+					<g class="node dendro" data-node="dendro" tabindex="0" role="button">
+						<rect class="chip dr" x="102" y="193" width="48" height="14" rx="2.5" />
+						<text class="chip-t" x="126" y="200.5" data-i18n="net.drShort"></text>
+						<rect class="batt" x="156" y="196" width="9" height="7" rx="1" />
+						<rect class="batt-nub" x="165" y="197.8" width="2" height="3.4" rx="0.6" />
+						<line class="ant sm" x1="170" y1="196" x2="178" y2="182" />
+						<circle class="ant-tip sm" cx="178" cy="182" r="3" />
+						<g class="waves sm" transform="translate(178,182)">
+							<path class="w w1" d="M 5 -7 A 9 9 0 0 1 5 7" />
+							<path class="w w2" d="M 10 -12 A 15 15 0 0 1 10 12" />
+						</g>
+					</g>
+
+					<!-- 树 2 -->
+					<g class="node tree" data-node="tree" tabindex="0" role="button">
+						<ellipse class="canopy" cx="96" cy="297" rx="30" ry="22" />
+						<ellipse class="canopy c2" cx="78" cy="309" rx="20" ry="15" />
+						<rect class="trunk" x="92" y="311" width="8" height="52" rx="2" />
+						<rect class="chip sf" x="102" y="331" width="48" height="14" rx="2.5" />
+						<text class="chip-t" x="126" y="338.5" data-i18n="net.sfShort"></text>
+					</g>
+					<g class="node dendro" data-node="dendro" tabindex="0" role="button">
+						<rect class="chip dr" x="102" y="313" width="48" height="14" rx="2.5" />
+						<text class="chip-t" x="126" y="320.5" data-i18n="net.drShort"></text>
+						<rect class="batt" x="156" y="316" width="9" height="7" rx="1" />
+						<rect class="batt-nub" x="165" y="317.8" width="2" height="3.4" rx="0.6" />
+						<line class="ant sm" x1="170" y1="316" x2="178" y2="302" />
+						<circle class="ant-tip sm" cx="178" cy="302" r="3" />
+						<g class="waves sm" transform="translate(178,302)">
+							<path class="w w2" d="M 5 -7 A 9 9 0 0 1 5 7" />
+							<path class="w w3" d="M 10 -12 A 15 15 0 0 1 10 12" />
+						</g>
+					</g>
+
+					<!-- 树 3 -->
+					<g class="node tree" data-node="tree" tabindex="0" role="button">
+						<ellipse class="canopy" cx="96" cy="417" rx="30" ry="22" />
+						<ellipse class="canopy c2" cx="78" cy="429" rx="20" ry="15" />
+						<rect class="trunk" x="92" y="431" width="8" height="52" rx="2" />
+						<rect class="chip sf" x="102" y="451" width="48" height="14" rx="2.5" />
+						<text class="chip-t" x="126" y="458.5" data-i18n="net.sfShort"></text>
+					</g>
+					<g class="node dendro" data-node="dendro" tabindex="0" role="button">
+						<rect class="chip dr" x="102" y="433" width="48" height="14" rx="2.5" />
+						<text class="chip-t" x="126" y="440.5" data-i18n="net.drShort"></text>
+						<rect class="batt" x="156" y="436" width="9" height="7" rx="1" />
+						<rect class="batt-nub" x="165" y="437.8" width="2" height="3.4" rx="0.6" />
+						<line class="ant sm" x1="170" y1="436" x2="178" y2="422" />
+						<circle class="ant-tip sm" cx="178" cy="422" r="3" />
+						<g class="waves sm" transform="translate(178,422)">
+							<path class="w w3" d="M 5 -7 A 9 9 0 0 1 5 7" />
+							<path class="w w1" d="M 10 -12 A 15 15 0 0 1 10 12" />
+						</g>
+					</g>
+
+					<text class="cap" x="96" y="512" data-i18n="net.tree"></text>
+					<text class="cap sub" x="96" y="530" data-i18n="net.more"></text>
+					<text class="batt-t" x="196" y="470" data-i18n="net.battery"></text>
+
+					<text class="link-tag" x="286" y="374" data-i18n="net.wired"></text>
+
+					<!-- ============ DT80 数采 ============ -->
+					<g class="node logger" data-node="logger" tabindex="0" role="button">
+						<rect class="box" x="386" y="302" width="176" height="64" rx="4" />
+						<rect class="box-led" x="400" y="314" width="7" height="7" rx="1.5" />
+						<text class="box-t" x="484" y="328">dataTaker</text>
+						<text class="box-t big" x="484" y="352">DT80</text>
+					</g>
+					<text class="cap" x="474" y="392" data-i18n="net.logger"></text>
+					<text class="cap sub" x="474" y="410" data-i18n="net.loggerSub"></text>
+
+					<!-- ============ 无线传输单元 ============ -->
+					<g class="node modem" data-node="modem" tabindex="0" role="button">
+						<rect class="box" x="632" y="310" width="92" height="44" rx="4" />
+						<line class="ant" x1="678" y1="310" x2="678" y2="278" />
+						<circle class="ant-tip" cx="678" cy="275" r="3.5" />
+						<g class="waves" transform="translate(678,275)">
+							<path class="w w1" d="M 8 -10 A 13 13 0 0 1 8 10" />
+							<path class="w w2" d="M 15 -18 A 23 23 0 0 1 15 18" />
+							<path class="w w3" d="M 22 -26 A 33 33 0 0 1 22 26" />
+						</g>
+					</g>
+					<text class="cap" x="678" y="382" data-i18n="net.modem"></text>
+					<text class="cap sub" x="678" y="400" data-i18n="net.modemSub"></text>
+
+					<text class="link-tag" x="798" y="316" data-i18n="net.wireless"></text>
+					<text class="link-tag sub" x="798" y="362" data-i18n="net.remote"></text>
+
+					<!-- ============ 实验室工作站 ============ -->
+					<g class="node lab" data-node="lab" tabindex="0" role="button">
+						<rect class="screen" x="870" y="256" width="138" height="100" rx="4" />
+						<rect class="screen-in" x="879" y="265" width="120" height="82" rx="2" />
+						<path class="scr-l l1" d="M 890 330 L 912 306 L 934 320 L 956 292 L 978 314 L 996 302" />
+						<path class="scr-l l2" d="M 890 340 L 914 334 L 938 338 L 962 330 L 984 336 L 996 332" />
+						<path class="base" d="M 852 372 L 1028 372 L 1012 358 L 866 358 Z" />
+					</g>
+					<text class="cap" x="940" y="400" data-i18n="net.lab"></text>
+					<text class="cap sub" x="940" y="418" data-i18n="net.labSub"></text>
+
+					<!-- ============ 幽灵光标：示意「这些节点能点」 ============
+					     放在最后 = 画在最上层。pointer-events:none，绝不挡真实点击。
+					     动画（移动 + 点击涟漪）全在 style.css 里，见 netGhostPath /
+					     netGhostClick；三个停留点的坐标与下面三个节点中心对齐：
+					       径向变化仪 (126,320) -> 数采 (474,334) -> 工作站 (939,306)
+					     用户一旦真的点/悬停/聚焦任意节点，js/network.js 会给 .net-wrap
+					     加上 is-explored，动画就此永久停止。 -->
+					<g id="netGhost" class="net-ghost" aria-hidden="true">
+						<circle class="gh-ring" cx="0" cy="0" r="13" />
+						<path class="gh-cursor"
+						      d="M 0 0 L 0 17.5 L 4.3 13.4 L 7 19.4 L 10 18 L 7.3 12.1 L 12.4 12.1 Z" />
+					</g>
+				</svg>
+				</div>
+				<p class="net-hint" data-i18n="net.hint"></p>
+
+				<div id="netDetail" class="net-detail" role="status"></div>
+			</div>
+		</section>
+
+		<!-- ---------------------- 树木位置 ---------------------- -->
+		<section id="location">
+			<h3 data-i18n="location.h3"></h3>
+			<p data-i18n-html="location.p"></p>
+		</section>
+	</div>
+</div>
+
+<div id="map_canvas"></div>
+
+<div id="primary-container">
+	<div class="row">
+
+		<!-- ---------------------- 树木数据 ---------------------- -->
+		<section id="treedata">
+			<h3 data-i18n="treedata.h3"></h3>
+			<p data-i18n="treedata.p"></p>
+
+			<div class="tree-picker">
+				<label for="treeSelect" data-i18n="treedata.pick"></label>
+				<select id="treeSelect"></select>
+			</div>
+
+			<!-- ============ 上下两张图 + 底部一条共用时间轴 ============
+			     上图：液流 + 径向（rangeSelector 在它顶部；navigator/scrollbar 已关掉）
+			     下图：环境条件（navigator + scrollbar 在它底部，同时控制两张图）
+			     两张图的绘图区左右边距写死成同一个值，同一时刻才在同一条竖线上。 -->
+			<div class="chart-stack">
+				<div id="chartDIASF"></div>
+				<div id="chartEnv"></div>
+				<p id="envEmpty" class="env-empty" data-i18n="env.empty" style="display:none"></p>
+
+				<!-- 标签栏放在**时间轴下面**。
+				     原先夹在两张图中间，拖 navigator 手柄时 Highcharts 会在手柄
+				     上方弹出日期气泡，正好被标签挡住，看不见自己拖到了哪一天。 -->
+				<div class="env-bar">
+					<div id="envTags" class="env-tags"></div>
+					<div class="env-actions">
+						<button type="button" id="envAll"  class="env-btn" data-i18n="env.all"></button>
+						<button type="button" id="envNone" class="env-btn" data-i18n="env.none"></button>
+					</div>
+				</div>
+			</div>
+
+			<!-- 完整数据集解锁条。内容由 js/unlock.js 生成 ——
+			     站点公开的只有最近 7 天，完整数据集是加密的，需要口令。
+			     放在图表正下方，因为它说明的正是「上面这两张图现在给你看多少」。 -->
+			<div id="unlockBar" class="unlock-bar"></div>
+
+			<p class="chart-note">
+				<span><span class="swatch sapflow"></span><span data-i18n="treedata.noteFd"></span></span>
+				<span><span class="swatch diameter"></span><span data-i18n="treedata.noteDia"></span></span>
+			</p>
+
+			<p id="envScaleNote" class="footnote env-scale-note" data-i18n-html="env.scaleNote"
+			   style="display:none"></p>
+
+			<div id="treeInfo" class="tree-info"></div>
+
+			<!-- 内容由 js/data-source.js 按 OBS_META.source 自动切换：
+			     合成数据 -> 橙色警示条；实测数据 -> 中性信息条 + 批次清单。
+			     导入实测数据后警示条会自动消失，不需要手工改文案。 -->
+			<p id="dataSource" class="footnote demo-warning"></p>
+
+			<!-- 环境变量的说明放在图表**下面**：上方两张图要贴在一起对比，
+			     中间塞一段介绍会把它们切开。 -->
+			<div class="env-block">
+				<h4 data-i18n="env.h4"></h4>
+				<p class="env-intro" data-i18n-html="env.p"></p>
+				<p class="footnote" data-i18n-html="env.note"></p>
+			</div>
+		</section>
+
+		<!-- ---------------------- 联系我们 ---------------------- -->
+		<section id="contact">
+			<h3 data-i18n="contact.h3"></h3>
+
+			<div class="contact-grid">
+				<dl class="site-facts">
+					<div><dt data-i18n="contact.f.station"></dt><dd data-i18n="contact.v.station"></dd></div>
+					<div><dt data-i18n="contact.f.operator"></dt><dd data-i18n="contact.v.operator"></dd></div>
+					<div><dt data-i18n="contact.f.person"></dt><dd><a href="mailto:lijinze@ibcas.ac.cn">lijinze@ibcas.ac.cn</a></dd></div>
+					<div><dt data-i18n="contact.f.location"></dt><dd data-i18n="contact.v.location"></dd></div>
+				</dl>
+
+				<figure class="qr-card">
+					<img src="images/wechat-qr.webp" alt="北京森林站 微信公众号二维码" />
+					<figcaption><span data-i18n="contact.qr"></span><br /><strong>北京森林站</strong></figcaption>
+				</figure>
+			</div>
+
+			<!-- 站点版本。改版本号只改 i18n 里的 site.version 一处，中英共用同一个数字。
+			     数据更新日期由 js/data-source.js 从 OBS_META 自动填，不用手写。 -->
+			<p class="site-version">
+				<span data-i18n="site.version"></span>
+				<span class="sv-sep">·</span>
+				<span data-i18n="site.updatedLabel"></span>
+				<span id="siteDataDate"></span>
+				<!-- 更新日志弹层由 js/changelog.js 生成，内容也写在那里 -->
+				<button type="button" id="changelogBtn" class="cl-btn"
+				        data-i18n="cl.open"></button>
+			</p>
+		</section>
+
+	</div>
+</div>
+
+<!-- ============================== FOOTER ============================== -->
+<footer>
+	<div class="footer-bottom">
+		<div class="footer-inner">
+			<div class="footer-left">
+				<div class="footer-logos">
+					<a href="https://www.cas.cn/" target="_blank" rel="noopener"><img src="images/logo-cas.webp" alt="中国科学院" /></a>
+					<a href="http://www.ibcas.ac.cn/" target="_blank" rel="noopener"><img src="images/logo-ibcas.webp" alt="中国科学院植物研究所" /></a>
+					<a href="http://www.cern.ac.cn/" target="_blank" rel="noopener"><img src="images/logo-cern.webp" alt="中国生态系统研究网络" /></a>
+				</div>
+				<div class="copyright">
+					<span data-i18n="footer.copyright"></span><br />
+					<a href="http://www.ibcas.ac.cn/" target="_blank" rel="noopener" data-i18n="footer.operator"></a>
+				</div>
+			</div>
+			<div class="footer-right">
+				<!-- 树种组成条：内容由 js/footer-composition.js 从 trees.js 现算，
+				     棵数/树种数/样点数都不写死 -->
+				<div id="footerComposition" class="footer-composition"></div>
+			</div>
+		</div>
+	</div>
+</footer>
+
+<!-- =========================================================================
+     首屏必需的脚本。
+     地图（leaflet + map.js）和图表（highstock + observations + chart*）
+     不在这里 —— 它们加起来 560 KB 多，改成滚到跟前才下，见 js/lazy-load.js。
+     ========================================================================= -->
+
+<!-- i18n 必须最先：其余模块初始化时要读当前语言 -->
+<script src="js/i18n.js"></script>
+
+<!-- theme 要在 chart.js / map.js 之前：它们初始化时会调 Theme.onChange 注册重绘回调。
+     注意首屏主题不是这里定的，是 <head> 里那段内联脚本 —— 见该文件顶部说明。 -->
+<script src="js/theme.js"></script>
+
+<script src="js/trees.js"></script>
+
+<!-- 只是观测数据的元信息（1 KB），供页脚日期与合成数据警示判断用。
+     整份观测数据（observations.js，压缩后约 180 KB）推迟到图表区才下。
+     两个文件由同一脚本、同一份数据生成，不会不一致。 -->
+<script src="js/obs-meta.js"></script>
+
+<!-- tree-info.js 必须在 chart.js 之前：chart.js 初始化时会用到下拉框与信息卡。
+     它只依赖 trees.js，所以留在首屏。 -->
+<script src="js/tree-info.js"></script>
+<script src="js/gallery.js"></script>
+<script src="js/network.js"></script>
+<script src="js/data-source.js"></script>
+<script src="js/footer-composition.js"></script>
+<script src="js/changelog.js"></script>
+<script src="js/nav.js"></script>
+
+<!-- 放最后：它要等上面这些就位后，再按滚动位置去取地图与图表 -->
+<script src="js/lazy-load.js"></script>
+
+</body>
+</html>
