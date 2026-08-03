@@ -7,21 +7,21 @@
 
 var OBS_META = {
   "source": "measured",
-  "generatedAt": "2026-08-01T18:51:53+08:00",
+  "generatedAt": "2026-08-03T20:36:28+08:00",
   "timezoneOffsetMin": 480,
   "units": {
     "sap_flux_density": "g m-2 s-1",
     "stem_radius": "um"
   },
   "span": [
-    1784907000000,
-    1785511800000
+    1785153600000,
+    1785758400000
   ],
   "trees": 20,
-  "points": 13401,
+  "points": 13420,
   "public": {
     "days": 7,
-    "since": 1784907000000,
-    "points": 13401
+    "since": 1785153600000,
+    "points": 13420
   }
 };

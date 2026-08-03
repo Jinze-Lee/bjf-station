@@ -120,7 +120,9 @@ def obs_window():
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--src", default=r"C:\Users\18256\Desktop\data.xlsx")
+    # 默认读**目录**：历次导出都留在这里，每次全读一遍合并。
+    # 只给单个文件也支持（--src 指向某个 xlsx），但那样就只有那一个文件的数据。
+    ap.add_argument("--src", default=str(BASE / "原始数据" / "环境"))
     # 全量明文写到 原始数据/全量/ ——**不是** js/。
     # js/environment.js 现在是「最近 7 天」的公开版，由 工具/发布数据.py 切出来。
     # 往 js/ 写会把公开版覆盖成全量明文，然后随下一次 push 泄出去。
@@ -129,58 +131,76 @@ def main():
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
+    # 输入可以是一个 xlsx，也可以是一个目录（目录里所有 xlsx 全读、按时刻合并）。
+    #
+    # 为什么要支持目录：气象站每次导出的 xlsx 只含最近几天。2026-08-03 那次
+    # 实测新文件只有 07-29~08-03 共 281 个时刻，而站上已有 07-10~07-31 的
+    # 1056 个时刻 —— 照旧的「整个覆盖」写法会把 7 月大半个月的环境数据直接抹掉。
+    #
+    # 观测数据那边早就是「数据/ 下所有批次合并去重」，环境这边一直是覆盖，
+    # 属于同一个坑没填。现在对齐：把历次导出都留在 原始数据/环境/ 下，
+    # 每次全读一遍。时刻相同则**后读到的覆盖先读到的**（文件名排序靠后者优先），
+    # 所以补发、修正的数据放新文件里就能生效。
     src = Path(args.src)
     if not src.exists():
-        raise SystemExit("!! 找不到环境数据文件: %s" % src)
+        raise SystemExit("!! 找不到环境数据文件/目录: %s" % src)
+
+    if src.is_dir():
+        books = sorted(p for p in src.glob("*.xlsx") if not p.name.startswith("~$"))
+        if not books:
+            raise SystemExit("!! 目录里没有 xlsx: %s" % src)
+    else:
+        books = [src]
 
     import openpyxl
-    wb = openpyxl.load_workbook(src, read_only=True, data_only=True)
 
     col_of = {c: k for c, k, _, _, _ in VARS}
     merged = defaultdict(dict)      # 键名 -> {吸附时刻: 值}
     unknown, bad = set(), defaultdict(int)
 
-    print("读取 %s" % src.name)
-    for nm in wb.sheetnames:
-        ws = wb[nm]
-        it = ws.iter_rows(values_only=True)
-        try:
-            hdr = [str(c).strip() if c is not None else "" for c in next(it)]
-        except StopIteration:
-            continue
-        if "时间" not in hdr:
-            print("  sheet %r 没有「时间」列，跳过" % nm)
-            continue
-        i_ts = hdr.index("时间")
-
-        for name in hdr:
-            if name and name != "时间" and name not in col_of and name not in SKIP_COLS:
-                unknown.add(name)
-
-        n = 0
-        for r in it:
-            if not r or len(r) <= i_ts:
+    for book in books:
+        wb = openpyxl.load_workbook(book, read_only=True, data_only=True)
+        print("读取 %s" % book.name)
+        for nm in wb.sheetnames:
+            ws = wb[nm]
+            it = ws.iter_rows(values_only=True)
+            try:
+                hdr = [str(c).strip() if c is not None else "" for c in next(it)]
+            except StopIteration:
                 continue
-            d = parse_dt(r[i_ts])
-            if d is None:
+            if "时间" not in hdr:
+                print("  sheet %r 没有「时间」列，跳过" % nm)
                 continue
-            d = snap(d)
-            n += 1
-            for i, name in enumerate(hdr):
-                key = col_of.get(name)
-                if key is None or len(r) <= i or r[i] in (None, ""):
+            i_ts = hdr.index("时间")
+
+            for name in hdr:
+                if name and name != "时间" and name not in col_of and name not in SKIP_COLS:
+                    unknown.add(name)
+
+            n = 0
+            for r in it:
+                if not r or len(r) <= i_ts:
                     continue
-                try:
-                    v = float(r[i])
-                except (TypeError, ValueError):
+                d = parse_dt(r[i_ts])
+                if d is None:
                     continue
-                lo, hi = RANGES.get(key, (-1e9, 1e9))
-                if not (lo <= v <= hi):
-                    bad[key] += 1
-                    continue
-                merged[key][d] = v
-        print("  sheet %-8s %5d 行" % (nm, n))
-    wb.close()
+                d = snap(d)
+                n += 1
+                for i, name in enumerate(hdr):
+                    key = col_of.get(name)
+                    if key is None or len(r) <= i or r[i] in (None, ""):
+                        continue
+                    try:
+                        v = float(r[i])
+                    except (TypeError, ValueError):
+                        continue
+                    lo, hi = RANGES.get(key, (-1e9, 1e9))
+                    if not (lo <= v <= hi):
+                        bad[key] += 1
+                        continue
+                    merged[key][d] = v
+            print("  sheet %-8s %5d 行" % (nm, n))
+        wb.close()
 
     if unknown:
         print("\n  [提示] Excel 里有本脚本未收录的列: %s" % ", ".join(sorted(unknown)))
