@@ -340,7 +340,11 @@ with sync_playwright() as p:
     check("1-i18n-k. 英文下 rangeSelector 文案",
           "Zoom" in en_rs and "From" in en_rs and "1d" in en_rs, str(en_rs[:6]))
     en_ax = page.eval_on_selector_all(".highcharts-xaxis-labels text", "e=>e.slice(0,2).map(x=>x.textContent)")
-    check("1-i18n-l. 英文下 x 轴日期格式", "Jul" in "".join(en_ax), str(en_ax))
+    # 不锁定具体月份缩写（"Jul"）——默认视图是最近 7 天，数据往后延几天，
+    # 这几天就可能整段落在下一个月内，届时轴上只有 "Aug" 没有 "Jul"，
+    # 断言应验证的是「英文月份缩写格式」本身，不是某个具体月份。
+    check("1-i18n-l. 英文下 x 轴日期格式",
+          bool(re.search(r"[A-Z][a-z]{2}", "".join(en_ax))), str(en_ax))
     check("1-i18n-m. 切换语言后仍保留当前选中的树",
           page.evaluate("SiteChart.currentTree()") == page.evaluate("SiteChart.defaultTree"),
           "当前=%s 默认=%s" % (page.evaluate("SiteChart.currentTree()"),
