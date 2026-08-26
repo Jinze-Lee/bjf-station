@@ -48,7 +48,7 @@ var TREES = [
       species: 'Larix gmelinii var. principis-rupprechtii', speciesZh: '落叶松', commonName: 'Prince Rupprecht larch', wood: 'coniferous',
       circumference: 60.78, dbh: 19.34, lat: 39.9585288, lon: 115.4259710 },
     { id: 'DT2-MD1-1131', plot: 'DT2', probe: 'MD1', gateway: 1131,
-      species: 'Tilia mongolica', speciesZh: '蒙椴', commonName: 'Mongolian lime', wood: 'diffuse-porous',
+      species: 'Tilia mandshurica', speciesZh: '糠椴', commonName: 'Manchurian lime', wood: 'diffuse-porous',
       circumference: 77.03, dbh: 24.46, lat: 39.9585078, lon: 115.4260702 },
     { id: 'DT2-MD2-1249', plot: 'DT2', probe: 'MD2', gateway: 1249,
       species: 'Tilia mongolica', speciesZh: '蒙椴', commonName: 'Mongolian lime', wood: 'diffuse-porous',

@@ -74,7 +74,7 @@ zh: {
     /* --- 监测树木 --- */
     'trees.h3':             '监测树木',
     'trees.p1':             '目前共有二十棵树木安装了传感器，分布在三个样点。每个样点由一台 <span class="sp">dataTaker</span> 数采（DT1–DT3）负责采集，每棵树配有编号探头，经网关回传。三个样点合计覆盖约 280 × 290 米的坡面。',
-    'trees.p2':             '这二十棵树涵盖八个树种，也覆盖了本站可见的全部木材解剖类型——环孔材、半环孔材、散孔材与针叶材。木材解剖构造是控制液流日变化曲线形态、以及导水边材深度的最主要因素。',
+    'trees.p2':             '这二十棵树涵盖九个树种，也覆盖了本站可见的全部木材解剖类型——环孔材、半环孔材、散孔材与针叶材。木材解剖构造是控制液流日变化曲线形态、以及导水边材深度的最主要因素。',
     'trees.th.species':     '拉丁名',
     'trees.th.common':      '中文名',
     'trees.th.wood':        '木材解剖类型',
@@ -328,7 +328,7 @@ en: {
 
     'trees.h3':             'Monitored Trees',
     'trees.p1':             'Twenty trees are currently instrumented, distributed across three plots. Each plot is served by its own <span class="sp">dataTaker</span> logger (DT1–DT3), and every tree carries a numbered probe reporting through a gateway. The three plots together span roughly 280 × 290 m of hillside.',
-    'trees.p2':             'The instrumented trees cover eight species and the full range of wood anatomies found at the site — ring-porous, semi-ring-porous, diffuse-porous and coniferous. Wood anatomy is the single strongest control on the shape of the daily sap flow curve and on how deep the conducting sapwood extends, so this spread is deliberate.',
+    'trees.p2':             'The instrumented trees cover nine species and the full range of wood anatomies found at the site — ring-porous, semi-ring-porous, diffuse-porous and coniferous. Wood anatomy is the single strongest control on the shape of the daily sap flow curve and on how deep the conducting sapwood extends, so this spread is deliberate.',
     'trees.th.species':     'Species',
     'trees.th.common':      'Common name',
     'trees.th.wood':        'Wood anatomy',

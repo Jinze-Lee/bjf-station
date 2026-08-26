@@ -28,6 +28,10 @@
     DT3-SY1-1152   周长 115.34 -> 80.49, 胸径 36.89 -> 25.55
 更正后 20 棵全部满足 胸径 ≈ 周长/π（最大偏差 2.5%）。
 
+    DT2-MD1-1131   物种 蒙椴(Tilia mongolica) -> 糠椴(Tilia mandshurica)，2026-08-26 核实更正。
+                   这棵树改动后，同步改 工具/预处理raw数据.py 的 CHANNEL_MAP（LYS 通道 3）——
+                   那边会拿这个中文名和 trees.js 的 speciesZh 逐条比对，两处不一致会直接报错终止。
+
 复现：python 生成树木数据.py
 """
 
@@ -58,6 +62,7 @@ SPECIES = {
     "黑桦":   ("Betula dahurica",                         "Dahurian birch",      "diffuse-porous"),
     "辽东栎": ("Quercus wutaishanica",                    "Liaodong oak",        "ring-porous"),
     "蒙椴":   ("Tilia mongolica",                         "Mongolian lime",      "diffuse-porous"),
+    "糠椴":   ("Tilia mandshurica",                       "Manchurian lime",     "diffuse-porous"),
     "五角枫": ("Acer pictum subsp. mono",                 "Painted maple",       "diffuse-porous"),
     "胡桃楸": ("Juglans mandshurica",                     "Manchurian walnut",   "semi-ring-porous"),
     "落叶松": ("Larix gmelinii var. principis-rupprechtii", "Prince Rupprecht larch", "coniferous"),
@@ -78,7 +83,7 @@ TREES = [
     ("DT2-HTQ2-1157", 4426102.30256, 365511.77931, "DT2", "HTQ2", 1157, "胡桃楸", 90.03, 28.64),
     ("DT2-LYS1-1144", 4426106.20663, 365510.68498, "DT2", "LYS1", 1144, "落叶松", 48.15, 15.27),
     ("DT2-LYS2-1151", 4426110.96033, 365503.31696, "DT2", "LYS2", 1151, "落叶松", 60.78, 19.34),
-    ("DT2-MD1-1131",  4426108.48086, 365511.74804, "DT2", "MD1",  1131, "蒙椴",   77.03, 24.46),
+    ("DT2-MD1-1131",  4426108.48086, 365511.74804, "DT2", "MD1",  1131, "糠椴",   77.03, 24.46),
     ("DT2-MD2-1249",  4426117.40439, 365497.32599, "DT2", "MD2",  1249, "蒙椴",   74.82, 23.73),
     ("DT2-WJF1-1141", 4426101.65979, 365517.06643, "DT2", "WJF1", 1141, "五角枫", 43.12, 13.72),
 

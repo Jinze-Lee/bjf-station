@@ -801,8 +801,13 @@ with sync_playwright() as p:
           page.evaluate("DataSource.isSample()") == (src == "sample"))
 
     # ---------------- 内容区块 ----------------
-    check("4k. 树种汇总表 8 行",
-          page.eval_on_selector_all("#speciesTableBody tr", "e=>e.length") == 8)
+    # 行数不写死 —— 应等于 TREES 里的物种去重数，写死的数字在物种表更正后
+    # （比如 2026-08-26 那次 1131 号树蒙椴/糠椴的更正）会红，且看不出为什么。
+    true_species = page.evaluate("new Set(TREES.map(t => t.species)).size")
+    check("4k. 树种汇总表行数与 TREES 物种数一致",
+          page.eval_on_selector_all("#speciesTableBody tr", "e=>e.length") == true_species,
+          "表格=%s TREES=%s" % (page.eval_on_selector_all("#speciesTableBody tr", "e=>e.length"),
+                                true_species))
     check("4l. 样点卡片 3 张",
           page.eval_on_selector_all(".plot-card", "e=>e.length") == 3)
     # 这条只管**本站自己的**图片（images/ 下的照片、logo、二维码）。
