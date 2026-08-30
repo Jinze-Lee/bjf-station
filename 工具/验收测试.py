@@ -56,8 +56,13 @@ with sync_playwright() as p:
 
     # 时区若配错，昼夜节律会整体平移。用平均日变化的峰值时刻来验，
     # 而不是单点最大值——液流曲线是平台状的，单点最大值会被噪声带偏。
+    # 聚合全站 20 棵树，不只看当前默认那一棵——
+    # 实测踩过坑：单株在公开的 7 天窗口里只要撞上一个阴天（全站蒸腾同步走低，
+    # 光照实测从 17.6 klux 跌到 11 klux 以内），一周里就这一天，平均就能被拖歪、
+    # 峰值时刻推迟到 15 时，而这是真实天气现象不是数据错误。20 棵树一起平均，
+    # 一天的天气异常影响就被摊薄了，检验的目的（管线时区对不对）也不需要单株视角。
     diel = page.evaluate("""() => {
-        const pts = OBS_FD[SiteChart.currentTree()];
+        const pts = Object.values(OBS_FD).flat();
         const sum = new Array(24).fill(0), cnt = new Array(24).fill(0);
         for (const [ms, v] of pts) {
             const h = new Date(ms + 480 * 60000).getUTCHours();
