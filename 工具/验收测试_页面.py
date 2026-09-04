@@ -1378,6 +1378,116 @@ with sync_playwright() as p:
     check("10k. 换过主题后图表仍可切树",
           page.evaluate("SiteChart.currentTree()") == "DT2-LYS1-1144")
 
+    # ---------------- 悬浮视频入口 ----------------
+    # 用户明确要求（2026-09-04 AskUserQuestion 确认）：气泡每次进页面都出现，
+    # 不能只在首次访问弹一下，也不能自己淡出——只能靠手动关掉或点开视频带走。
+    vw = page.evaluate("""() => {
+        const root = document.querySelector('.video-widget');
+        const bubble = document.querySelector('.video-bubble');
+        const fab = document.querySelector('.video-fab');
+        return {
+            hasRoot: !!root, hasBubble: !!bubble, hasFab: !!fab,
+            bubbleHidden: bubble ? bubble.classList.contains('is-hidden') : null,
+            hasApi: !!(window.VideoWidget && window.VideoWidget.open && window.VideoWidget.close)
+        };
+    }""")
+    check("12a. 悬浮视频容器/气泡/按钮都已挂载", vw["hasRoot"] and vw["hasBubble"] and vw["hasFab"], str(vw))
+    check("12b. 首次进页面气泡就是打开状态（非首次访问门控）", vw["bubbleHidden"] is False, str(vw))
+    check("12c. 对外句柄 window.VideoWidget 就位", vw["hasApi"])
+
+    page.wait_for_timeout(6000)
+    check("12d. 等待 6 秒气泡仍不自动消失",
+          page.evaluate("!document.querySelector('.video-bubble').classList.contains('is-hidden')"))
+
+    # 点悬浮球（不拖动）应该打开视频弹窗，且此刻才插入 iframe.src（懒加载）
+    page.click(".video-fab")
+    page.wait_for_timeout(400)
+    modal_state = page.evaluate("""() => {
+        const m = document.querySelector('.video-modal');
+        const f = document.querySelector('.vm-iframe');
+        return { open: m && m.classList.contains('is-open'),
+                 src: f ? f.src : null,
+                 locked: document.body.classList.contains('vm-lock'),
+                 bubbleHidden: document.querySelector('.video-bubble').classList.contains('is-hidden') };
+    }""")
+    check("12e. 点击悬浮球打开视频弹窗", modal_state["open"], str(modal_state))
+    check("12f. 打开瞬间才插入正确的 B 站外链播放器地址",
+          bool(modal_state["src"]) and "player.bilibili.com" in modal_state["src"]
+          and "BV1qttV6zEQX" in modal_state["src"], str(modal_state["src"]))
+    check("12g. 弹窗打开时锁滚动（body.vm-lock）", modal_state["locked"])
+    check("12h. 打开视频顺带关掉提示气泡", modal_state["bubbleHidden"])
+
+    # Esc 关闭；关闭必须清空 iframe.src，否则音频会在弹窗关掉后继续在后台放
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(300)
+    after_esc = page.evaluate("""() => ({
+        open: document.querySelector('.video-modal').classList.contains('is-open'),
+        src: document.querySelector('.vm-iframe').src,
+        locked: document.body.classList.contains('vm-lock')
+    })""")
+    check("12i. Esc 关闭视频弹窗", not after_esc["open"], str(after_esc))
+    check("12j. 关闭后 iframe.src 被清空（停止后台播放）", after_esc["src"] in ("", "about:blank"), repr(after_esc["src"]))
+    check("12k. 关闭后解除滚动锁", not after_esc["locked"])
+
+    # 再开一次，这回点蒙层空白处关闭（跟灯箱的约定一致：点面板本身不关）
+    page.click(".video-fab")
+    page.wait_for_timeout(300)
+    page.mouse.click(20, 20)   # 蒙层左上角，明显在 .vm-panel 之外
+    page.wait_for_timeout(300)
+    check("12l. 点蒙层空白处关闭视频弹窗",
+          not page.evaluate("document.querySelector('.video-modal').classList.contains('is-open')"))
+
+    # 手动关闭气泡（点叉）：不应该顺带打开视频
+    page.reload(wait_until="networkidle")
+    page.wait_for_timeout(1500)
+    page.click(".vw-close")
+    page.wait_for_timeout(200)
+    after_close_x = page.evaluate("""() => ({
+        bubbleHidden: document.querySelector('.video-bubble').classList.contains('is-hidden'),
+        modalOpen: document.querySelector('.video-modal') ?
+            document.querySelector('.video-modal').classList.contains('is-open') : false
+    })""")
+    check("12m. 点气泡的关闭叉只关气泡、不打开视频", after_close_x["bubbleHidden"] and not after_close_x["modalOpen"], str(after_close_x))
+
+    # 刷新后气泡要重新出现——这是跟"只在首次访问出现一次"最本质的区别
+    page.reload(wait_until="networkidle")
+    page.wait_for_timeout(1500)
+    check("12n. 刷新后气泡重新出现（每次都出现，非一次性）",
+          page.evaluate("!document.querySelector('.video-bubble').classList.contains('is-hidden')"))
+
+    # 拖动悬浮球：位置要真的变化，并且持久化到 localStorage，刷新后还在原地
+    fab_box = page.eval_on_selector(".video-fab", "el => { const r = el.getBoundingClientRect(); return {x: r.x + r.width/2, y: r.y + r.height/2}; }")
+    before_pos = page.evaluate("() => { const r = document.querySelector('.video-widget').getBoundingClientRect(); return {right: innerWidth - r.right, bottom: innerHeight - r.bottom}; }")
+    page.mouse.move(fab_box["x"], fab_box["y"])
+    page.mouse.down()
+    page.mouse.move(fab_box["x"] - 160, fab_box["y"] - 120, steps=12)
+    page.mouse.up()
+    page.wait_for_timeout(300)
+    after_pos = page.evaluate("() => { const r = document.querySelector('.video-widget').getBoundingClientRect(); return {right: innerWidth - r.right, bottom: innerHeight - r.bottom}; }")
+    moved = abs(after_pos["right"] - before_pos["right"]) > 50 or abs(after_pos["bottom"] - before_pos["bottom"]) > 50
+    check("12o. 拖动悬浮球真的改变了容器位置（非误判为点击）", moved,
+          "拖前 %s / 拖后 %s" % (before_pos, after_pos))
+    saved_pos = page.evaluate("JSON.parse(localStorage.getItem('bfers-video-widget-pos') || 'null')")
+    check("12p. 拖动结果写入 localStorage", saved_pos is not None, str(saved_pos))
+
+    page.reload(wait_until="networkidle")
+    page.wait_for_timeout(1500)
+    restored_pos = page.evaluate("() => { const r = document.querySelector('.video-widget').getBoundingClientRect(); return {right: innerWidth - r.right, bottom: innerHeight - r.bottom}; }")
+    check("12q. 刷新后悬浮球停在上次拖到的位置",
+          abs(restored_pos["right"] - after_pos["right"]) <= 2 and abs(restored_pos["bottom"] - after_pos["bottom"]) <= 2,
+          "拖后 %s / 刷新后 %s" % (after_pos, restored_pos))
+
+    # 语言切换：气泡文案要跟着变，不能中英文混着
+    page.evaluate("Lang.set('zh')")
+    page.wait_for_timeout(200)
+    zh_text = page.evaluate("document.querySelector('.vw-text').textContent")
+    page.evaluate("Lang.set('en')")
+    page.wait_for_timeout(200)
+    en_text = page.evaluate("document.querySelector('.vw-text').textContent")
+    check("12r. 切换语言后气泡文案跟随变化", en_text != zh_text, "%r -> %r" % (zh_text, en_text))
+    page.evaluate("Lang.set('zh')")
+    page.wait_for_timeout(200)
+
     # ---------------- 手机端 ----------------
     # 用真实设备描述符（含触摸、dpr、UA），不是简单改视口宽度 ——
     # 触摸设备上 Highcharts 走的是另一套指针逻辑。

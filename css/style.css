@@ -2586,3 +2586,196 @@ footer {
     .ub-text  { font-size: 12px; }
     .fc-item b { font-size: 14px; }
 }
+
+/* ==========================================================================
+   悬浮视频入口 —— 安装与组网演示（B站外链播放器）
+   见 js/video-widget.js 顶部说明：气泡+按钮同属一个可拖动容器，
+   拖动只需要挪动 .video-widget 一处，气泡自然跟着走。
+   ========================================================================== */
+
+.video-widget {
+    position: fixed;
+    z-index: 950;                 /* 高于普通内容，低于灯箱(3000)/更新日志(3200) */
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    /* right/top 由 JS 按拖动结果写成具体 px 行内样式（同步执行，中间不会
+       有渲染帧），这里只是没跑 JS 时的兜底值：贴右下角，留出比常规悬浮球
+       更大的底部间距——原因见 js/video-widget.js 里 defaultTop() 的注释
+       （贴最底/贴顶/居中都各自撞上了图表或地图的控件，实测出来的）。 */
+    right: 24px;
+    bottom: 96px;
+}
+
+.video-widget.vw-enter { animation: vw-fade-in .35s ease-out; }
+
+@keyframes vw-fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* --- 悬浮球本身 ---------------------------------------------------------- */
+
+.video-fab {
+    flex: 0 0 auto;
+    width: 56px;
+    height: 56px;
+    border: none;
+    border-radius: 50%;
+    background: var(--heading);
+    box-shadow: var(--shadow-md);
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 只给非位置属性做过渡——position(right/bottom)本身绝不能加 transition，
+       拖动时每一帧都在改 right/bottom，加了过渡手感会发飘、跟不上指针。 */
+    transition: box-shadow .15s, transform .1s;
+    touch-action: none;   /* 交给 Pointer Events 自己处理，不要被浏览器的
+                              原生触屏滚动/缩放手势抢走事件 */
+}
+
+.video-fab:hover { box-shadow: var(--shadow-lg); }
+.video-fab:active,
+.video-widget.is-dragging .video-fab { cursor: grabbing; transform: scale(0.96); }
+.video-fab:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* 播放三角形——纯 CSS 画的，跟站上其它图标（主题切换）同一个做法，
+   不额外引入图标库或图片。 */
+.vw-play {
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 9px 0 9px 15px;
+    border-color: transparent transparent transparent var(--on-accent);
+    margin-left: 3px;   /* 三角形视觉重心偏左，微调居中 */
+}
+
+/* --- 提示气泡 ------------------------------------------------------------ */
+
+.video-bubble {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 8px 9px 14px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--rule-strong);
+    box-shadow: var(--shadow-sm);
+    white-space: nowrap;
+}
+
+.video-bubble.is-hidden { display: none; }
+
+.vw-text {
+    color: var(--text);
+    font-size: 12.5px;
+    letter-spacing: .3px;
+    cursor: pointer;
+}
+
+.vw-text:hover { color: var(--heading); }
+.vw-text:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+.vw-close {
+    /* 视觉上是个小叉号，但点击区必须 >= 36px（跟全站触屏目标尺寸的约定一致，
+       见验收测试 11h）——用 flex 居中图标，而不是靠 line-height 凑数。 */
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-faint);
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.vw-close:hover { background: var(--rule); color: var(--text); }
+.vw-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* 手机上气泡文字可能比按钮还宽，窄屏收窄字号和内边距，
+   容器本身已经是 flex，会自动跟着缩，这里只调细节观感 */
+@media (max-width: 480px) {
+    .video-bubble { padding: 8px 6px 8px 11px; }
+    .vw-text { font-size: 11.5px; }
+    .video-fab { width: 50px; height: 50px; }
+}
+
+/* --- 视频弹窗 ------------------------------------------------------------ */
+
+body.vm-lock { overflow: hidden; }
+
+.video-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;               /* 跟图集灯箱同一档——两者不会同时打开 */
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    background: rgba(28, 25, 21, .95);
+}
+
+.video-modal.is-open { display: flex; }
+
+.vm-panel {
+    position: relative;
+    width: min(720px, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.vm-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.vm-iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.vm-caption {
+    margin: 0;
+    color: #ddd7cd;
+    font-size: 12.5px;
+    line-height: 1.6;
+    text-align: center;
+}
+
+.vm-close {
+    position: absolute;
+    top: -44px;
+    right: 0;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 3px;
+    color: #e8e2d8;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+
+.vm-close:hover { background: rgba(255, 255, 255, .18); border-color: #cdbfa8; }
+.vm-close:focus-visible { outline: 2px solid #cdbfa8; outline-offset: 2px; }
+
+@media (max-width: 700px) {
+    .video-modal { padding: 56px 14px 24px; }
+    .vm-close { top: -40px; width: 36px; height: 36px; font-size: 22px; }
+}
