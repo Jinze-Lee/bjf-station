@@ -134,6 +134,52 @@ def apply_clock_fix(dt, site_key):
             return dt + offset
     return dt
 
+
+# ---------------------------------------------------------------------------
+# 配置 2c：径向变化仪的已知阶跃跳变（人工核实、人工订正）
+#
+# 2026-09-22 用户在网页上发现 DT2-MD2-1249（1249 号网关）的径向变化曲线有
+# 一处突兀的跃升，回查原始 Excel 发现该网关的原始读数（diams，mm）里有
+# 三处相邻两点之间的阶跃：
+#   2026-08-30 12:01:04   3.1838 ->  11.3661 （+8.1823 mm）
+#   2026-08-30 12:31:03  11.3661 ->  14.2171 （+2.8510 mm，紧跟在上一条后面，
+#                                              第一轮订正时漏看，前两处修完后
+#                                              在图上仍然很扎眼，用户确认后补上）
+#   2026-09-05 17:01:03  14.4801 -> 174.5193 （+160.0392 mm）
+# 跳变前后各自都是平滑、速率合理的缓慢生长曲线，唯独这几个瞬间不合理
+# （30 分钟内不可能真长这么多）——是传感器读数阶跃（松动/复位/换传感器
+# 之类），不是真实生长。径向变化仪的绝对读数本身没有物理意义（零点由
+# 安装位置决定，chart.js 只按首点归零后显示"变化量"），所以订正方式是把
+# 跳变点开始的所有后续读数统一减去跳变量，让曲线在该处平滑接上——
+# 不是删除那段时间的数据（用户要求"删掉跳变，前后接上"，不是留空)。
+#
+# 三处跳变要累加：每一处之后的点都要扣掉它之前（含自己）全部跳变量的和。
+# ---------------------------------------------------------------------------
+STEM_RADIUS_JUMP_FIXES = [
+    # (树号, 跳变生效起始时间戳(含), 要减掉的偏移量(μm), 备注)
+    ("DT2-MD2-1249",
+     datetime(2026, 8, 30, 12, 1, 4, tzinfo=CST),
+     8182.3,
+     "原始读数 08-30 12:01 阶跃 +8.1823mm，用户 09-22 核实为传感器异常"),
+    ("DT2-MD2-1249",
+     datetime(2026, 8, 30, 12, 31, 3, tzinfo=CST),
+     2851.0,
+     "原始读数 08-30 12:31 阶跃 +2.8510mm，紧跟上一条之后，第一轮漏看，用户 09-22 二次确认补订正"),
+    ("DT2-MD2-1249",
+     datetime(2026, 9, 5, 17, 1, 3, tzinfo=CST),
+     160039.2,
+     "原始读数 09-05 17:01 阶跃 +160.0392mm，用户 09-22 反馈图上的突跳即此处"),
+]
+
+
+def apply_radius_jump_fix(tid, dt, v_um):
+    """把已知的径向读数阶跃累加订正掉；不涉及的树/时间原样返回。"""
+    for tree, start, offset_um, _note in STEM_RADIUS_JUMP_FIXES:
+        if tid == tree and dt >= start:
+            v_um -= offset_um
+    return v_um
+
+
 # ---------------------------------------------------------------------------
 # Granier 换算
 #   K  = (ΔT₀ − ΔT) / ΔT
@@ -469,6 +515,7 @@ def read_dendro(path, gw2tree, log):
     import openpyxl
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     series, skipped, nodiams = {}, [], []
+    fixed_pts = 0
 
     for name in wb.sheetnames:
         sheet_gw = None
@@ -491,6 +538,7 @@ def read_dendro(path, gw2tree, log):
             nodiams.append(name)
             continue
         i_ts, i_d = hdr.index("ts"), hdr.index("diams")
+        tid = gw2tree[sheet_gw]
 
         pts = []
         for r in it:
@@ -503,15 +551,21 @@ def read_dendro(path, gw2tree, log):
                 mm = float(r[i_d])
             except (TypeError, ValueError):
                 continue
-            pts.append((t, mm * 1000.0))          # mm -> μm
+            um = mm * 1000.0                       # mm -> μm
+            fixed_um = apply_radius_jump_fix(tid, t, um)
+            if fixed_um != um:
+                fixed_pts += 1
+            pts.append((t, fixed_um))
         if pts:
-            series[gw2tree[sheet_gw]] = snap_series(pts)
+            series[tid] = snap_series(pts)
 
     wb.close()
     if skipped:
         log.append("  跳过与监测树木无关的 sheet: %s" % ", ".join(skipped))
     if nodiams:
         log.append("  跳过无 diams 列的 sheet: %s" % ", ".join(nodiams))
+    if fixed_pts:
+        log.append("  按 STEM_RADIUS_JUMP_FIXES 订正了阶跃跳变之后的 %d 个点" % fixed_pts)
 
     log.append("")
     log.append("  %-16s %10s %10s %10s %7s" % ("树号", "读数最小", "读数最大", "全期变幅", "点数"))
