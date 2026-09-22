@@ -97,7 +97,16 @@ def snap(dt):
 
 
 def obs_window():
-    """从 js/observations.js 读树木数据的时间窗，环境数据要裁到同一区间。
+    """从 原始数据/全量/observations.js 读**全量**观测数据的时间窗，
+    环境数据要裁到同一区间（不是裁到公开 7 天窗口——这一步生成的是全量
+    环境归档，供 工具/发布数据.py 之后再切公开窗口用）。
+
+    2026-09-22 实测发现这里原来指向 js/observations.js，一直找不到 span
+    字段（那是纯数据文件，没有这个字段）；改过一次误指到 js/obs-meta.js，
+    但那也是**公开 7 天窗口**的元信息，不是全量范围，一样是错的源。
+    真正带着全量范围的 span，是 导入观测数据.py 写在
+    原始数据/全量/observations.js 开头的 OBS_META（发布之前生成，
+    此时还没有"公开窗口"这回事）。
 
     OBS_META 是用 json.dumps(indent=2) 写出来的，所以键**带引号**、数组**跨行**：
         "span": [
@@ -107,7 +116,7 @@ def obs_window():
     正则两点都要照顾到（\"?span\"? 和 \\s* 跨换行），否则匹配不上却又不报错，
     只会安静地跳过裁剪 —— 表现为两张图表时间轴对不齐。
     """
-    p = BASE / "js" / "observations.js"
+    p = BASE / "原始数据" / "全量" / "observations.js"
     if not p.exists():
         return None
     m = re.search(r'"?span"?\s*:\s*\[\s*(\d+)\s*,\s*(\d+)\s*\]',

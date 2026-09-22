@@ -95,6 +95,46 @@ CHANNEL_MAP = {
 SHEET_SKIP = set()          # 留空 = 自动按 trees.js 的网关号筛，多余的 sheet 会被报告并跳过
 
 # ---------------------------------------------------------------------------
+# 配置 2b：已知的时钟错误区间（人工核实，人工订正）
+#
+# 2026-09-21 快到 14:00 时，落叶松样地（LYS）数采的不间断电源断电，
+# 13:30 那次记录直接丢失（原始文件里那个格点确实不存在，不用补）。
+# 电源恢复后数采的时钟本身没跟着走完断电的这段时间，之后每次记录都比
+# 真实时间**恒定慢 30 分钟**（不是还在继续漂移）。用户 09-22 到现场时
+# 数采自己显示的时间是 15:55，此刻真实时间其实是 16:25，当场把时钟往前
+# 拨了 30 分钟校正。
+#
+# 换算成"数采自己写的（错误）时间戳"区间：从错误开始的那次记录
+# （标着 14:00，其实是真实时间 14:30 补记的那次）起，到标着 15:55
+# 为止（数采按半点记录，实际不会真有 15:55 这一行，15:55 只是校正那一刻
+# 的读数，写成区间右端点是为了让下面这行 <= 15:55 之后就不再生效——
+# 校正之后数采自己记的时间已经准了，不能再往后加）——闭区间里的每一条
+# 都要 +30 分钟才是真实时间。
+#
+# 该样地当次导出（20260922LYS.csv）最后一行刚好停在 15:00（真实 15:30，
+# 校正动作发生之前），所以这份文件里从 14:00 起没有一行是准的。以后
+# 每次重新导出这份数采的历史记录都会带着这同一段，所以在这里配置一次
+# 一直生效，比手改原始 CSV 更安全——原始文件保持逐字节不动，这里的改动
+# 集中、可追溯、随时可撤销。
+# ---------------------------------------------------------------------------
+CLOCK_OFFSET_FIXES = [
+    # (样地前缀, 起始时间戳(含,错误值), 结束时间戳(含,错误值), 要加的偏移量, 备注)
+    ("LYS",
+     datetime(2026, 9, 21, 14, 0, 0, tzinfo=CST),
+     datetime(2026, 9, 22, 15, 55, 0, tzinfo=CST),
+     timedelta(minutes=30),
+     "UPS 断电致时钟卡表，09-22 现场校正（数采显示15:55时真实时间16:25）"),
+]
+
+
+def apply_clock_fix(dt, site_key):
+    """把已知的时钟错误区间订正成真实时间；不在任何区间内的时间戳原样返回。"""
+    for prefix, start, end, offset, _note in CLOCK_OFFSET_FIXES:
+        if site_key == prefix and start <= dt <= end:
+            return dt + offset
+    return dt
+
+# ---------------------------------------------------------------------------
 # Granier 换算
 #   K  = (ΔT₀ − ΔT) / ΔT
 #   Fd = 0.0119 · K^1.231     [cm³ cm⁻² s⁻¹]  ×10000 → [g m⁻² s⁻¹]
@@ -323,7 +363,7 @@ def read_datataker(path, site_key, valid_ids, log):
 
     mapping = CHANNEL_MAP.get(site_key, {})
     series = defaultdict(list)          # tree_id -> [(dt, ΔT)]
-    skipped_ch, bad_pts = [], 0
+    skipped_ch, bad_pts, fixed_pts = [], 0, 0
 
     for ch in sorted(ch_col):
         if ch not in mapping:
@@ -335,6 +375,10 @@ def read_datataker(path, site_key, valid_ids, log):
             dt = parse_dt(r[0])
             if dt is None:
                 continue
+            fixed_dt = apply_clock_fix(dt, site_key)
+            if fixed_dt != dt:
+                fixed_pts += 1
+            dt = fixed_dt
             raw = r[col].strip()
             if raw in ("", "NaN", "nan"):
                 continue
@@ -353,6 +397,9 @@ def read_datataker(path, site_key, valid_ids, log):
     if bad_pts:
         log.append("  %s: 剔除超出 ΔT 量程 [%g, %g] 的点 %d 个（未接或故障通道）"
                    % (path.name, DT_MIN, DT_MAX, bad_pts))
+    if fixed_pts:
+        log.append("  %s: 按 CLOCK_OFFSET_FIXES 订正了时钟错误区间内的 %d 个点"
+                   % (path.name, fixed_pts))
     return series
 
 
