@@ -252,6 +252,70 @@
             loggerMarkers.push({ key: key, marker: m });
         });
 
+        /* --- RTK 实测点：主树（默认开）与样方内树（默认关） ---
+         *
+         * 数据来自 G:\\Forlijinze 的 RTK shapefile，见 js/survey-points.js。
+         * 与上面那 20 棵「被监测树」用不同样式区分：这里是空心的中性色小圈，
+         * 且留在默认 overlayPane（z400），低于被监测树用的 treePane（z650），
+         * 所以永远不会盖住被监测树。颜色走 CSS 变量（--survey-main/--survey-tree），
+         * 这样切主题时跟着变。
+         */
+        var surveyMainMarkers = [];
+        var surveyTreeMarkers = [];
+
+        function surveyColor(kind) {
+            var name = (kind === 'main') ? '--survey-main' : '--survey-tree';
+            try {
+                var v = getComputedStyle(document.documentElement)
+                            .getPropertyValue(name).trim();
+                if (v) { return v; }
+            } catch (e) { /* 落到回退色 */ }
+            return (kind === 'main') ? '#7f9db9' : '#b08d63';
+        }
+
+        /* H 并非所有点都有（主树多数为 0），所以 >0 才显示数值，否则给破折号 */
+        function hText(h) {
+            return (h && h > 0) ? (h.toFixed(1) + ' m') : '\u2014';
+        }
+
+        function surveyPopup(pt, kind) {
+            var rows = '';
+            if (pt.species) {
+                rows += '<tr><th>' + t('map.species') + '</th><td>' + esc(pt.species) + '</td></tr>';
+            }
+            rows += '<tr><th>' + t('map.coords') + '</th><td>' +
+                    pt.lat.toFixed(6) + '&deg;N, ' + pt.lon.toFixed(6) + '&deg;E</td></tr>' +
+                    '<tr><th>' + t('map.hRtk') + '</th><td>' + hText(pt.h) + '</td></tr>';
+            return '<div class="tree-popup survey-popup">' +
+                '<strong>' + esc(pt.name) + '</strong>' +
+                '<div class="cn">' + t(kind === 'main' ? 'map.surveyMain' : 'map.surveyTree') + '</div>' +
+                '<table>' + rows + '</table></div>';
+        }
+
+        var surveyMainLayer = L.layerGroup();
+        var surveyTreeLayer = L.layerGroup();
+
+        function addSurvey(arr, kind, layer, store, radius, weight) {
+            arr.forEach(function (pt) {
+                var c = surveyColor(kind);
+                var m = L.circleMarker(place(pt.lat, pt.lon), {
+                    radius: radius, weight: weight,
+                    color: c, fillColor: c,
+                    fillOpacity: (kind === 'main' ? 0.18 : 0.32)
+                });
+                m.bindPopup(surveyPopup(pt, kind));
+                m.bindTooltip(pt.name, { direction: 'top', offset: [0, -6] });
+                m.addTo(layer);
+                store.push({ pt: pt, marker: m, kind: kind });
+            });
+        }
+
+        if (typeof SURVEY !== 'undefined') {
+            addSurvey(SURVEY.maintrees || [], 'main', surveyMainLayer, surveyMainMarkers, 4, 1.5);
+            addSurvey(SURVEY.plotTrees || [], 'tree', surveyTreeLayer, surveyTreeMarkers, 3, 1);
+            surveyMainLayer.addTo(map);      /* 主树默认开；样方内树默认关 */
+        }
+
         /* --- 切换底图时按目标坐标系重新摆放所有标记 --- */
         function replaceAll() {
             TREES.forEach(function (t) {
@@ -259,6 +323,12 @@
             });
             loggerMarkers.forEach(function (o) {
                 o.marker.setLatLng(place(PLOTS[o.key].lat, PLOTS[o.key].lon));
+            });
+            surveyMainMarkers.forEach(function (o) {
+                o.marker.setLatLng(place(o.pt.lat, o.pt.lon));
+            });
+            surveyTreeMarkers.forEach(function (o) {
+                o.marker.setLatLng(place(o.pt.lat, o.pt.lon));
             });
             map.panTo(place(center[0], center[1]));
         }
@@ -286,6 +356,10 @@
                          key + ' &mdash; ' + plotName(key)] = groups[key];
             });
             overlays[t('map.loggers')] = loggerLayer;
+            if (typeof SURVEY !== 'undefined') {
+                overlays[t('map.surveyMainLayer')] = surveyMainLayer;
+                overlays[t('map.surveyTreeLayer')] = surveyTreeLayer;
+            }
 
             /* 窄屏折叠成一个图标，点开才展开。
              *
@@ -339,6 +413,12 @@
                 loggerMarkers.forEach(function (o) {
                     o.marker.setPopupContent(loggerPopup(o.key));
                 });
+                surveyMainMarkers.forEach(function (o) {
+                    o.marker.setPopupContent(surveyPopup(o.pt, 'main'));
+                });
+                surveyTreeMarkers.forEach(function (o) {
+                    o.marker.setPopupContent(surveyPopup(o.pt, 'tree'));
+                });
             });
         }
 
@@ -356,6 +436,14 @@
             loggerMarkers.forEach(function (o) {
                 o.marker.setIcon(loggerIcon(o.key));
             });
+            function recolor(arr, kind) {
+                var c = surveyColor(kind);
+                arr.forEach(function (o) {
+                    o.marker.setStyle({ color: c, fillColor: c });
+                });
+            }
+            recolor(surveyMainMarkers, 'main');
+            recolor(surveyTreeMarkers, 'tree');
             /* 图层控件的色点写在标签 HTML 里，只能整个重建 */
             buildLayerControl();
         }
@@ -400,7 +488,11 @@
             focusTree: focusTree,
             isGcj: function () { return useGcj; },
             plotColor: plotColor,
-            repaintTheme: repaintTheme
+            repaintTheme: repaintTheme,
+            surveyMainMarkers: surveyMainMarkers,
+            surveyTreeMarkers: surveyTreeMarkers,
+            surveyMainLayer: surveyMainLayer,
+            surveyTreeLayer: surveyTreeLayer
         };
     }
 

@@ -271,6 +271,12 @@ zh: {
     'map.satellite':        '高德影像',
     'map.street':           '高德地图',
     'map.osm':              'OpenStreetMap',
+    'map.surveyMain':       '实测主树',
+    'map.surveyTree':       '样方内树',
+    'map.surveyMainLayer':  '实测主树 (RTK)',
+    'map.surveyTreeLayer':  '样方内树 (RTK)',
+    'map.species':          '树种',
+    'map.hRtk':             'H (RTK)',
 
     /* --- 木材解剖类型 --- */
     'wood.ring-porous':      '环孔材',
@@ -516,6 +522,12 @@ en: {
     'map.satellite':        'AMap Satellite',
     'map.street':           'AMap Street',
     'map.osm':              'OpenStreetMap',
+    'map.surveyMain':       'Surveyed main tree',
+    'map.surveyTree':       'Quadrat tree',
+    'map.surveyMainLayer':  'Surveyed main trees (RTK)',
+    'map.surveyTreeLayer':  'Quadrat trees (RTK)',
+    'map.species':          'Species',
+    'map.hRtk':             'H (RTK)',
 
     'wood.ring-porous':      'ring-porous',
     'wood.semi-ring-porous': 'semi-ring-porous',

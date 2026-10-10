@@ -483,6 +483,47 @@ with sync_playwright() as p:
     check("3j. 弹窗标题在白底上是深色（可读）",
           popup_ok is not None and popup_ok < 250, f"RGB 之和={popup_ok}")
 
+    # ---------------- RTK 实测点图层 ----------------
+    check("3k. survey-points.js 已加载",
+          page.evaluate("typeof SURVEY !== 'undefined' && Array.isArray(SURVEY.maintrees)"))
+    check("3l. 实测主树默认显示在地图上",
+          page.evaluate("SiteMap.map.hasLayer(SiteMap.surveyMainLayer)"))
+    check("3m. 样方内树默认不显示",
+          page.evaluate("!SiteMap.map.hasLayer(SiteMap.surveyTreeLayer)"))
+    n_main = page.evaluate("SiteMap.surveyMainMarkers.length")
+    n_tree = page.evaluate("SiteMap.surveyTreeMarkers.length")
+    check("3n. 主树标记数与数据一致",
+          n_main == page.evaluate("SURVEY.maintrees.length") and n_main > 0, "n=%s" % n_main)
+    check("3o. 样方内树标记数与数据一致",
+          n_tree == page.evaluate("SURVEY.plotTrees.length") and n_tree > 0, "n=%s" % n_tree)
+
+    # 实测点同样要过 WGS-84 -> GCJ-02（与 4a 同理）
+    sv = page.evaluate("""() => {
+        const o = SiteMap.surveyMainMarkers[0];
+        const p = o.marker.getLatLng();
+        return [o.pt.lat, o.pt.lon, p.lat, p.lng];
+    }""")
+    dsv = haversine([sv[0], sv[1]], [sv[2], sv[3]])
+    check("3p. 实测点在高德底图上已做 GCJ-02 偏移",
+          50 < dsv < 1000, f"偏移 {dsv:.0f} m")
+
+    # 样方层勾上后应真的渲染出标记（不只是数据在内存里）
+    page.evaluate("SiteMap.map.addLayer(SiteMap.surveyTreeLayer)")
+    page.wait_for_timeout(400)
+    tree_drawn = page.evaluate(
+        "SiteMap.surveyTreeMarkers.filter(o => o.marker._path).length")
+    check("3q. 勾选样方层后标记渲染出来",
+          tree_drawn == n_tree, f"渲染 {tree_drawn}/{n_tree}")
+    page.evaluate("SiteMap.map.removeLayer(SiteMap.surveyTreeLayer)")
+
+    # 实测点弹窗含 H (RTK) 与坐标
+    page.evaluate("SiteMap.surveyMainMarkers[0].marker.openPopup()")
+    page.wait_for_timeout(400)
+    svp = page.evaluate(
+        "(document.querySelector('.leaflet-popup-content')||{}).textContent||''")
+    check("3r. 实测点弹窗含 H (RTK) 与坐标",
+          "H (RTK)" in svp and "\u00b0N" in svp, repr(svp[:60]))
+
     # ---------------- WGS-84 -> GCJ-02 坐标转换 ----------------
     check("4-pre. 地图句柄 window.SiteMap 已暴露",
           page.evaluate("!!(window.SiteMap && window.SiteMap.markers)"))
