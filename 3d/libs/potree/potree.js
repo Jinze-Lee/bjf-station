@@ -66399,7 +66399,6 @@ void main() {
 				}else {
 					let response = await fetch(urlOctree, {
 						headers: {
-							'content-type': 'multipart/byteranges',
 							'Range': `bytes=${first}-${last}`,
 						},
 					});
@@ -66596,7 +66595,6 @@ void main() {
 
 			let response = await fetch(hierarchyPath, {
 				headers: {
-					'content-type': 'multipart/byteranges',
 					'Range': `bytes=${first}-${last}`,
 				},
 			});
