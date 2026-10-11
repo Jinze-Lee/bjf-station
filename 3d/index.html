@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+	<title>北京森林站 · 三维林相</title>
+
+	<link rel="stylesheet" type="text/css" href="./libs/potree/potree.css">
+	<link rel="stylesheet" type="text/css" href="./libs/jquery-ui/jquery-ui.min.css">
+	<link rel="stylesheet" type="text/css" href="./libs/openlayers3/ol.css">
+	<link rel="stylesheet" type="text/css" href="./libs/spectrum/spectrum.css">
+	<link rel="stylesheet" type="text/css" href="./libs/jstree/themes/mixed/style.css">
+	<link rel="stylesheet" type="text/css" href="../css/leaflet.css">
+
+	<style>
+		html, body { margin: 0; height: 100%; overflow: hidden; background: #14170f;
+			font-family: Raleway, "Segoe UI", "Microsoft YaHei", sans-serif; }
+		#potree_render_area { background: radial-gradient(circle at 50% 40%, #232a1c 0%, #12150e 70%, #0b0d08 100%); }
+
+		/* 顶部标题栏 */
+		#topbar {
+			position: fixed; left: 0; right: 0; top: 0; z-index: 2000;
+			display: flex; align-items: center; gap: 14px;
+			padding: 10px 16px; pointer-events: none;
+			background: linear-gradient(180deg, rgba(10,13,8,.82), rgba(10,13,8,0));
+		}
+		#topbar .brand { color: #d7d2c6; font-size: 15px; font-weight: 700; letter-spacing: .3px;
+			text-shadow: 0 1px 4px rgba(0,0,0,.7); pointer-events: auto; }
+		#topbar .brand small { display:block; font-weight: 400; opacity: .72; font-size: 11px; letter-spacing: 0; }
+		#topbar .spacer { flex: 1; }
+		#topbar a.btn, #topbar button.btn {
+			pointer-events: auto; cursor: pointer; text-decoration: none;
+			color: #e7e3d8; background: rgba(38,42,30,.72); border: 1px solid rgba(160,180,120,.35);
+			border-radius: 6px; padding: 7px 13px; font-size: 13px; font-family: inherit;
+		}
+		#topbar a.btn:hover, #topbar button.btn:hover { background: rgba(58,72,40,.85); color: #fff; }
+
+		/* 左下角高德小地图 */
+		#inset { position: fixed; left: 12px; bottom: 12px; z-index: 1900;
+			width: 240px; height: 190px; border: 1px solid rgba(160,180,120,.35);
+			border-radius: 8px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,.55);
+			background: #191c14; }
+		#inset .cap { position: absolute; left: 0; right: 0; top: 0; z-index: 500;
+			font-size: 10.5px; color: #cfcabd; background: rgba(10,13,8,.62); padding: 3px 7px; }
+		#insetMap { position: absolute; inset: 0; }
+		@media (max-width: 640px) { #inset { width: 150px; height: 120px; } }
+
+		/* 三维场景里的浮动标签 */
+		#labels { position: fixed; inset: 0; z-index: 1500; pointer-events: none; overflow: hidden; }
+		.lbl { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; cursor: pointer;
+			white-space: nowrap; font-size: 11px; color: #fff; padding: 2px 6px; border-radius: 10px;
+			background: rgba(28,33,22,.78); border: 1px solid rgba(160,180,120,.5);
+			box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+		.lbl.tree { background: rgba(40,74,40,.86); }
+		.lbl.log { background: rgba(122,66,28,.9); font-weight: 700; }
+		.lbl:hover { background: #6ca14a; border-color: #fff; }
+		.lbl.hidden { display: none; }
+		#tip { position: fixed; z-index: 1600; pointer-events: none; max-width: 240px; display: none;
+			background: rgba(20,24,15,.95); color: #ddd7cd; border: 1px solid rgba(160,180,120,.4);
+			border-radius: 6px; padding: 7px 10px; font-size: 12px; line-height: 1.5; }
+
+		.potree_container { position: absolute; width: 100%; height: 100%; left: 0; top: 0; }
+		/* 把 Potree 的菜单按钮下移，避免和顶部标题重叠 */
+		#potree_sidebar_container { top: 46px !important; }
+	</style>
+</head>
+
+<body>
+	<script src="./libs/jquery/jquery-3.1.1.min.js"></script>
+	<script src="./libs/spectrum/spectrum.js"></script>
+	<script src="./libs/jquery-ui/jquery-ui.min.js"></script>
+	<script src="./libs/other/BinaryHeap.js"></script>
+	<script src="./libs/tween/tween.min.js"></script>
+	<script src="./libs/d3/d3.js"></script>
+	<script src="./libs/proj4/proj4.js"></script>
+	<script src="./libs/openlayers3/ol.js"></script>
+	<script src="./libs/i18next/i18next.js"></script>
+	<script src="./libs/jstree/jstree.js"></script>
+	<script src="./libs/potree/potree.js"></script>
+	<script src="./libs/plasio/js/laslaz.js"></script>
+	<script src="../js/leaflet.js"></script>
+
+	<div id="topbar">
+		<div class="brand"><span id="bt">北京森林生态系统定位研究站 · 三维林相</span>
+			<small id="bs">无人机 LiDAR 彩色点云 · 高德卫星底图 · 20 棵监测树 / 3 台数采</small></div>
+		<div class="spacer"></div>
+		<button class="btn" id="langBtn">EN</button>
+		<a class="btn" href="../index.html" id="backBtn">← 返回网站</a>
+	</div>
+
+	<div id="inset">
+		<div class="cap">样地位置 · AMap Satellite</div>
+		<div id="insetMap"></div>
+	</div>
+
+	<div id="labels"></div>
+	<div id="tip"></div>
+
+	<div class="potree_container">
+		<div id="potree_render_area"></div>
+		<div id="potree_sidebar_container"></div>
+	</div>
+
+	<script>
+		var I18N = {
+			zh: { title: '北京森林生态系统定位研究站 · 三维林相',
+			      sub: '无人机 LiDAR 彩色点云 · 高德卫星底图 · 20 棵监测树 / 3 台数采',
+			      back: '← 返回网站', lang: 'EN', mapcap: '样地位置 · AMap Satellite' },
+			en: { title: 'Beijing Forest Ecosystem Research Station · 3D Canopy',
+			      sub: 'UAV LiDAR colour point cloud · AMap satellite · 20 monitored trees / 3 loggers',
+			      back: '← Back to site', lang: '中文', mapcap: 'Plot location · AMap Satellite' }
+		};
+		var LANG = localStorage.getItem('bfers-3d-lang') || 'zh';
+		function applyLang() {
+			var d = I18N[LANG];
+			document.documentElement.lang = LANG;
+			document.getElementById('bt').textContent = d.title;
+			document.getElementById('bs').textContent = d.sub;
+			document.getElementById('backBtn').textContent = d.back;
+			document.getElementById('langBtn').textContent = d.lang;
+			document.querySelector('#inset .cap').textContent = d.mapcap;
+		}
+		applyLang();
+		document.getElementById('langBtn').addEventListener('click', function () {
+			LANG = (LANG === 'zh') ? 'en' : 'zh';
+			localStorage.setItem('bfers-3d-lang', LANG); applyLang();
+		});
+
+		// WGS-84 -> GCJ-02（供高德小地图对齐用）
+		var A = 6378245.0, EE = 0.00669342162296594323;
+		function outOfChina(lat, lon){ return (lon<72.004||lon>137.8347||lat<0.8293||lat>55.8271); }
+		function tLat(x,y){var r=-100+2*x+3*y+0.2*y*y+0.1*x*y+0.2*Math.sqrt(Math.abs(x));
+			r+=(20*Math.sin(6*x*Math.PI)+20*Math.sin(2*x*Math.PI))*2/3;
+			r+=(20*Math.sin(y*Math.PI)+40*Math.sin(y/3*Math.PI))*2/3;
+			r+=(160*Math.sin(y/12*Math.PI)+320*Math.sin(y*Math.PI/30))*2/3;return r;}
+		function tLon(x,y){var r=300+x+2*y+0.1*x*x+0.1*x*y+0.1*Math.sqrt(Math.abs(x));
+			r+=(20*Math.sin(6*x*Math.PI)+20*Math.sin(2*x*Math.PI))*2/3;
+			r+=(20*Math.sin(x*Math.PI)+40*Math.sin(x/3*Math.PI))*2/3;
+			r+=(150*Math.sin(x/12*Math.PI)+300*Math.sin(x/30*Math.PI))*2/3;return r;}
+		function gcj(lat,lon){ if(outOfChina(lat,lon)) return [lat,lon];
+			var dLat=tLat(lon-105,lat-35), dLon=tLon(lon-105,lat-35);
+			var rad=lat/180*Math.PI, m=Math.sin(rad); m=1-EE*m*m; var sm=Math.sqrt(m);
+			dLat=(dLat*180)/((A*(1-EE))/(m*sm)*Math.PI);
+			dLon=(dLon*180)/(A/sm*Math.cos(rad)*Math.PI);
+			return [lat+dLat, lon+dLon]; }
+
+		proj4.defs('EPSG:32650', '+proj=utm +zone=50 +datum=WGS84 +units=m +no_defs');
+		function utmToWgs84(E,N){ var p=proj4('EPSG:32650','EPSG:4326',[E,N]); return [p[1],p[0]]; } // [lat,lon]
+
+		var viewer = new Potree.Viewer(document.getElementById('potree_render_area'));
+		viewer.setEDLEnabled(true);
+		viewer.setFOV(60);
+		viewer.setPointBudget(3_000_000);
+		viewer.setDescription('');
+
+		viewer.loadGUI(function () {
+			viewer.setLanguage('en');
+			// 隐藏 Potree 自带的 OSM 地图面板（改用左下角高德小地图）
+			try { $('#menu_map').hide(); $('#menu_map').next().hide(); } catch (e) {}
+			// 保持侧栏收起（只留菜单按钮），把画面让给点云
+			if (viewer.sidebar && viewer.sidebar.isOpen) { viewer.toggleSidebar(); }
+		});
+
+		var INSET = null, ANNOT = null;
+
+		function buildInset(bbox) {
+			var map = L.map('insetMap', { zoomControl: false, attributionControl: false, scrollWheelZoom: false });
+			L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}',
+				{ subdomains: '1234', maxNativeZoom: 18, maxZoom: 21 }).addTo(map);
+			// 点云范围（EPSG:32650 -> WGS84 -> GCJ）
+			var corners = [[bbox.min[0],bbox.min[1]],[bbox.max[0],bbox.min[1]],
+			               [bbox.max[0],bbox.max[1]],[bbox.min[0],bbox.max[1]]];
+			var g = corners.map(function (c) { var w = utmToWgs84(c[0], c[1]); return gcj(w[0], w[1]); });
+			L.polygon(g, { color: '#f98422', weight: 1.5, fill: false, dashArray: '4 3' }).addTo(map);
+			// 树木
+			if (ANNOT && ANNOT.trees) ANNOT.trees.forEach(function (t) {
+				var w = utmToWgs84(t.E, t.N); var p = gcj(w[0], w[1]);
+				L.circleMarker(p, { radius: 3.5, color: '#0d0f0b', weight: 1,
+					fillColor: '#6ca14a', fillOpacity: .95 }).addTo(map).bindTooltip(t.id + ' · ' + (t.speciesZh || ''));
+			});
+			if (ANNOT && ANNOT.plots) ANNOT.plots.forEach(function (pl) {
+				var w = utmToWgs84(pl.E, pl.N); var p = gcj(w[0], w[1]);
+				L.marker(p, { icon: L.divIcon({ className: 'lg3d', html: '<b>' + pl.nameZh + '</b>',
+					iconSize: [30, 14], iconAnchor: [15, 7] }) }).addTo(map);
+			});
+			map.fitBounds(L.latLngBounds(g), { padding: [12, 12] });
+			INSET = map;
+		}
+
+		// 世界坐标(CRS) -> 屏幕像素（用相机矩阵，不需要 THREE 全局）
+		function m4mul(a, b) { var o = new Array(16);
+			for (var c = 0; c < 4; c++) for (var r = 0; r < 4; r++)
+				o[c*4+r] = a[r]*b[c*4] + a[4+r]*b[c*4+1] + a[8+r]*b[c*4+2] + a[12+r]*b[c*4+3];
+			return o; }
+		function m4apply(m, v) { return [
+			m[0]*v[0]+m[4]*v[1]+m[8]*v[2]+m[12]*v[3],
+			m[1]*v[0]+m[5]*v[1]+m[9]*v[2]+m[13]*v[3],
+			m[2]*v[0]+m[6]*v[1]+m[10]*v[2]+m[14]*v[3],
+			m[3]*v[0]+m[7]*v[1]+m[11]*v[2]+m[15]*v[3]]; }
+
+		var LABELS = [], tip = null;
+		function addLabel(x, y, z, text, cls, info) {
+			var el = document.createElement('div');
+			el.className = 'lbl ' + cls; el.textContent = text;
+			el.addEventListener('mousemove', function (ev) { showTip(ev, info); });
+			el.addEventListener('mouseleave', hideTip);
+			document.getElementById('labels').appendChild(el);
+			LABELS.push({ el: el, p: [x, y, z], cls: cls });
+		}
+		function showTip(ev, html) { tip = tip || document.getElementById('tip');
+			tip.innerHTML = html; tip.style.display = 'block';
+			tip.style.left = Math.min(ev.clientX + 12, innerWidth - 250) + 'px';
+			tip.style.top = (ev.clientY + 12) + 'px'; }
+		function hideTip() { if (tip) tip.style.display = 'none'; }
+
+		function project() {
+			var pc = viewer.scene.pointclouds[0], cam = viewer.scene.getActiveCamera();
+			if (!pc || !cam || !LABELS.length) return;
+			var V = cam.matrixWorldInverse.elements, P = cam.projectionMatrix.elements;
+			var W = innerWidth, H = innerHeight;
+			var me = cam.matrixWorld.elements, cx = me[12], cy = me[13], cz = me[14];
+			var TREE_DIST = 500;   // 相机离树超过这个距离就不显示单树标签（远景只留 3 个样点）
+			var cand = [];
+			for (var i = 0; i < LABELS.length; i++) {
+				var L = LABELS[i];
+				var dx = L.p[0] - cx, dy = L.p[1] - cy, dz = L.p[2] - cz;
+				var dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+				if (L.cls === 'tree' && dist > TREE_DIST) { L.el.classList.add('hidden'); continue; }
+				var clip = m4apply(P, m4apply(V, [L.p[0], L.p[1], L.p[2], 1]));
+				if (clip[3] <= 0.0001) { L.el.classList.add('hidden'); continue; }
+				var sx = (clip[0] / clip[3] * 0.5 + 0.5) * W;
+				var sy = (-clip[1] / clip[3] * 0.5 + 0.5) * H;
+				if (sx < -80 || sx > W + 80 || sy < -30 || sy > H + 30) { L.el.classList.add('hidden'); continue; }
+				cand.push({ L: L, sx: sx, sy: sy, dist: dist, prio: (L.cls === 'log' ? 0 : 1) });
+			}
+			// 屏幕空间去重叠：样点标签优先，树标签按距离近的优先，重叠的隐藏
+			cand.sort(function (a, b) { return a.prio - b.prio || a.dist - b.dist; });
+			var placed = [];
+			for (var k = 0; k < cand.length; k++) {
+				var c = cand[k], ok = true;
+				for (var j = 0; j < placed.length; j++) {
+					if (Math.abs(c.sx - placed[j].sx) < 74 && Math.abs(c.sy - placed[j].sy) < 16) { ok = false; break; }
+				}
+				if (!ok) { c.L.el.classList.add('hidden'); continue; }
+				c.L.el.classList.remove('hidden');
+				c.L.el.style.left = c.sx + 'px'; c.L.el.style.top = c.sy + 'px';
+				placed.push(c);
+			}
+		}
+
+		Potree.loadPointCloud('./pointclouds/index/metadata.json', 'index', function (e) {
+			var pointcloud = e.pointcloud, scene = viewer.scene;
+			var m = pointcloud.material;
+			m.size = 1; m.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+			m.shape = Potree.PointShape.SQUARE; m.activeAttributeName = 'rgba';
+			scene.addPointCloud(pointcloud);
+			viewer.fitToScreen();
+
+			var bbox = pointcloud.pcoGeometry.boundingBox;
+			var box = { min: [bbox.min.x, bbox.min.y, bbox.min.z], max: [bbox.max.x, bbox.max.y, bbox.max.z] };
+
+			fetch('annotations.json').then(function (r) { return r.json(); }).then(function (data) {
+				ANNOT = data;
+				(data.trees || []).forEach(function (t) {
+					if (t.Z == null) return;
+					var info = '<b>' + t.id + '</b><br>' + (t.speciesZh || '') + ' ' + (t.species || '') +
+						'<br>' + (LANG === 'zh' ? '胸径' : 'DBH') + ' ' + t.dbh + ' cm';
+					addLabel(t.E, t.N, t.Z + 2, t.id, 'tree', info);
+				});
+				(data.plots || []).forEach(function (p) {
+					if (p.Z == null) return;
+					addLabel(p.E, p.N, p.Z + 30, p.nameZh, 'log',
+						'<b>' + p.nameZh + '</b><br>' + (LANG === 'zh' ? '样点数采' : 'Plot logger'));
+				});
+				buildInset(box);
+			});
+
+			(function loop() { project(); requestAnimationFrame(loop); })();
+		});
+	</script>
+	<style>
+		.lg3d b { display:inline-block; background:#c2703d; color:#fff; font-size:10px; font-weight:700;
+			padding:1px 4px; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,.6); }
+	</style>
+</body>
+</html>

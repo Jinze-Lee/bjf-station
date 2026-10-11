@@ -1953,6 +1953,15 @@ body[data-lang="zh"] .net-detail { font-size: 13.5px; font-weight: 400; }
 /* 图层控件里的样点色点 */
 .leaflet-control-layers-overlays label { color: var(--text); }
 
+/* 地图区块里的「查看三维林相」入口 */
+.view3d-link { margin: 14px 0 0; }
+.view3d-link a {
+    display: inline-block; padding: 8px 16px; border-radius: 6px;
+    background: var(--surface); border: 1px solid var(--heading);
+    color: var(--heading); text-decoration: none; font-size: 14px;
+}
+.view3d-link a:hover { background: var(--heading); color: var(--bg); }
+
 .map-error {
     height: 680px;
     display: flex;

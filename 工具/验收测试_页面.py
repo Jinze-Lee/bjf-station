@@ -400,6 +400,10 @@ with sync_playwright() as p:
     check("3d. 3 台数采有标记", page.eval_on_selector_all(".logger-icon", "e=>e.length") == 3)
     check("3e. 图层切换控件存在", page.query_selector(".leaflet-control-layers") is not None)
     check("3f. 比例尺存在", page.query_selector(".leaflet-control-scale") is not None)
+    v3 = page.query_selector(".view3d-link a")
+    check("3f2. 地图区块有「查看三维林相」入口",
+          v3 is not None and "3d/" in (v3.get_attribute("href") or "") and
+          len(v3.inner_text().strip()) > 0)
 
     # 标记按数采分三色
     colors = page.evaluate("""() => {

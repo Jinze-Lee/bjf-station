@@ -149,6 +149,7 @@ zh: {
     /* --- 树木位置 --- */
     'location.h3':          '树木位置',
     'location.p':           '下图显示全部二十棵监测树木与三台数采。标记按样点着色——<span class="key dt1">DT1</span> <span class="key dt2">DT2</span> <span class="key dt3">DT3</span>。点击任意树木可查看其详细信息，并可通过弹窗内的按钮把该树的观测数据载入下方图表。右上角图层控件可切换底图，或隐藏某个样点。在地图上先点击一下，即可用鼠标滚轮缩放。',
+    'location.view3d':      '查看三维林相（无人机 LiDAR 彩色点云）→',
 
     /* --- 树木数据 --- */
     'treedata.h3':          '树木数据',
@@ -411,6 +412,7 @@ en: {
 
     'location.h3':          'Tree Location',
     'location.p':           'The map below shows all twenty monitored trees and the three data loggers. Markers are coloured by plot — <span class="key dt1">DT1</span> <span class="key dt2">DT2</span> <span class="key dt3">DT3</span>. Click any tree to see its details, and use the button in the popup to load that tree’s measurements into the chart below. Use the layer control in the upper right to switch base maps or to hide a plot. Click the map before scrolling to enable zooming with the mouse wheel.',
+    'location.view3d':      'View the 3D canopy (UAV LiDAR colour point cloud) →',
 
     'treedata.h3':          'Tree data',
     'treedata.p':           'The dynamic chart below displays sap flux density and radial change for the selected tree. Using the ‘zoom’ buttons it is possible to select a different time range. A specific time range can also be defined. Furthermore data ranges can be selected by simple clicking and dragging your cursor along the chart horizontally.',

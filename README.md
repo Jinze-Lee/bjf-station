@@ -82,6 +82,7 @@ E:\网页制作\
 │   ├── 生成树木数据.py          # 投影坐标换算 + 数据自检 -> trees.js
 │   ├── 生成示例数据.py          # 20 棵树示例数据（固定随机种子，可复现）
 │   ├── 生成实测点数据.py        # RTK shapefile -> js/survey-points.js（含清洗）
+│   ├── 生成三维点云.py          # LiDAR LAS 体素抽稀 -> 三维页点云（见 3d/）
 │   ├── 准备图片.py              # 图片压缩与改名 -> images/
 │   ├── 校验观测数据.py          # 上传前自检（报行号）
 │   ├── 导入观测数据.py          # 数据/*.csv -> js/observations.js
@@ -96,6 +97,7 @@ E:\网页制作\
 │   ├── 怎么上传数据.md          # ← 三步操作手册
 │   ├── 怎么发布上线.md          # ← 部署到 GitHub Pages
 │   └── 设计文档_treewatch复刻.md
+├── 3d/                         # 三维林相（Potree 点云查看器，独立页）
 ├── _版本备份/                   # v1–v15 历史快照（本地保留，.gitignore 排除）
 ├── 原始数据/                    # 仪器原始导出（本地保留，.gitignore 排除）
 └── README.md
@@ -292,7 +294,7 @@ HTML 里只有标记，文字由 i18n 注入：
 
 ## 已实现的交互功能
 
-全部经 Playwright 驱动真实 Chrome 自动化验收：**图表 37/37 + 页面 300/300 = 337 项**，控制台零报错。
+全部经 Playwright 驱动真实 Chrome 自动化验收：**图表 37/37 + 页面 301/301 = 338 项**，控制台零报错。
 
 **图表**
 
@@ -394,6 +396,21 @@ circle 圆心画在 `(0,0)`，而 SVG 的 `transform-origin` 默认就是用户�
 
 ---
 
+## 三维林相（`3d/`）
+
+地图区块里的「查看三维林相」按钮打开 `3d/` —— 一个独立的 **Potree** 三维点云查看器。
+
+- 数据：`G:\Forlijinze` 的无人机 LiDAR 彩色点云（8.19 亿点，28 GB，EPSG:32650），
+  经 `工具/生成三维点云.py` 体素抽稀（0.55 m，保留真彩）到 **877 万点**，
+  再用 **PotreeConverter 2.1.1**（BROTLI 压缩）转成 Potree 八叉树（LOD 流式加载）。
+- 体积：整页 121 MB，`octree.bin` 73.5 MB（**控制在 GitHub 单文件 100 MB 以内**）。
+- 页面：深色森林风格、高德卫星**小地图**（左下，用 Leaflet 自己实现，正确处理 GCJ-02 偏移）、
+  20 棵监测树 + 3 台数采的**浮动标签**（按相机距离 + 屏幕去重叠自动显隐）。
+- 全用开源库（Potree / PotreeConverter）+ 高德瓦片，**免费、不绑卡**。
+- ⚠️ 三维页体积较大，且需服务器支持 **HTTP Range**（GitHub Pages 支持；本地 `python -m http.server` 不支持，需 `RangeHTTPServer`）。
+
+---
+
 ## 换成自己的数据
 
 **不要手写 `js/observations.js`**，走脚本生成（见 `docs/怎么上传数据.md`）。它的结构是
@@ -445,7 +462,7 @@ python "E:\网页制作\工具\准备图片.py"
 pip install playwright                      # 首次
 python -m http.server 8765 --directory "E:\网页制作"   # 另开一个窗口
 python "E:\网页制作\工具\验收测试.py"        # 图表与数据管线 37 项
-python "E:\网页制作\工具\验收测试_页面.py"   # 页面/地图/中英文/示意图/双主题/环境面板 300 项
+python "E:\网页制作\工具\验收测试_页面.py"   # 页面/地图/中英文/示意图/双主题/环境面板 301 项
 ```
 测试用系统已装的 Chrome（`channel="chrome"`），不需要额外下载浏览器内核。
 改完内容后建议跑一遍，确认没改坏。
