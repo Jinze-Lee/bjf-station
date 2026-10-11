@@ -83,6 +83,7 @@ E:\网页制作\
 │   ├── 生成示例数据.py          # 20 棵树示例数据（固定随机种子，可复现）
 │   ├── 生成实测点数据.py        # RTK shapefile -> js/survey-points.js（含清洗）
 │   ├── 生成三维点云.py          # LiDAR LAS 体素抽稀 -> 三维页点云（见 3d/）
+│   ├── 生成三维标注.py          # trees.js + survey-points.js + DEM -> 3d/annotations.json
 │   ├── 准备图片.py              # 图片压缩与改名 -> images/
 │   ├── 校验观测数据.py          # 上传前自检（报行号）
 │   ├── 导入观测数据.py          # 数据/*.csv -> js/observations.js
@@ -404,8 +405,10 @@ circle 圆心画在 `(0,0)`，而 SVG 的 `transform-origin` 默认就是用户�
   经 `工具/生成三维点云.py` 体素抽稀（0.55 m，保留真彩）到 **877 万点**，
   再用 **PotreeConverter 2.1.1**（BROTLI 压缩）转成 Potree 八叉树（LOD 流式加载）。
 - 体积：整页 121 MB，`octree.bin` 73.5 MB（**控制在 GitHub 单文件 100 MB 以内**）。
-- 页面：深色森林风格、高德卫星**小地图**（左下，用 Leaflet 自己实现，正确处理 GCJ-02 偏移）、
-  20 棵监测树 + 3 台数采的**浮动标签**（按相机距离 + 屏幕去重叠自动显隐）。
+- 页面：深色森林风格、高德卫星**小地图**（左下，用 Leaflet 自己实现，正确处理 GCJ-02 偏移）。
+- 标注：20 棵监测树 + 3 台数采画成**浮动标签**（按相机距离 + 屏幕去重叠自动显隐）；
+  另把 RTK 实测点 **103 主树 + 318 样方内树**画成**画布圆点**（悬停显示名称，右下角有图例）。
+- 标注数据由 `工具/生成三维标注.py` 生成（WGS84 -> UTM50N，用 DEM 采样地面高程）。
 - 全用开源库（Potree / PotreeConverter）+ 高德瓦片，**免费、不绑卡**。
 - ⚠️ 三维页体积较大，且需服务器支持 **HTTP Range**（GitHub Pages 支持；本地 `python -m http.server` 不支持，需 `RangeHTTPServer`）。
 

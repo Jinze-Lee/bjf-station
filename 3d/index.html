@@ -59,6 +59,21 @@
 			background: rgba(20,24,15,.95); color: #ddd7cd; border: 1px solid rgba(160,180,120,.4);
 			border-radius: 6px; padding: 7px 10px; font-size: 12px; line-height: 1.5; }
 
+		/* 实测点（主树/样方内树）画布圆点 */
+		#dots { position: fixed; inset: 0; z-index: 1400; pointer-events: none; }
+
+		/* 图例 */
+		#legend3d { position: fixed; right: 12px; bottom: 12px; z-index: 1900;
+			background: rgba(20,24,15,.82); border: 1px solid rgba(160,180,120,.3);
+			border-radius: 6px; padding: 8px 11px; font-size: 11.5px; color: #d3cec1; line-height: 1.75; }
+		#legend3d i { display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+			margin-right: 6px; vertical-align: middle; }
+		#legend3d i.mon  { background: #6ca14a; }
+		#legend3d i.log  { background: #c2703d; }
+		#legend3d i.main { background: #8fb4d6; }
+		#legend3d i.tree { background: #d3a970; }
+		@media (max-width: 640px) { #legend3d { font-size: 10.5px; padding: 6px 8px; } }
+
 		.potree_container { position: absolute; width: 100%; height: 100%; left: 0; top: 0; }
 		/* 把 Potree 的菜单按钮下移，避免和顶部标题重叠 */
 		#potree_sidebar_container { top: 46px !important; }
@@ -95,6 +110,8 @@
 
 	<div id="labels"></div>
 	<div id="tip"></div>
+	<canvas id="dots"></canvas>
+	<div id="legend3d"></div>
 
 	<div class="potree_container">
 		<div id="potree_render_area"></div>
@@ -119,6 +136,17 @@
 			document.getElementById('backBtn').textContent = d.back;
 			document.getElementById('langBtn').textContent = d.lang;
 			document.querySelector('#inset .cap').textContent = d.mapcap;
+			renderLegend();
+		}
+		function renderLegend() {
+			var s = (LANG === 'zh');
+			var el = document.getElementById('legend3d');
+			if (!el) return;
+			el.innerHTML =
+				'<span><i class="mon"></i>' + (s ? '监测树' : 'Monitored') + ' <b>20</b></span><br>' +
+				'<span><i class="log"></i>' + (s ? '数采' : 'Loggers') + ' <b>3</b></span><br>' +
+				'<span><i class="main"></i>' + (s ? '实测主树 RTK' : 'Surveyed main (RTK)') + ' <b>' + MAIN_N + '</b></span><br>' +
+				'<span><i class="tree"></i>' + (s ? '样方内树 RTK' : 'Quadrat trees (RTK)') + ' <b>' + TREE_N + '</b></span>';
 		}
 		applyLang();
 		document.getElementById('langBtn').addEventListener('click', function () {
@@ -161,7 +189,7 @@
 			if (viewer.sidebar && viewer.sidebar.isOpen) { viewer.toggleSidebar(); }
 		});
 
-		var INSET = null, ANNOT = null;
+		var INSET = null, ANNOT = null, MAIN_N = 0, TREE_N = 0;
 
 		function buildInset(bbox) {
 			var map = L.map('insetMap', { zoomControl: false, attributionControl: false, scrollWheelZoom: false });
@@ -248,6 +276,64 @@
 			}
 		}
 
+		// --- 实测点画布圆点（主树/样方内树，比 DOM 标签高效） ---
+		var dotCanvas = document.getElementById('dots');
+		var dctx = dotCanvas.getContext('2d');
+		var DOTPTS = [], DOTSCREEN = [];
+		function sizeCanvas() {
+			dotCanvas.width = Math.round(innerWidth * devicePixelRatio);
+			dotCanvas.height = Math.round(innerHeight * devicePixelRatio);
+		}
+		sizeCanvas();
+		window.addEventListener('resize', sizeCanvas);
+
+		function drawDots() {
+			dctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+			dctx.clearRect(0, 0, innerWidth, innerHeight);
+			DOTSCREEN.length = 0;
+			var pc = viewer.scene.pointclouds[0], cam = viewer.scene.getActiveCamera();
+			if (!pc || !cam || !DOTPTS.length) return;
+			var V = cam.matrixWorldInverse.elements, P = cam.projectionMatrix.elements;
+			var W = innerWidth, H = innerHeight;
+			var me = cam.matrixWorld.elements, cx = me[12], cy = me[13], cz = me[14];
+			for (var i = 0; i < DOTPTS.length; i++) {
+				var p = DOTPTS[i];
+				var clip = m4apply(P, m4apply(V, [p.E, p.N, p.Z, 1]));
+				if (clip[3] <= 0.0001) continue;
+				var sx = (clip[0] / clip[3] * 0.5 + 0.5) * W;
+				var sy = (-clip[1] / clip[3] * 0.5 + 0.5) * H;
+				if (sx < -5 || sx > W + 5 || sy < -5 || sy > H + 5) continue;
+				var dx = p.E - cx, dy = p.N - cy, dz = p.Z - cz;
+				var d2 = dx * dx + dy * dy + dz * dz;
+				var r = d2 > 400 * 400 ? 2.4 : (d2 > 150 * 150 ? 3.0 : 4.2);
+				dctx.globalAlpha = 0.95;
+				dctx.fillStyle = (p.kind === 'main') ? '#8fb4d6' : '#d3a970';
+				dctx.beginPath(); dctx.arc(sx, sy, r, 0, 6.2832); dctx.fill();
+				dctx.lineWidth = 1; dctx.strokeStyle = 'rgba(10,13,8,.9)'; dctx.stroke();
+				DOTSCREEN.push({ x: sx, y: sy, name: p.name, kind: p.kind });
+			}
+			dctx.globalAlpha = 1;
+		}
+
+		// 悬停实测点显示名称
+		document.getElementById('potree_render_area').addEventListener('mousemove', function (ev) {
+			var best = null, bd = 144;   // 12px 内
+			for (var i = 0; i < DOTSCREEN.length; i++) {
+				var s = DOTSCREEN[i];
+				var dd = (s.x - ev.clientX) * (s.x - ev.clientX) + (s.y - ev.clientY) * (s.y - ev.clientY);
+				if (dd < bd) { bd = dd; best = s; }
+			}
+			if (best) {
+				tip = tip || document.getElementById('tip');
+				tip.innerHTML = '<b>' + best.name + '</b><br>' +
+					(best.kind === 'main' ? (LANG === 'zh' ? '实测主树 (RTK)' : 'Surveyed main tree (RTK)')
+					                      : (LANG === 'zh' ? '样方内树 (RTK)' : 'Quadrat tree (RTK)'));
+				tip.style.display = 'block';
+				tip.style.left = Math.min(ev.clientX + 12, innerWidth - 250) + 'px';
+				tip.style.top = (ev.clientY + 12) + 'px';
+			} else { hideTip(); }
+		});
+
 		Potree.loadPointCloud('./pointclouds/index/metadata.json', 'index', function (e) {
 			var pointcloud = e.pointcloud, scene = viewer.scene;
 			var m = pointcloud.material;
@@ -272,10 +358,19 @@
 					addLabel(p.E, p.N, p.Z + 30, p.nameZh, 'log',
 						'<b>' + p.nameZh + '</b><br>' + (LANG === 'zh' ? '样点数采' : 'Plot logger'));
 				});
+				(data.maintrees || []).forEach(function (m) {
+					if (m.Z != null) DOTPTS.push({ E: m.E, N: m.N, Z: m.Z, name: m.name, kind: 'main' });
+				});
+				(data.plotTrees || []).forEach(function (p) {
+					if (p.Z != null) DOTPTS.push({ E: p.E, N: p.N, Z: p.Z, name: p.name, kind: 'tree' });
+				});
+				MAIN_N = (data.maintrees || []).length;
+				TREE_N = (data.plotTrees || []).length;
+				renderLegend();
 				buildInset(box);
 			});
 
-			(function loop() { project(); requestAnimationFrame(loop); })();
+			(function loop() { project(); drawDots(); requestAnimationFrame(loop); })();
 		});
 	</script>
 	<style>
