@@ -145,7 +145,7 @@
 			el.innerHTML =
 				'<span><i class="mon"></i>' + (s ? '监测树' : 'Monitored') + ' <b>20</b></span><br>' +
 				'<span><i class="log"></i>' + (s ? '数采' : 'Loggers') + ' <b>3</b></span><br>' +
-				'<span><i class="main"></i>' + (s ? '实测主树 RTK' : 'Surveyed main (RTK)') + ' <b>' + MAIN_N + '</b></span><br>' +
+				'<span>\uD83C\uDF33 ' + (s ? '实测主树 RTK' : 'Surveyed main (RTK)') + ' <b>' + MAIN_N + '</b></span><br>' +
 				'<span><i class="tree"></i>' + (s ? '样方内树 RTK' : 'Quadrat trees (RTK)') + ' <b>' + TREE_N + '</b></span>';
 		}
 		applyLang();
@@ -280,6 +280,7 @@
 		var dotCanvas = document.getElementById('dots');
 		var dctx = dotCanvas.getContext('2d');
 		var DOTPTS = [], DOTSCREEN = [];
+		var LABEL_DIST = 260;   // 相机离点小于此距离才显示名称标签（避免远景拥挤）
 		function sizeCanvas() {
 			dotCanvas.width = Math.round(innerWidth * devicePixelRatio);
 			dotCanvas.height = Math.round(innerHeight * devicePixelRatio);
@@ -296,6 +297,7 @@
 			var V = cam.matrixWorldInverse.elements, P = cam.projectionMatrix.elements;
 			var W = innerWidth, H = innerHeight;
 			var me = cam.matrixWorld.elements, cx = me[12], cy = me[13], cz = me[14];
+			var texts = [];
 			for (var i = 0; i < DOTPTS.length; i++) {
 				var p = DOTPTS[i];
 				var clip = m4apply(P, m4apply(V, [p.E, p.N, p.Z, 1]));
@@ -305,14 +307,47 @@
 				if (sx < -5 || sx > W + 5 || sy < -5 || sy > H + 5) continue;
 				var dx = p.E - cx, dy = p.N - cy, dz = p.Z - cz;
 				var d2 = dx * dx + dy * dy + dz * dz;
-				var r = d2 > 400 * 400 ? 2.4 : (d2 > 150 * 150 ? 3.0 : 4.2);
-				dctx.globalAlpha = 0.95;
-				dctx.fillStyle = (p.kind === 'main') ? '#8fb4d6' : '#d3a970';
-				dctx.beginPath(); dctx.arc(sx, sy, r, 0, 6.2832); dctx.fill();
-				dctx.lineWidth = 1; dctx.strokeStyle = 'rgba(10,13,8,.9)'; dctx.stroke();
+
+				// 标记：主树用 🌳，样方内树用圆点
+				if (p.kind === 'main') {
+					var es = d2 > 400 * 400 ? 13 : (d2 > 150 * 150 ? 16 : 20);
+					dctx.font = es + 'px "Segoe UI Emoji","Noto Color Emoji",serif';
+					dctx.textAlign = 'center'; dctx.textBaseline = 'middle';
+					dctx.fillText('\uD83C\uDF33', sx, sy);
+				} else {
+					var r = d2 > 400 * 400 ? 1.7 : (d2 > 150 * 150 ? 2.2 : 3.2);
+					dctx.globalAlpha = 0.9;
+					dctx.fillStyle = '#d3a970';
+					dctx.beginPath(); dctx.arc(sx, sy, r, 0, 6.2832); dctx.fill();
+					dctx.lineWidth = 1; dctx.strokeStyle = 'rgba(10,13,8,.9)'; dctx.stroke();
+					dctx.globalAlpha = 1;
+				}
 				DOTSCREEN.push({ x: sx, y: sy, name: p.name, kind: p.kind });
+				if (d2 < LABEL_DIST * LABEL_DIST) texts.push({ sx: sx, sy: sy, d2: d2, name: p.name });
 			}
-			dctx.globalAlpha = 1;
+
+			// 放大后显示名称（近的优先，重叠的跳过）
+			if (texts.length) {
+				texts.sort(function (a, b) { return a.d2 - b.d2; });
+				dctx.font = '12px Raleway,"Microsoft YaHei",sans-serif';
+				dctx.textAlign = 'left'; dctx.textBaseline = 'middle';
+				var placed = [];
+				for (var k = 0; k < texts.length; k++) {
+					var t = texts[k], w = dctx.measureText(t.name).width + 8, h = 15;
+					var x = t.sx + 7, y = t.sy;
+					var ok = true;
+					for (var j = 0; j < placed.length; j++) {
+						if (Math.abs(x - placed[j].x) < (w + placed[j].w) / 2 &&
+							Math.abs(y - placed[j].y) < (h + placed[j].h) / 2) { ok = false; break; }
+					}
+					if (!ok) continue;
+					dctx.fillStyle = 'rgba(20,24,15,.78)';
+					dctx.fillRect(x - 4, y - h / 2, w, h);
+					dctx.fillStyle = '#e7e3d8';
+					dctx.fillText(t.name, x, y);
+					placed.push({ x: x, y: y, w: w, h: h });
+				}
+			}
 		}
 
 		// 悬停实测点显示名称
