@@ -207,11 +207,15 @@
 		});
 
 		// 相机「漫游」：在环绕（orbit）与第一人称自由飞行（fpControls）之间切换
+		var canvasEl = viewer.renderer.domElement;
+		canvasEl.setAttribute('tabindex', '0');   // 让画布可获得键盘焦点（Potree 的按键绑在画布上）
+		canvasEl.style.outline = 'none';
 		document.getElementById('roamBtn').addEventListener('click', function () {
 			ROAM = !ROAM;
 			if (ROAM && viewer.fpControls) {
 				try { viewer.setMoveSpeed(viewer.scene.view.radius / 40); } catch (e) {}
 				viewer.setControls(viewer.fpControls);
+				canvasEl.focus();                 // 直接获得焦点，无需再点画面
 			} else {
 				viewer.setControls(viewer.orbitControls);
 				ROAM = false;
