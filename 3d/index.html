@@ -74,6 +74,12 @@
 		#legend3d i.tree { background: #d3a970; }
 		@media (max-width: 640px) { #legend3d { font-size: 10.5px; padding: 6px 8px; } }
 
+		/* 漫游 */
+		#roamBtn.active { background: rgba(108,161,74,.9); color: #14170f; border-color: #6ca14a; }
+		#roamHint { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 1900;
+			display: none; background: rgba(20,24,15,.86); color: #d7d2c6;
+			border: 1px solid rgba(160,180,120,.35); border-radius: 6px; padding: 7px 14px; font-size: 12.5px; }
+
 		.potree_container { position: absolute; width: 100%; height: 100%; left: 0; top: 0; }
 		/* 把 Potree 的菜单按钮下移，避免和顶部标题重叠 */
 		#potree_sidebar_container { top: 46px !important; }
@@ -99,9 +105,11 @@
 		<div class="brand"><span id="bt">北京森林生态系统定位研究站 · 三维林相</span>
 			<small id="bs">无人机 LiDAR 彩色点云 · 高德卫星底图 · 20 棵监测树 / 3 台数采</small></div>
 		<div class="spacer"></div>
+		<button class="btn" id="roamBtn">漫游</button>
 		<button class="btn" id="langBtn">EN</button>
 		<a class="btn" href="../index.html" id="backBtn">← 返回网站</a>
 	</div>
+	<div id="roamHint"></div>
 
 	<div id="inset">
 		<div class="cap">样地位置 · AMap Satellite</div>
@@ -122,11 +130,16 @@
 		var I18N = {
 			zh: { title: '北京森林生态系统定位研究站 · 三维林相',
 			      sub: '无人机 LiDAR 彩色点云 · 高德卫星底图 · 20 棵监测树 / 3 台数采',
-			      back: '← 返回网站', lang: 'EN', mapcap: '样地位置 · AMap Satellite' },
+			      back: '← 返回网站', lang: 'EN', mapcap: '样地位置 · AMap Satellite',
+			      roam: '漫游', roamExit: '退出漫游',
+			      hintRoam: 'WASD / 方向键 移动　·　按住左键拖动环顾　·　滚轮调速' },
 			en: { title: 'Beijing Forest Ecosystem Research Station · 3D Canopy',
 			      sub: 'UAV LiDAR colour point cloud · AMap satellite · 20 monitored trees / 3 loggers',
-			      back: '← Back to site', lang: '中文', mapcap: 'Plot location · AMap Satellite' }
+			      back: '← Back to site', lang: '中文', mapcap: 'Plot location · AMap Satellite',
+			      roam: 'Roam', roamExit: 'Exit roam',
+			      hintRoam: 'WASD / arrows to move · drag to look around · scroll to adjust speed' }
 		};
+		var ROAM = false;
 		var LANG = localStorage.getItem('bfers-3d-lang') || 'zh';
 		function applyLang() {
 			var d = I18N[LANG];
@@ -136,6 +149,10 @@
 			document.getElementById('backBtn').textContent = d.back;
 			document.getElementById('langBtn').textContent = d.lang;
 			document.querySelector('#inset .cap').textContent = d.mapcap;
+			var rb = document.getElementById('roamBtn');
+			if (rb) rb.textContent = ROAM ? d.roamExit : d.roam;
+			var rh = document.getElementById('roamHint');
+			if (rh) rh.textContent = d.hintRoam;
 			renderLegend();
 		}
 		function renderLegend() {
@@ -187,6 +204,21 @@
 			try { $('#menu_map').hide(); $('#menu_map').next().hide(); } catch (e) {}
 			// 保持侧栏收起（只留菜单按钮），把画面让给点云
 			if (viewer.sidebar && viewer.sidebar.isOpen) { viewer.toggleSidebar(); }
+		});
+
+		// 相机「漫游」：在环绕（orbit）与第一人称自由飞行（fpControls）之间切换
+		document.getElementById('roamBtn').addEventListener('click', function () {
+			ROAM = !ROAM;
+			if (ROAM && viewer.fpControls) {
+				try { viewer.setMoveSpeed(viewer.scene.view.radius / 40); } catch (e) {}
+				viewer.setControls(viewer.fpControls);
+			} else {
+				viewer.setControls(viewer.orbitControls);
+				ROAM = false;
+			}
+			this.classList.toggle('active', ROAM);
+			document.getElementById('roamHint').style.display = ROAM ? 'block' : 'none';
+			this.textContent = I18N[LANG][ROAM ? 'roamExit' : 'roam'];
 		});
 
 		var INSET = null, ANNOT = null, MAIN_N = 0, TREE_N = 0;
