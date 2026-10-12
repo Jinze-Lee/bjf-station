@@ -377,15 +377,7 @@
 				if (p.kind === 'det') {
 					if (!DET_ON) continue;
 					var col = (SPECIES[p.sp] && SPECIES[p.sp].color) || '#888888';
-					if (p.ring && d2 < CROWN_DIST * CROWN_DIST) {
-						drawCrown(p.ring, V, P, col);        // 近处：填充整个树冠
-					} else {
-						var rd = d2 > 400 * 400 ? 1.4 : (d2 > 150 * 150 ? 2.1 : 3.0);
-						dctx.globalAlpha = 0.95;
-						dctx.fillStyle = col;
-						dctx.beginPath(); dctx.arc(sx, sy, rd, 0, 6.2832); dctx.fill();
-						dctx.globalAlpha = 1;
-					}
+					if (p.ring) { drawCrown(p.ring, V, P, col); }   // Voronoi 单元：整片填色
 					DOTSCREEN.push({ x: sx, y: sy, kind: 'det', sp: p.sp });
 					continue;
 				}
@@ -539,14 +531,16 @@
 				buildInset(box);
 			});
 
-			// 单木识别（3779 个树冠多边形，按物种着色；近处填充、远处画点）
-			fetch('treestems.json').then(function (r) { return r.json(); }).then(function (ts) {
-				SPECIES = ts.species || {};
-				(ts.crowns || []).forEach(function (cr) {   // [Spe_ID, cE,cN,cZ, [[E,N,Z],...]]
-					if (cr[3] == null) return;
-					DOTPTS.push({ E: cr[1], N: cr[2], Z: cr[3], sp: cr[0], kind: 'det', ring: cr[4] });
+			// 单木覆盖（Voronoi）：整片区域按最近的树填色
+			fetch('voronoi.json').then(function (r) { return r.json(); }).then(function (vo) {
+				SPECIES = vo.species || {};
+				(vo.cells || []).forEach(function (c) {   // [Spe_ID, [[E,N,Z],...]]
+					var ring = c[1], ax = 0, ay = 0, az = 0;
+					for (var i = 0; i < ring.length; i++) { ax += ring[i][0]; ay += ring[i][1]; az += ring[i][2]; }
+					var n = ring.length || 1;
+					DOTPTS.push({ E: ax / n, N: ay / n, Z: az / n, sp: c[0], kind: 'det', ring: ring });
 				});
-				DET_N = (ts.crowns || []).length;
+				DET_N = (vo.cells || []).length;
 				renderLegend();
 			});
 

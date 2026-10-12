@@ -69,6 +69,7 @@ E:\网页制作\
 │   ├── observations.js         # 观测数据（生成产物，勿手工编辑）
 │   ├── survey-points.js        # RTK 实测点（生成产物，勿手工编辑）
 │   ├── treestems.js            # 单木识别树冠中心（生成产物，勿手工编辑）
+│   ├── voronoi.js              # 单木覆盖 Voronoi（生成产物，勿手工编辑）
 │   ├── bounds.js               # 样地边界/网格/水系（生成产物，勿手工编辑）
 │   ├── tree-info.js            # 树木下拉框 + 信息卡 + 汇总表
 │   ├── chart.js                # 图表配置 —— 要改图表只改这里
@@ -85,6 +86,7 @@ E:\网页制作\
 │   ├── 生成示例数据.py          # 20 棵树示例数据（固定随机种子，可复现）
 │   ├── 生成实测点数据.py        # RTK shapefile -> js/survey-points.js（含清洗）
 │   ├── 生成单木识别数据.py      # 树冠 shapefile -> js/treestems.js + 3d/treestems.json
+│   ├── 生成单木覆盖数据.py      # 树冠中心 -> Voronoi 覆盖 -> js/voronoi.js + 3d/voronoi.json
 │   ├── 生成样地边界数据.py      # 边界/网格/水系 shapefile -> js/bounds.js + 3d/bounds.json
 │   ├── 生成三维点云.py          # LiDAR LAS 体素抽稀 -> 三维页点云（见 3d/）
 │   ├── 生成三维标注.py          # trees.js + survey-points.js + DEM -> 3d/annotations.json
@@ -421,14 +423,15 @@ circle 圆心画在 `(0,0)`，而 SVG 的 `transform-origin` 默认就是用户�
 
 ---
 
-## 单木识别（树冠）
+## 单木覆盖（Voronoi）
 
 来自 `G:\DJIvideo\treesclusters_0501_50N_SpeID.shp` —— 无人机 LiDAR 的**单木树冠分割**成果，
-**3779 棵树冠**，带中文物种名与 `Spe_ID`（12 类），坐标系 UTM 50N，与点云同区。
+**3779 棵树**，带中文物种名与 `Spe_ID`（12 类），坐标系 UTM 50N，与点云同区。
 
-- 生成：`python 工具/生成单木识别数据.py` → `js/treestems.js`（二维）+ `3d/treestems.json`（三维）。树冠顶点经 Douglas-Peucker 抽稀（容差 0.35 m，30 万 → 6.3 万）。
-- 二维地图：图层控件里的「单木识别 (3779)」，**按物种着色的填充树冠多边形**，悬停显示物种名。**默认关**，用 canvas 渲染器承载 3779 个面。
-- 三维场景：顶部「单木」开关，**远近分级** —— 远景画物种色点、飞近（相机 < 200 m）画**填充树冠**；悬停显示物种。
+- 生成：`python 工具/生成单木覆盖数据.py` —— 对 3779 个树冠中心做 **Voronoi（泰森多边形）**，裁到树的凸包（外扩 15 m），按物种上色 → `js/voronoi.js`（二维，WGS84）+ `3d/voronoi.json`（三维，UTM 50N + DEM 高程；边界缺高程的用全局中位补，避免 null 投影成 NaN）。
+- **整片区域 100% 被物种颜色覆盖**（每块地归给它最近的树）。
+- 二维地图：图层控件里的「单木覆盖 (3779)」，按物种着色的填充多边形，悬停显示物种名。**默认关**，用 canvas 渲染器承载 3779 个面。
+- 三维场景：顶部「单木」开关，把 Voronoi 单元铺在地面上、整片填色；悬停显示物种。
 - 物种与株数：油松 946、辽东栎 756、胡桃楸 635、落叶松 627、五角枫 294、山杨 188、黑桦 121、蒙椴 106、糠椴 48、大果榆 24、花曲柳 22、裂叶榆 12。
 
 ---

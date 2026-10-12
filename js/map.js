@@ -360,25 +360,24 @@
             boundLayer.addTo(map);           /* 边界默认开；网格/水系默认关 */
         }
 
-        /* --- 单木识别（3779 个树冠多边形，按物种着色填充） ---
-         * 数据来自 G:\\DJIvideo\\treesclusters_0501_50N_SpeID.shp，见 js/treestems.js。
-         * 多边形已 Douglas-Peucker 抽稀（容差 0.35 m）。用 canvas 渲染器承载 3779 个面。
+        /* --- 单木覆盖（Voronoi / 泰森多边形）：整片区域按最近的树填色 ---
+         * 数据见 js/voronoi.js。用 canvas 渲染器承载 3779 个面。
          * 默认关（和「样方内树」一致），否则会把那 20 棵监测树淹掉。 */
         var tsLayer = L.layerGroup();
         var tsMarkers = [];
-        if (typeof TREESTEMS !== 'undefined' && TREESTEMS.crowns) {
+        if (typeof VORONOI !== 'undefined' && VORONOI.cells) {
             var tsRenderer = L.canvas({ padding: 0.5 });
-            var tsSpecies = TREESTEMS.species || {};
-            TREESTEMS.crowns.forEach(function (cr) {   // [Spe_ID, [[lat,lon],...]]
-                var sp = tsSpecies[String(cr[0])];
+            var tsSpecies = VORONOI.species || {};
+            VORONOI.cells.forEach(function (c) {   // [Spe_ID, [[lat,lon],...]]
+                var sp = tsSpecies[String(c[0])];
                 var col = (sp && sp.color) ? sp.color : '#888888';
-                var poly = L.polygon(cr[1].map(function (p) { return place(p[0], p[1]); }), {
-                    renderer: tsRenderer, color: col, weight: 0.5, opacity: 0.7,
-                    fillColor: col, fillOpacity: 0.5
+                var poly = L.polygon(c[1].map(function (p) { return place(p[0], p[1]); }), {
+                    renderer: tsRenderer, color: col, weight: 0.4, opacity: 0.6,
+                    fillColor: col, fillOpacity: 0.75
                 });
                 if (sp) { poly.bindTooltip(sp.zh, { direction: 'top', offset: [0, -4] }); }
                 poly.addTo(tsLayer);
-                tsMarkers.push({ g: { pts: cr[1] }, poly: poly });
+                tsMarkers.push({ g: { pts: c[1] }, poly: poly });
             });
         }
 
@@ -437,9 +436,9 @@
                 overlays[t('map.surveyMainLayer')] = surveyMainLayer;
                 overlays[t('map.surveyTreeLayer')] = surveyTreeLayer;
             }
-            if (typeof TREESTEMS !== 'undefined' && TREESTEMS.crowns) {
+            if (typeof VORONOI !== 'undefined' && VORONOI.cells) {
                 overlays['<span style="color:#7fae54">&#9632;</span> ' + t('map.tsLayer') +
-                         ' (' + TREESTEMS.crowns.length + ')'] = tsLayer;
+                         ' (' + VORONOI.cells.length + ')'] = tsLayer;
             }
             if (typeof SURVEY !== 'undefined' && SURVEY.quadrats && SURVEY.quadrats.length) {
                 overlays['<span style="color:#8fb4d6">&#9671;</span> ' + t('map.quadLayer') +
