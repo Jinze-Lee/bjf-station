@@ -186,6 +186,31 @@ def apply_radius_jump_fix(tid, dt, v_um):
 
 
 # ---------------------------------------------------------------------------
+# 配置 2d：径向变化仪的已知**故障段**（整段剔除，不编造数值）
+#
+# DT3-LYS1-1150 从 2026-09-14 16:00 起读数在 0 与 175.926mm 之间乱跳，之后固定
+# 在 175.9mm（远超径向变化仪正常量程），是传感器/数采故障。这一段没有可信的
+# "真实值"可接（不像阶跃能减去偏移量），所以整段剔除——该树在公开窗口内就没有
+# 数据，页面上会诚实地标成"无数据"，而不是画一条假的平线。
+# ---------------------------------------------------------------------------
+STEM_RADIUS_DROP_FROM = [
+    # (树号, 起始时间戳(含), 备注)
+    ("DT3-LYS1-1150",
+     datetime(2026, 9, 14, 16, 0, tzinfo=CST),
+     "09-14 16:00 起读数在 0 与 175.926mm 之间乱跳、之后固定在 175.9mm，"
+     "传感器故障，该段全部剔除（不编造数值）"),
+]
+
+
+def radius_dropped(tid, dt):
+    """该树在该时刻是否落在已知故障段内（是则整点剔除）。"""
+    for tree, start, _note in STEM_RADIUS_DROP_FROM:
+        if tid == tree and dt >= start:
+            return True
+    return False
+
+
+# ---------------------------------------------------------------------------
 # Granier 换算
 #   K  = (ΔT₀ − ΔT) / ΔT
 #   Fd = 0.0119 · K^1.231     [cm³ cm⁻² s⁻¹]  ×10000 → [g m⁻² s⁻¹]
@@ -521,6 +546,7 @@ def read_dendro(path, gw2tree, log):
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     series, skipped, nodiams = {}, [], []
     fixed_pts = 0
+    dropped_pts = 0
 
     for name in wb.sheetnames:
         sheet_gw = None
@@ -552,6 +578,9 @@ def read_dendro(path, gw2tree, log):
             t = parse_dt(r[i_ts])
             if t is None or r[i_d] in (None, ""):
                 continue
+            if radius_dropped(tid, t):
+                dropped_pts += 1
+                continue
             try:
                 mm = float(r[i_d])
             except (TypeError, ValueError):
@@ -571,6 +600,8 @@ def read_dendro(path, gw2tree, log):
         log.append("  跳过无 diams 列的 sheet: %s" % ", ".join(nodiams))
     if fixed_pts:
         log.append("  按 STEM_RADIUS_JUMP_FIXES 订正了阶跃跳变之后的 %d 个点" % fixed_pts)
+    if dropped_pts:
+        log.append("  按 STEM_RADIUS_DROP_FROM 剔除了故障段 %d 个点" % dropped_pts)
 
     log.append("")
     log.append("  %-16s %10s %10s %10s %7s" % ("树号", "读数最小", "读数最大", "全期变幅", "点数"))
