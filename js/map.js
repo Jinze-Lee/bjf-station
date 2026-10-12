@@ -379,6 +379,21 @@
                 poly.addTo(tsLayer);
                 tsMarkers.push({ g: { pts: c[1] }, poly: poly });
             });
+
+            /* 物种图例（勾选「单木覆盖」时显示，否则收起） */
+            var sl = L.control({ position: 'bottomleft' });
+            sl.onAdd = function () {
+                var div = L.DomUtil.create('div', 'species-legend');
+                var html = '<div class="sl-title">' + t('map.speciesLegend') + '</div>';
+                Object.keys(tsSpecies).forEach(function (k) {
+                    html += '<div class="sl-row"><i style="background:' + tsSpecies[k].color +
+                            '"></i>' + esc(tsSpecies[k].zh) + '</div>';
+                });
+                div.innerHTML = html;
+                return div;
+            };
+            tsLayer.on('add', function () { sl.addTo(map); });
+            tsLayer.on('remove', function () { map.removeControl(sl); });
         }
 
         /* --- 切换底图时按目标坐标系重新摆放所有标记 --- */

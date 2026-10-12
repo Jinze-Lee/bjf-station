@@ -1962,6 +1962,14 @@ body[data-lang="zh"] .net-detail { font-size: 13.5px; font-weight: 400; }
 }
 .view3d-link a:hover { background: var(--heading); color: var(--bg); }
 
+/* 单木覆盖的物种图例（勾选该图层时出现） */
+.species-legend { background: var(--surface); border: 1px solid var(--rule-strong);
+    border-radius: 6px; padding: 6px 9px; font-size: 11.5px; color: var(--text);
+    line-height: 1.7; max-height: 230px; overflow-y: auto; }
+.species-legend .sl-title { font-weight: 700; color: var(--text-soft); margin-bottom: 2px; }
+.species-legend .sl-row i { display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+    margin-right: 6px; vertical-align: middle; }
+
 .map-error {
     height: 680px;
     display: flex;
