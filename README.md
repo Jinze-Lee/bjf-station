@@ -69,6 +69,7 @@ E:\网页制作\
 │   ├── observations.js         # 观测数据（生成产物，勿手工编辑）
 │   ├── survey-points.js        # RTK 实测点（生成产物，勿手工编辑）
 │   ├── treestems.js            # 单木识别树冠中心（生成产物，勿手工编辑）
+│   ├── bounds.js               # 样地边界/网格/水系（生成产物，勿手工编辑）
 │   ├── tree-info.js            # 树木下拉框 + 信息卡 + 汇总表
 │   ├── chart.js                # 图表配置 —— 要改图表只改这里
 │   ├── map.js                  # 地图 + WGS-84→GCJ-02 坐标转换
@@ -84,6 +85,7 @@ E:\网页制作\
 │   ├── 生成示例数据.py          # 20 棵树示例数据（固定随机种子，可复现）
 │   ├── 生成实测点数据.py        # RTK shapefile -> js/survey-points.js（含清洗）
 │   ├── 生成单木识别数据.py      # 树冠 shapefile -> js/treestems.js + 3d/treestems.json
+│   ├── 生成样地边界数据.py      # 边界/网格/水系 shapefile -> js/bounds.js + 3d/bounds.json
 │   ├── 生成三维点云.py          # LiDAR LAS 体素抽稀 -> 三维页点云（见 3d/）
 │   ├── 生成三维标注.py          # trees.js + survey-points.js + DEM -> 3d/annotations.json
 │   ├── 准备图片.py              # 图片压缩与改名 -> images/
@@ -297,7 +299,7 @@ HTML 里只有标记，文字由 i18n 注入：
 
 ## 已实现的交互功能
 
-全部经 Playwright 驱动真实 Chrome 自动化验收：**图表 37/37 + 页面 304/304 = 341 项**，控制台零报错。
+全部经 Playwright 驱动真实 Chrome 自动化验收：**图表 37/37 + 页面 306/306 = 343 项**，控制台零报错。
 
 **图表**
 
@@ -400,6 +402,25 @@ circle 圆心画在 `(0,0)`，而 SVG 的 `transform-origin` 默认就是用户�
 
 ---
 
+## 样地边界 / 网格 / 水系
+
+来自微信收到的 `bounds` 目录（已拷入 `原始数据/bounds/`，gitignore 排除）：
+
+| 文件 | 内容 | 坐标系 |
+|---|---|---|
+| `zhl_bound_polygonnew_50N` | 综合林样地边界 | UTM 50N |
+| `yousong_bound_polygon` | 油松样地边界 | WGS84 |
+| `luoyesong_bound_polygon` | 落叶松样地边界 | WGS84 |
+| `20m_grid_fall` | 20 m 网格（157 格） | UTM 50N |
+| `40m_grid_everngreen` | 40 m 网格（46 格） | UTM 50N |
+| `Drainage Line Layer` | 水系/汇水线（48 条） | UTM 50N |
+
+- 生成：`python 工具/生成样地边界数据.py` → `js/bounds.js`（二维，WGS84）+ `3d/bounds.json`（三维，UTM 50N + DEM 高程）。
+- 二维地图：图层控件里「样地边界」（默认开）、「20m 网格」「40m 网格」「水系」（默认关）。
+- 三维场景：顶部「边界」开关（默认开，画在地面上）、「网格」开关（网格 + 水系，默认关）。
+
+---
+
 ## 单木识别（树冠）
 
 来自 `G:\DJIvideo\treesclusters_0501_50N_SpeID.shp` —— 无人机 LiDAR 的**单木树冠分割**成果，
@@ -481,7 +502,7 @@ python "E:\网页制作\工具\准备图片.py"
 pip install playwright                      # 首次
 python -m http.server 8765 --directory "E:\网页制作"   # 另开一个窗口
 python "E:\网页制作\工具\验收测试.py"        # 图表与数据管线 37 项
-python "E:\网页制作\工具\验收测试_页面.py"   # 页面/地图/中英文/示意图/双主题/环境面板 304 项
+python "E:\网页制作\工具\验收测试_页面.py"   # 页面/地图/中英文/示意图/双主题/环境面板 306 项
 ```
 测试用系统已装的 Chrome（`channel="chrome"`），不需要额外下载浏览器内核。
 改完内容后建议跑一遍，确认没改坏。

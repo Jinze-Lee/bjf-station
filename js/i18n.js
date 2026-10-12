@@ -278,6 +278,10 @@ zh: {
     'map.surveyTreeLayer':  '样方内树 (RTK)',
     'map.tsLayer':          '单木识别',
     'map.quadLayer':        '样方框',
+    'map.boundLayer':       '样地边界',
+    'map.grid20Layer':      '20m 网格',
+    'map.grid40Layer':      '40m 网格',
+    'map.drainLayer':       '水系',
     'map.species':          '树种',
     'map.hRtk':             'H (RTK)',
 
@@ -532,6 +536,10 @@ en: {
     'map.surveyTreeLayer':  'Quadrat trees (RTK)',
     'map.tsLayer':          'Detected trees',
     'map.quadLayer':        'Quadrat frames',
+    'map.boundLayer':       'Plot boundaries',
+    'map.grid20Layer':      '20 m grid',
+    'map.grid40Layer':      '40 m grid',
+    'map.drainLayer':       'Drainage',
     'map.species':          'Species',
     'map.hRtk':             'H (RTK)',
 

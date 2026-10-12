@@ -412,6 +412,10 @@ with sync_playwright() as p:
           any(("单木识别" in s) or ("Detected trees" in s) for s in ts_labels), str(ts_labels)[:140])
     check("3f5. 图层控件含「样方框」",
           any(("样方框" in s) or ("Quadrat frames" in s) for s in ts_labels), str(ts_labels)[:160])
+    check("3f6. 样地边界数据已加载（3 个）",
+          page.evaluate("typeof BOUNDS !== 'undefined' && BOUNDS.boundaries.length === 3"))
+    check("3f7. 图层控件含「样地边界」",
+          any(("样地边界" in s) or ("Plot boundaries" in s) for s in ts_labels), str(ts_labels)[:200])
 
     # 标记按数采分三色
     colors = page.evaluate("""() => {

@@ -107,6 +107,8 @@
 			<small id="bs">无人机 LiDAR 彩色点云 · 高德卫星底图 · 20 棵监测树 / 3 台数采</small></div>
 		<div class="spacer"></div>
 		<button class="btn active" id="detBtn">单木</button>
+		<button class="btn active" id="bndBtn">边界</button>
+		<button class="btn" id="gridBtn">网格</button>
 		<button class="btn" id="roamBtn">漫游</button>
 		<button class="btn" id="langBtn">EN</button>
 		<a class="btn" href="../index.html" id="backBtn">← 返回网站</a>
@@ -157,6 +159,10 @@
 			if (rh) rh.textContent = d.hintRoam;
 			var db = document.getElementById('detBtn');
 			if (db) db.textContent = (LANG === 'zh') ? '单木' : 'Trees';
+			var bb = document.getElementById('bndBtn');
+			if (bb) bb.textContent = (LANG === 'zh') ? '边界' : 'Bounds';
+			var gb = document.getElementById('gridBtn');
+			if (gb) gb.textContent = (LANG === 'zh') ? '网格' : 'Grid';
 			renderLegend();
 		}
 		function renderLegend() {
@@ -236,7 +242,18 @@
 			this.classList.toggle('active', DET_ON);
 		});
 
-		var INSET = null, ANNOT = null, MAIN_N = 0, TREE_N = 0, SPECIES = {}, DET_ON = true, DET_N = 0;
+		// 样地边界 / 网格+水系 开关
+		document.getElementById('bndBtn').addEventListener('click', function () {
+			BND_ON = !BND_ON;
+			this.classList.toggle('active', BND_ON);
+		});
+		document.getElementById('gridBtn').addEventListener('click', function () {
+			GRID_ON = !GRID_ON;
+			this.classList.toggle('active', GRID_ON);
+		});
+
+		var INSET = null, ANNOT = null, MAIN_N = 0, TREE_N = 0, SPECIES = {}, DET_ON = true, DET_N = 0,
+		    BNDS = null, BND_ON = true, GRID_ON = false;
 
 		function buildInset(bbox) {
 			var map = L.map('insetMap', { zoomControl: false, attributionControl: false, scrollWheelZoom: false });
@@ -407,6 +424,42 @@
 			}
 		}
 
+		// --- 样地边界 / 网格 / 水系（画在地面上，见 3d/bounds.json） ---
+		function projXYZ(V, P, x, y, z) {
+			var clip = m4apply(P, m4apply(V, [x, y, z, 1]));
+			if (clip[3] <= 0.0001) return null;
+			return [(clip[0] / clip[3] * 0.5 + 0.5) * innerWidth,
+			        (-clip[1] / clip[3] * 0.5 + 0.5) * innerHeight];
+		}
+		function drawRing(ring, V, P, fill, stroke, lw, alpha, close) {
+			if (!ring || ring.length < 2) return;
+			dctx.beginPath();
+			for (var i = 0; i < ring.length; i++) {
+				var s = projXYZ(V, P, ring[i][0], ring[i][1], ring[i][2]);
+				if (!s) return;                       // 顶点跑到相机后就不画这一条
+				if (i === 0) dctx.moveTo(s[0], s[1]); else dctx.lineTo(s[0], s[1]);
+			}
+			if (close) dctx.closePath();
+			if (fill) { dctx.globalAlpha = alpha; dctx.fillStyle = fill; dctx.fill(); }
+			if (stroke) { dctx.globalAlpha = 1; dctx.strokeStyle = stroke; dctx.lineWidth = lw; dctx.stroke(); }
+			dctx.globalAlpha = 1;
+		}
+		function drawBounds() {
+			var pc = viewer.scene.pointclouds[0], cam = viewer.scene.getActiveCamera();
+			if (!pc || !cam || !BNDS) return;
+			var V = cam.matrixWorldInverse.elements, P = cam.projectionMatrix.elements;
+			if (BND_ON) {
+				(BNDS.boundaries || []).forEach(function (b) {
+					drawRing(b.pts, V, P, '#f98422', '#f98422', 2, 0.14, true);
+				});
+			}
+			if (GRID_ON) {
+				(BNDS.grid20 || []).forEach(function (g) { drawRing(g.pts, V, P, null, 'rgba(220,220,220,.45)', 0.7, 0, true); });
+				(BNDS.grid40 || []).forEach(function (g) { drawRing(g.pts, V, P, null, 'rgba(180,180,180,.5)', 1, 0, true); });
+				(BNDS.drainage || []).forEach(function (l) { drawRing(l, V, P, null, 'rgba(70,160,235,.9)', 1.4, 0, false); });
+			}
+		}
+
 		// 悬停实测点显示名称
 		document.getElementById('potree_render_area').addEventListener('mousemove', function (ev) {
 			var best = null, bd = 144;   // 12px 内
@@ -478,7 +531,10 @@
 				renderLegend();
 			});
 
-			(function loop() { project(); drawDots(); requestAnimationFrame(loop); })();
+			// 样地边界 / 网格 / 水系
+			fetch('bounds.json').then(function (r) { return r.json(); }).then(function (b) { BNDS = b; });
+
+			(function loop() { project(); drawDots(); drawBounds(); requestAnimationFrame(loop); })();
 		});
 	</script>
 	<style>

@@ -332,6 +332,34 @@
             quadLayer.addTo(map);            /* 默认开 */
         }
 
+        /* --- 样地边界 / 网格 / 水系（源：原始数据/bounds，见 js/bounds.js） --- */
+        var boundLayer = L.layerGroup(), grid20Layer = L.layerGroup(),
+            grid40Layer = L.layerGroup(), drainLayer = L.layerGroup();
+        var boundShapes = [], grid20Shapes = [], grid40Shapes = [], drainShapes = [];
+        if (typeof BOUNDS !== 'undefined') {
+            function addPolys(list, layer, store, opts) {
+                (list || []).forEach(function (g) {
+                    var poly = L.polygon(g.pts.map(function (p) { return place(p[0], p[1]); }), opts);
+                    if (g.name) { poly.bindTooltip(g.name, { direction: 'top', offset: [0, -4] }); }
+                    poly.addTo(layer);
+                    store.push({ g: g, poly: poly });
+                });
+            }
+            addPolys(BOUNDS.boundaries, boundLayer, boundShapes,
+                { color: '#f98422', weight: 2, opacity: 0.95, fillColor: '#f98422', fillOpacity: 0.08 });
+            addPolys(BOUNDS.grid20, grid20Layer, grid20Shapes,
+                { color: '#c9c9c9', weight: 0.6, opacity: 0.45, fill: false });
+            addPolys(BOUNDS.grid40, grid40Layer, grid40Shapes,
+                { color: '#9a9a9a', weight: 0.8, opacity: 0.5, fill: false });
+            (BOUNDS.drainage || []).forEach(function (line) {
+                var pl = L.polyline(line.map(function (p) { return place(p[0], p[1]); }),
+                    { color: '#1584ec', weight: 1.2, opacity: 0.8 });
+                pl.addTo(drainLayer);
+                drainShapes.push({ g: { pts: line }, poly: pl });
+            });
+            boundLayer.addTo(map);           /* 边界默认开；网格/水系默认关 */
+        }
+
         /* --- 单木识别（3779 棵树冠中心，按物种着色） ---
          * 数据来自 G:\\DJIvideo\\treesclusters_0501_50N_SpeID.shp，见 js/treestems.js。
          * 点很多，用 Leaflet 的 canvas 渲染器，避免上千个 SVG 节点拖慢页面。
@@ -373,6 +401,11 @@
             quadPolygons.forEach(function (o) {
                 o.poly.setLatLngs(o.q.pts.map(function (p) { return place(p[0], p[1]); }));
             });
+            [boundShapes, grid20Shapes, grid40Shapes, drainShapes].forEach(function (arr) {
+                arr.forEach(function (o) {
+                    o.poly.setLatLngs(o.g.pts.map(function (p) { return place(p[0], p[1]); }));
+                });
+            });
             map.panTo(place(center[0], center[1]));
         }
 
@@ -410,6 +443,12 @@
             if (typeof SURVEY !== 'undefined' && SURVEY.quadrats && SURVEY.quadrats.length) {
                 overlays['<span style="color:#8fb4d6">&#9671;</span> ' + t('map.quadLayer') +
                          ' (' + SURVEY.quadrats.length + ')'] = quadLayer;
+            }
+            if (typeof BOUNDS !== 'undefined') {
+                overlays['<span style="color:#f98422">&#9634;</span> ' + t('map.boundLayer')] = boundLayer;
+                overlays[t('map.grid20Layer')] = grid20Layer;
+                overlays[t('map.grid40Layer')] = grid40Layer;
+                overlays[t('map.drainLayer')] = drainLayer;
             }
 
             /* 窄屏折叠成一个图标，点开才展开。
