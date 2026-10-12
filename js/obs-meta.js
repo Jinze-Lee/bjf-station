@@ -7,7 +7,7 @@
 
 var OBS_META = {
   "source": "measured",
-  "generatedAt": "2026-09-22T17:38:55+08:00",
+  "generatedAt": "2026-10-13T02:00:57+08:00",
   "timezoneOffsetMin": 480,
   "units": {
     "sap_flux_density": "g m-2 s-1",
