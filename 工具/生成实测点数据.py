@@ -85,6 +85,37 @@ def main():
     maintrees = load(SRC_DIR / "DLS_RTK0613_maintree.shp")
     plot_trees = load(SRC_DIR / "DLS_RTK0613_pin.shp")
 
+    # 由 pin 点推「样方框」：按主树分组，取凸包（Andrew 单调链，保证不自交）
+    def hull(points):
+        pts = sorted(set(points))
+        if len(pts) < 3:
+            return []
+        def cross(o, a, b):
+            return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+        lower = []
+        for p in pts:
+            while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
+                lower.pop()
+            lower.append(p)
+        upper = []
+        for p in reversed(pts):
+            while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
+                upper.pop()
+            upper.append(p)
+        return lower[:-1] + upper[:-1]
+
+    groups = {}
+    for p in plot_trees:
+        base = re.sub(r"(?i)pin\d+$", "", p["name"])
+        groups.setdefault(base, []).append((p["lat"], p["lon"]))
+    quadrats = []
+    for base, pts in groups.items():
+        h = hull(pts)
+        if len(h) >= 3:
+            quadrats.append({"name": base, "pts": [[round(a, 7), round(b, 7)] for a, b in h]})
+    print("  样方框（由 pin 凸包）: %d 个，共 %d 个 pin 点"
+          % (len(quadrats), sum(len(v) for v in groups.values())))
+
     print("=== 数据清洗 ===")
     print("  maintree: %d -> 保留 %d（丢弃 %d）" % (n_mt, len(maintrees), n_mt - len(maintrees)))
     print("  pin     : %d -> 保留 %d（丢弃 %d）" % (n_pin, len(plot_trees), n_pin - len(plot_trees)))
@@ -115,6 +146,9 @@ var SURVEY = {
     lines.append("    ],\n    plotTrees: [")
     for p in plot_trees:
         lines.append(js_pt(p))
+    lines.append("    ],\n    quadrats: [")
+    for q in quadrats:
+        lines.append("        { name: %r, pts: %r }," % (q["name"], q["pts"]))
     lines.append("    ]\n};\n")
 
     OUT.write_text("\n".join(lines), encoding="utf-8")

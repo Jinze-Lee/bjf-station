@@ -277,6 +277,7 @@ zh: {
     'map.surveyMainLayer':  '实测主树 (RTK)',
     'map.surveyTreeLayer':  '样方内树 (RTK)',
     'map.tsLayer':          '单木识别',
+    'map.quadLayer':        '样方框',
     'map.species':          '树种',
     'map.hRtk':             'H (RTK)',
 
@@ -530,6 +531,7 @@ en: {
     'map.surveyMainLayer':  'Surveyed main trees (RTK)',
     'map.surveyTreeLayer':  'Quadrat trees (RTK)',
     'map.tsLayer':          'Detected trees',
+    'map.quadLayer':        'Quadrat frames',
     'map.species':          'Species',
     'map.hRtk':             'H (RTK)',
 

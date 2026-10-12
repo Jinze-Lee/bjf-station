@@ -316,6 +316,22 @@
             surveyMainLayer.addTo(map);      /* 主树默认开；样方内树默认关 */
         }
 
+        /* --- 样方框（由每棵主树周围的 pin 桩点取凸包推得，见 js/survey-points.js） --- */
+        var quadLayer = L.layerGroup();
+        var quadPolygons = [];
+        if (typeof SURVEY !== 'undefined' && SURVEY.quadrats) {
+            SURVEY.quadrats.forEach(function (q) {
+                var poly = L.polygon(q.pts.map(function (p) { return place(p[0], p[1]); }), {
+                    color: '#8fb4d6', weight: 1, opacity: 0.9,
+                    fillColor: '#8fb4d6', fillOpacity: 0.12
+                });
+                poly.bindTooltip(q.name, { direction: 'top', offset: [0, -4] });
+                poly.addTo(quadLayer);
+                quadPolygons.push({ q: q, poly: poly });
+            });
+            quadLayer.addTo(map);            /* 默认开 */
+        }
+
         /* --- 单木识别（3779 棵树冠中心，按物种着色） ---
          * 数据来自 G:\\DJIvideo\\treesclusters_0501_50N_SpeID.shp，见 js/treestems.js。
          * 点很多，用 Leaflet 的 canvas 渲染器，避免上千个 SVG 节点拖慢页面。
@@ -354,6 +370,9 @@
             tsMarkers.forEach(function (o) {
                 o.marker.setLatLng(place(o.pt[0], o.pt[1]));
             });
+            quadPolygons.forEach(function (o) {
+                o.poly.setLatLngs(o.q.pts.map(function (p) { return place(p[0], p[1]); }));
+            });
             map.panTo(place(center[0], center[1]));
         }
 
@@ -387,6 +406,10 @@
             if (typeof TREESTEMS !== 'undefined' && TREESTEMS.pts) {
                 overlays['<span style="color:#7fae54">&#9632;</span> ' + t('map.tsLayer') +
                          ' (' + TREESTEMS.pts.length + ')'] = tsLayer;
+            }
+            if (typeof SURVEY !== 'undefined' && SURVEY.quadrats && SURVEY.quadrats.length) {
+                overlays['<span style="color:#8fb4d6">&#9671;</span> ' + t('map.quadLayer') +
+                         ' (' + SURVEY.quadrats.length + ')'] = quadLayer;
             }
 
             /* 窄屏折叠成一个图标，点开才展开。

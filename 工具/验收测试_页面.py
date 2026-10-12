@@ -410,6 +410,8 @@ with sync_playwright() as p:
     ts_labels = page.eval_on_selector_all(".leaflet-control-layers-overlays label", "e=>e.map(x=>x.textContent)")
     check("3f4. 图层控件含「单木识别」",
           any(("单木识别" in s) or ("Detected trees" in s) for s in ts_labels), str(ts_labels)[:140])
+    check("3f5. 图层控件含「样方框」",
+          any(("样方框" in s) or ("Quadrat frames" in s) for s in ts_labels), str(ts_labels)[:160])
 
     # 标记按数采分三色
     colors = page.evaluate("""() => {
