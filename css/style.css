@@ -1969,6 +1969,9 @@ body[data-lang="zh"] .net-detail { font-size: 13.5px; font-weight: 400; }
 .species-legend .sl-title { font-weight: 700; color: var(--text-soft); margin-bottom: 2px; }
 .species-legend .sl-row i { display: inline-block; width: 10px; height: 10px; border-radius: 2px;
     margin-right: 6px; vertical-align: middle; }
+@media (max-width: 640px) {
+    .species-legend { font-size: 10px; max-height: 132px; padding: 4px 6px; line-height: 1.55; }
+}
 
 .map-error {
     height: 680px;

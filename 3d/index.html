@@ -80,6 +80,10 @@
 		#legend3d i.main { background: #8fb4d6; }
 		#legend3d i.tree { background: #d3a970; }
 		#legend3d i.det  { background: linear-gradient(90deg,#4f7a52,#b3903a,#c06a3c); }
+		#legend3d .sl3d { margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(160,180,120,.3); max-width: 210px; }
+		#legend3d .sl3d-i { display: inline-block; margin: 0 8px 2px 0; }
+		#legend3d .sl3d-i i { display: inline-block; width: 9px; height: 9px; border-radius: 2px;
+			margin-right: 4px; vertical-align: middle; }
 		@media (max-width: 640px) { #legend3d { font-size: 10.5px; padding: 6px 8px; } }
 
 		/* 漫游 */
@@ -176,12 +180,22 @@
 			var s = (LANG === 'zh');
 			var el = document.getElementById('legend3d');
 			if (!el) return;
-			el.innerHTML =
+			var html =
 				'<span><i class="mon"></i>' + (s ? '监测树' : 'Monitored') + ' <b>20</b></span><br>' +
 				'<span><i class="log"></i>' + (s ? '数采' : 'Loggers') + ' <b>3</b></span><br>' +
 				'<span>\uD83C\uDF33 ' + (s ? '实测主树 RTK' : 'Surveyed main (RTK)') + ' <b>' + MAIN_N + '</b></span><br>' +
 				'<span><i class="tree"></i>' + (s ? '样方内树 RTK' : 'Quadrat trees (RTK)') + ' <b>' + TREE_N + '</b></span><br>' +
 				'<span><i class="det"></i>' + (s ? '单木覆盖（按物种着色）' : 'Tree cover (by species)') + ' <b>' + DET_N + '</b></span>';
+			var keys = Object.keys(SPECIES || {});
+			if (DET_ON && keys.length) {
+				html += '<div class="sl3d">';
+				keys.forEach(function (k) {
+					html += '<span class="sl3d-i"><i style="background:' + SPECIES[k].color + '"></i>' +
+						SPECIES[k].zh + '</span>';
+				});
+				html += '</div>';
+			}
+			el.innerHTML = html;
 		}
 		applyLang();
 		document.getElementById('langBtn').addEventListener('click', function () {
@@ -247,6 +261,7 @@
 		document.getElementById('detBtn').addEventListener('click', function () {
 			DET_ON = !DET_ON;
 			this.classList.toggle('active', DET_ON);
+			renderLegend();
 		});
 
 		// 样地边界 / 网格+水系 开关
