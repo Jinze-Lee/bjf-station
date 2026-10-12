@@ -34,6 +34,13 @@
 			border-radius: 6px; padding: 7px 13px; font-size: 13px; font-family: inherit;
 		}
 		#topbar a.btn:hover, #topbar button.btn:hover { background: rgba(58,72,40,.85); color: #fff; }
+		@media (max-width: 640px) {
+			#topbar { flex-wrap: wrap; row-gap: 6px; padding: 8px 10px; }
+			#topbar .spacer { display: none; }
+			#topbar .brand { flex-basis: 100%; font-size: 13px; }
+			#topbar .brand small { display: none; }
+			#potree_sidebar_container { top: 84px !important; }
+		}
 
 		/* 左下角高德小地图 */
 		#inset { position: fixed; left: 12px; bottom: 12px; z-index: 1900;
@@ -461,13 +468,13 @@
 			var V = cam.matrixWorldInverse.elements, P = cam.projectionMatrix.elements;
 			if (BND_ON) {
 				(BNDS.boundaries || []).forEach(function (b) {
-					drawRing(b.pts, V, P, '#f98422', '#f98422', 2, 0.14, true);
+					drawRing(b.pts, V, P, '#f98422', '#f98422', 2.5, 0.16, true);
 				});
 			}
 			if (GRID_ON) {
-				(BNDS.grid20 || []).forEach(function (g) { drawRing(g.pts, V, P, null, 'rgba(220,220,220,.45)', 0.7, 0, true); });
-				(BNDS.grid40 || []).forEach(function (g) { drawRing(g.pts, V, P, null, 'rgba(180,180,180,.5)', 1, 0, true); });
-				(BNDS.drainage || []).forEach(function (l) { drawRing(l, V, P, null, 'rgba(70,160,235,.9)', 1.4, 0, false); });
+				(BNDS.grid20 || []).forEach(function (g) { drawRing(g.pts, V, P, null, 'rgba(235,235,235,.75)', 1.1, 0, true); });
+				(BNDS.grid40 || []).forEach(function (g) { drawRing(g.pts, V, P, null, 'rgba(255,210,127,.85)', 1.6, 0, true); });
+				(BNDS.drainage || []).forEach(function (l) { drawRing(l, V, P, null, 'rgba(60,175,255,1)', 2.2, 0, false); });
 			}
 		}
 

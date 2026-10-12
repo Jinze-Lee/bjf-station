@@ -346,14 +346,14 @@
                 });
             }
             addPolys(BOUNDS.boundaries, boundLayer, boundShapes,
-                { color: '#f98422', weight: 2, opacity: 0.95, fillColor: '#f98422', fillOpacity: 0.08 });
+                { color: '#f98422', weight: 2.5, opacity: 1, fillColor: '#f98422', fillOpacity: 0.1 });
             addPolys(BOUNDS.grid20, grid20Layer, grid20Shapes,
-                { color: '#c9c9c9', weight: 0.6, opacity: 0.45, fill: false });
+                { color: '#eaeaea', weight: 1, opacity: 0.7, fill: false });
             addPolys(BOUNDS.grid40, grid40Layer, grid40Shapes,
-                { color: '#9a9a9a', weight: 0.8, opacity: 0.5, fill: false });
+                { color: '#ffd27f', weight: 1.4, opacity: 0.8, fill: false });
             (BOUNDS.drainage || []).forEach(function (line) {
                 var pl = L.polyline(line.map(function (p) { return place(p[0], p[1]); }),
-                    { color: '#1584ec', weight: 1.2, opacity: 0.8 });
+                    { color: '#2fa8ff', weight: 2, opacity: 0.95 });
                 pl.addTo(drainLayer);
                 drainShapes.push({ g: { pts: line }, poly: pl });
             });
