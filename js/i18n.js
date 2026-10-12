@@ -198,7 +198,7 @@ zh: {
     'contact.f.person':     '网站维护',
     'contact.f.location':   '地址',
     'contact.v.location':   '北京市门头沟区东灵山',
-    'site.version':         '网站版本 v1.8',
+    'site.version':         '网站版本 v2.0',
     'site.updatedLabel':    '数据更新至',
 
     /* 更新日志弹层。条目正文写在 js/changelog.js 里（中英各一份），
@@ -466,7 +466,7 @@ en: {
     'contact.f.person':     'Site maintainer',
     'contact.f.location':   'Location',
     'contact.v.location':   'Dongling Mountain, Mentougou District, Beijing, China',
-    'site.version':         'Site version v1.8',
+    'site.version':         'Site version v2.0',
     'site.updatedLabel':    'data updated to',
 
     'unlock.title':         'Showing the last {days} days.',

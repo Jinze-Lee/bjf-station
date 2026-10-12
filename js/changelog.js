@@ -25,6 +25,25 @@
     /* 倒序：最新的在最前面 */
     var LOG = [
         {
+            v: '2.0', date: '2026-10-13', kind: 'feat',
+            zh: {
+                title: '三维林相页 + 多源实测数据图层',
+                items: [
+                    '新增「三维林相」独立页：无人机 LiDAR 彩色点云（8.19 亿点抽稀到 877 万点），可旋转、缩放、第一人称漫游飞行；叠高德卫星小地图，并标出 20 棵监测树、3 台数采、103 棵实测主树、318 个样方内树。',
+                    '地图新增多组实测图层：RTK 实测主树 / 样方内树 / 样方框、三块样地边界、20 m 与 40 m 网格、水系，以及按物种着色的「单木覆盖」——3779 棵树用泰森多边形铺满整片区域。',
+                    '订正 DT2-WJF1-1141 径向变化曲线里一处 +5.07 mm 的传感器阶跃。',
+                ]
+            },
+            en: {
+                title: '3D canopy page + multi-source measured-data layers',
+                items: [
+                    'New "3D canopy" page: a UAV LiDAR colour point cloud (819M points thinned to 8.77M) — rotate, zoom, fly through in first person — with an AMap satellite inset and annotations for the 20 monitored trees, 3 loggers, 103 surveyed main trees and 318 quadrat trees.',
+                    'New measured-data map layers: RTK surveyed main trees / quadrat trees / quadrat frames, three plot boundaries, 20 m and 40 m grids, drainage, and a species-coloured "tree cover" — 3779 trees tiled over the whole area by Voronoi tessellation.',
+                    'Corrected a +5.07 mm sensor step in the radial-change series of DT2-WJF1-1141.',
+                ]
+            }
+        },
+        {
             v: '1.8', date: '2026-08-03', kind: 'ui',
             zh: {
                 title: '手机端适配',
