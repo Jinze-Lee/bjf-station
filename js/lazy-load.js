@@ -53,6 +53,7 @@
                   check: function () { return !!window.L; },
                   fallback: 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js' },
                 'js/survey-points.js',
+                'js/treestems.js',
                 'js/map.js'
             ]
         },

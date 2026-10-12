@@ -316,6 +316,27 @@
             surveyMainLayer.addTo(map);      /* 主树默认开；样方内树默认关 */
         }
 
+        /* --- 单木识别（3779 棵树冠中心，按物种着色） ---
+         * 数据来自 G:\\DJIvideo\\treesclusters_0501_50N_SpeID.shp，见 js/treestems.js。
+         * 点很多，用 Leaflet 的 canvas 渲染器，避免上千个 SVG 节点拖慢页面。
+         * 默认关（和「样方内树」一致），否则会把那 20 棵监测树淹掉。 */
+        var tsLayer = L.layerGroup();
+        var tsMarkers = [];
+        if (typeof TREESTEMS !== 'undefined' && TREESTEMS.pts) {
+            var tsRenderer = L.canvas({ padding: 0.5 });
+            var tsSpecies = TREESTEMS.species || {};
+            TREESTEMS.pts.forEach(function (pt) {
+                var sp = tsSpecies[String(pt[2])];
+                var m = L.circleMarker(place(pt[0], pt[1]), {
+                    renderer: tsRenderer, radius: 3, weight: 0,
+                    fillColor: (sp && sp.color) ? sp.color : '#888888', fillOpacity: 0.85
+                });
+                if (sp) { m.bindTooltip(sp.zh, { direction: 'top', offset: [0, -4] }); }
+                m.addTo(tsLayer);
+                tsMarkers.push({ pt: pt, marker: m });
+            });
+        }
+
         /* --- 切换底图时按目标坐标系重新摆放所有标记 --- */
         function replaceAll() {
             TREES.forEach(function (t) {
@@ -329,6 +350,9 @@
             });
             surveyTreeMarkers.forEach(function (o) {
                 o.marker.setLatLng(place(o.pt.lat, o.pt.lon));
+            });
+            tsMarkers.forEach(function (o) {
+                o.marker.setLatLng(place(o.pt[0], o.pt[1]));
             });
             map.panTo(place(center[0], center[1]));
         }
@@ -359,6 +383,10 @@
             if (typeof SURVEY !== 'undefined') {
                 overlays[t('map.surveyMainLayer')] = surveyMainLayer;
                 overlays[t('map.surveyTreeLayer')] = surveyTreeLayer;
+            }
+            if (typeof TREESTEMS !== 'undefined' && TREESTEMS.pts) {
+                overlays['<span style="color:#7fae54">&#9632;</span> ' + t('map.tsLayer') +
+                         ' (' + TREESTEMS.pts.length + ')'] = tsLayer;
             }
 
             /* 窄屏折叠成一个图标，点开才展开。

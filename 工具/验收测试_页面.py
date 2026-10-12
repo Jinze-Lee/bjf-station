@@ -404,6 +404,12 @@ with sync_playwright() as p:
     check("3f2. 地图区块有「查看三维林相」入口",
           v3 is not None and "3d/" in (v3.get_attribute("href") or "") and
           len(v3.inner_text().strip()) > 0)
+    check("3f3. 单木识别数据已加载（>3000 棵）",
+          page.evaluate("typeof TREESTEMS !== 'undefined' && TREESTEMS.pts && TREESTEMS.pts.length > 3000"),
+          "n=%s" % page.evaluate("typeof TREESTEMS!=='undefined'?TREESTEMS.pts.length:-1"))
+    ts_labels = page.eval_on_selector_all(".leaflet-control-layers-overlays label", "e=>e.map(x=>x.textContent)")
+    check("3f4. 图层控件含「单木识别」",
+          any(("单木识别" in s) or ("Detected trees" in s) for s in ts_labels), str(ts_labels)[:140])
 
     # 标记按数采分三色
     colors = page.evaluate("""() => {
@@ -634,7 +640,12 @@ with sync_playwright() as p:
     check("4A. 图集存在", page.query_selector("#methodGallery") is not None)
     check("4B. 右侧 3 张缩略图（主图不重复出现）",
           page.eval_on_selector_all("#galleryThumbs .gt", "e=>e.length") == 3)
-    check("4C. 首屏主图为第 1 张",
+    # 图集每 5 秒自动翻页；前面的 #methods 锚点测试会让图集进入视野、轮播已经跑起来，
+    # 所以先复位到第 0 张再断言「索引 0 对应第 1 张」，否则这条断言取决于运行到此
+    # 处的时间是否恰为 5 秒整数倍（实测会偶发失败）。
+    page.evaluate("SiteGallery.select(0)")
+    page.wait_for_timeout(200)
+    check("4C. 主图索引 0 对应第 1 张（先复位轮播）",
           "install-1.webp" in (page.get_attribute("#galleryMainImg", "src") or ""))
 
     # 点缩略图换主图

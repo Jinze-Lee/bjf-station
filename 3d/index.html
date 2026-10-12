@@ -72,6 +72,7 @@
 		#legend3d i.log  { background: #c2703d; }
 		#legend3d i.main { background: #8fb4d6; }
 		#legend3d i.tree { background: #d3a970; }
+		#legend3d i.det  { background: linear-gradient(90deg,#4f7a52,#b3903a,#c06a3c); }
 		@media (max-width: 640px) { #legend3d { font-size: 10.5px; padding: 6px 8px; } }
 
 		/* 漫游 */
@@ -105,6 +106,7 @@
 		<div class="brand"><span id="bt">北京森林生态系统定位研究站 · 三维林相</span>
 			<small id="bs">无人机 LiDAR 彩色点云 · 高德卫星底图 · 20 棵监测树 / 3 台数采</small></div>
 		<div class="spacer"></div>
+		<button class="btn active" id="detBtn">单木</button>
 		<button class="btn" id="roamBtn">漫游</button>
 		<button class="btn" id="langBtn">EN</button>
 		<a class="btn" href="../index.html" id="backBtn">← 返回网站</a>
@@ -153,6 +155,8 @@
 			if (rb) rb.textContent = ROAM ? d.roamExit : d.roam;
 			var rh = document.getElementById('roamHint');
 			if (rh) rh.textContent = d.hintRoam;
+			var db = document.getElementById('detBtn');
+			if (db) db.textContent = (LANG === 'zh') ? '单木' : 'Trees';
 			renderLegend();
 		}
 		function renderLegend() {
@@ -163,7 +167,8 @@
 				'<span><i class="mon"></i>' + (s ? '监测树' : 'Monitored') + ' <b>20</b></span><br>' +
 				'<span><i class="log"></i>' + (s ? '数采' : 'Loggers') + ' <b>3</b></span><br>' +
 				'<span>\uD83C\uDF33 ' + (s ? '实测主树 RTK' : 'Surveyed main (RTK)') + ' <b>' + MAIN_N + '</b></span><br>' +
-				'<span><i class="tree"></i>' + (s ? '样方内树 RTK' : 'Quadrat trees (RTK)') + ' <b>' + TREE_N + '</b></span>';
+				'<span><i class="tree"></i>' + (s ? '样方内树 RTK' : 'Quadrat trees (RTK)') + ' <b>' + TREE_N + '</b></span><br>' +
+				'<span><i class="det"></i>' + (s ? '单木识别（按物种着色）' : 'Detected trees (by species)') + ' <b>' + DET_N + '</b></span>';
 		}
 		applyLang();
 		document.getElementById('langBtn').addEventListener('click', function () {
@@ -225,7 +230,13 @@
 			this.textContent = I18N[LANG][ROAM ? 'roamExit' : 'roam'];
 		});
 
-		var INSET = null, ANNOT = null, MAIN_N = 0, TREE_N = 0;
+		// 单木识别图层开关（默认开）
+		document.getElementById('detBtn').addEventListener('click', function () {
+			DET_ON = !DET_ON;
+			this.classList.toggle('active', DET_ON);
+		});
+
+		var INSET = null, ANNOT = null, MAIN_N = 0, TREE_N = 0, SPECIES = {}, DET_ON = true, DET_N = 0;
 
 		function buildInset(bbox) {
 			var map = L.map('insetMap', { zoomControl: false, attributionControl: false, scrollWheelZoom: false });
@@ -344,7 +355,17 @@
 				var dx = p.E - cx, dy = p.N - cy, dz = p.Z - cz;
 				var d2 = dx * dx + dy * dy + dz * dz;
 
-				// 标记：主树用 🌳，样方内树用圆点
+				// 标记：单木识别按物种着色；主树用 🌳；样方内树用圆点
+				if (p.kind === 'det') {
+					if (!DET_ON) continue;
+					var rd = d2 > 400 * 400 ? 1.4 : (d2 > 150 * 150 ? 2.1 : 3.0);
+					dctx.globalAlpha = 0.95;
+					dctx.fillStyle = (SPECIES[p.sp] && SPECIES[p.sp].color) || '#888888';
+					dctx.beginPath(); dctx.arc(sx, sy, rd, 0, 6.2832); dctx.fill();
+					dctx.globalAlpha = 1;
+					DOTSCREEN.push({ x: sx, y: sy, kind: 'det', sp: p.sp });
+					continue;
+				}
 				if (p.kind === 'main') {
 					var es = d2 > 400 * 400 ? 13 : (d2 > 150 * 150 ? 16 : 20);
 					dctx.font = es + 'px "Segoe UI Emoji","Noto Color Emoji",serif';
@@ -396,9 +417,14 @@
 			}
 			if (best) {
 				tip = tip || document.getElementById('tip');
-				tip.innerHTML = '<b>' + best.name + '</b><br>' +
-					(best.kind === 'main' ? (LANG === 'zh' ? '实测主树 (RTK)' : 'Surveyed main tree (RTK)')
-					                      : (LANG === 'zh' ? '样方内树 (RTK)' : 'Quadrat tree (RTK)'));
+				if (best.kind === 'det') {
+					tip.innerHTML = '<b>' + ((SPECIES[best.sp] && SPECIES[best.sp].zh) || '') + '</b><br>' +
+						(LANG === 'zh' ? '单木识别' : 'Detected tree');
+				} else {
+					tip.innerHTML = '<b>' + best.name + '</b><br>' +
+						(best.kind === 'main' ? (LANG === 'zh' ? '实测主树 (RTK)' : 'Surveyed main tree (RTK)')
+						                      : (LANG === 'zh' ? '样方内树 (RTK)' : 'Quadrat tree (RTK)'));
+				}
 				tip.style.display = 'block';
 				tip.style.left = Math.min(ev.clientX + 12, innerWidth - 250) + 'px';
 				tip.style.top = (ev.clientY + 12) + 'px';
@@ -439,6 +465,17 @@
 				TREE_N = (data.plotTrees || []).length;
 				renderLegend();
 				buildInset(box);
+			});
+
+			// 单木识别（3779 棵，按物种着色）
+			fetch('treestems.json').then(function (r) { return r.json(); }).then(function (ts) {
+				SPECIES = ts.species || {};
+				(ts.pts || []).forEach(function (p) {
+					if (p[2] == null) return;
+					DOTPTS.push({ E: p[0], N: p[1], Z: p[2], sp: p[3], kind: 'det' });
+				});
+				DET_N = (ts.pts || []).length;
+				renderLegend();
 			});
 
 			(function loop() { project(); drawDots(); requestAnimationFrame(loop); })();
