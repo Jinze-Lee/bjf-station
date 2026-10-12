@@ -360,24 +360,25 @@
             boundLayer.addTo(map);           /* 边界默认开；网格/水系默认关 */
         }
 
-        /* --- 单木识别（3779 棵树冠中心，按物种着色） ---
+        /* --- 单木识别（3779 个树冠多边形，按物种着色填充） ---
          * 数据来自 G:\\DJIvideo\\treesclusters_0501_50N_SpeID.shp，见 js/treestems.js。
-         * 点很多，用 Leaflet 的 canvas 渲染器，避免上千个 SVG 节点拖慢页面。
+         * 多边形已 Douglas-Peucker 抽稀（容差 0.35 m）。用 canvas 渲染器承载 3779 个面。
          * 默认关（和「样方内树」一致），否则会把那 20 棵监测树淹掉。 */
         var tsLayer = L.layerGroup();
         var tsMarkers = [];
-        if (typeof TREESTEMS !== 'undefined' && TREESTEMS.pts) {
+        if (typeof TREESTEMS !== 'undefined' && TREESTEMS.crowns) {
             var tsRenderer = L.canvas({ padding: 0.5 });
             var tsSpecies = TREESTEMS.species || {};
-            TREESTEMS.pts.forEach(function (pt) {
-                var sp = tsSpecies[String(pt[2])];
-                var m = L.circleMarker(place(pt[0], pt[1]), {
-                    renderer: tsRenderer, radius: 3, weight: 0,
-                    fillColor: (sp && sp.color) ? sp.color : '#888888', fillOpacity: 0.85
+            TREESTEMS.crowns.forEach(function (cr) {   // [Spe_ID, [[lat,lon],...]]
+                var sp = tsSpecies[String(cr[0])];
+                var col = (sp && sp.color) ? sp.color : '#888888';
+                var poly = L.polygon(cr[1].map(function (p) { return place(p[0], p[1]); }), {
+                    renderer: tsRenderer, color: col, weight: 0.5, opacity: 0.7,
+                    fillColor: col, fillOpacity: 0.5
                 });
-                if (sp) { m.bindTooltip(sp.zh, { direction: 'top', offset: [0, -4] }); }
-                m.addTo(tsLayer);
-                tsMarkers.push({ pt: pt, marker: m });
+                if (sp) { poly.bindTooltip(sp.zh, { direction: 'top', offset: [0, -4] }); }
+                poly.addTo(tsLayer);
+                tsMarkers.push({ g: { pts: cr[1] }, poly: poly });
             });
         }
 
@@ -396,7 +397,7 @@
                 o.marker.setLatLng(place(o.pt.lat, o.pt.lon));
             });
             tsMarkers.forEach(function (o) {
-                o.marker.setLatLng(place(o.pt[0], o.pt[1]));
+                o.poly.setLatLngs(o.g.pts.map(function (p) { return place(p[0], p[1]); }));
             });
             quadPolygons.forEach(function (o) {
                 o.poly.setLatLngs(o.q.pts.map(function (p) { return place(p[0], p[1]); }));
@@ -436,9 +437,9 @@
                 overlays[t('map.surveyMainLayer')] = surveyMainLayer;
                 overlays[t('map.surveyTreeLayer')] = surveyTreeLayer;
             }
-            if (typeof TREESTEMS !== 'undefined' && TREESTEMS.pts) {
+            if (typeof TREESTEMS !== 'undefined' && TREESTEMS.crowns) {
                 overlays['<span style="color:#7fae54">&#9632;</span> ' + t('map.tsLayer') +
-                         ' (' + TREESTEMS.pts.length + ')'] = tsLayer;
+                         ' (' + TREESTEMS.crowns.length + ')'] = tsLayer;
             }
             if (typeof SURVEY !== 'undefined' && SURVEY.quadrats && SURVEY.quadrats.length) {
                 overlays['<span style="color:#8fb4d6">&#9671;</span> ' + t('map.quadLayer') +

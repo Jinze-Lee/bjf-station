@@ -405,8 +405,8 @@ with sync_playwright() as p:
           v3 is not None and "3d/" in (v3.get_attribute("href") or "") and
           len(v3.inner_text().strip()) > 0)
     check("3f3. 单木识别数据已加载（>3000 棵）",
-          page.evaluate("typeof TREESTEMS !== 'undefined' && TREESTEMS.pts && TREESTEMS.pts.length > 3000"),
-          "n=%s" % page.evaluate("typeof TREESTEMS!=='undefined'?TREESTEMS.pts.length:-1"))
+          page.evaluate("typeof TREESTEMS !== 'undefined' && TREESTEMS.crowns && TREESTEMS.crowns.length > 3000"),
+          "n=%s" % page.evaluate("typeof TREESTEMS!=='undefined'&&TREESTEMS.crowns?TREESTEMS.crowns.length:-1"))
     ts_labels = page.eval_on_selector_all(".leaflet-control-layers-overlays label", "e=>e.map(x=>x.textContent)")
     check("3f4. 图层控件含「单木识别」",
           any(("单木识别" in s) or ("Detected trees" in s) for s in ts_labels), str(ts_labels)[:140])

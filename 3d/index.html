@@ -345,6 +345,7 @@
 		var dctx = dotCanvas.getContext('2d');
 		var DOTPTS = [], DOTSCREEN = [];
 		var LABEL_DIST = 260;   // 相机离点小于此距离才显示名称标签（避免远景拥挤）
+		var CROWN_DIST = 200;   // 相机离树冠中心小于此距离才画填充树冠（远景画点）
 		function sizeCanvas() {
 			dotCanvas.width = Math.round(innerWidth * devicePixelRatio);
 			dotCanvas.height = Math.round(innerHeight * devicePixelRatio);
@@ -375,11 +376,16 @@
 				// 标记：单木识别按物种着色；主树用 🌳；样方内树用圆点
 				if (p.kind === 'det') {
 					if (!DET_ON) continue;
-					var rd = d2 > 400 * 400 ? 1.4 : (d2 > 150 * 150 ? 2.1 : 3.0);
-					dctx.globalAlpha = 0.95;
-					dctx.fillStyle = (SPECIES[p.sp] && SPECIES[p.sp].color) || '#888888';
-					dctx.beginPath(); dctx.arc(sx, sy, rd, 0, 6.2832); dctx.fill();
-					dctx.globalAlpha = 1;
+					var col = (SPECIES[p.sp] && SPECIES[p.sp].color) || '#888888';
+					if (p.ring && d2 < CROWN_DIST * CROWN_DIST) {
+						drawCrown(p.ring, V, P, col);        // 近处：填充整个树冠
+					} else {
+						var rd = d2 > 400 * 400 ? 1.4 : (d2 > 150 * 150 ? 2.1 : 3.0);
+						dctx.globalAlpha = 0.95;
+						dctx.fillStyle = col;
+						dctx.beginPath(); dctx.arc(sx, sy, rd, 0, 6.2832); dctx.fill();
+						dctx.globalAlpha = 1;
+					}
 					DOTSCREEN.push({ x: sx, y: sy, kind: 'det', sp: p.sp });
 					continue;
 				}
@@ -430,6 +436,19 @@
 			if (clip[3] <= 0.0001) return null;
 			return [(clip[0] / clip[3] * 0.5 + 0.5) * innerWidth,
 			        (-clip[1] / clip[3] * 0.5 + 0.5) * innerHeight];
+		}
+		function drawCrown(ring, V, P, color) {
+			if (!ring || ring.length < 3) return;
+			dctx.beginPath();
+			for (var i = 0; i < ring.length; i++) {
+				var s = projXYZ(V, P, ring[i][0], ring[i][1], ring[i][2]);
+				if (!s) return;
+				if (i === 0) dctx.moveTo(s[0], s[1]); else dctx.lineTo(s[0], s[1]);
+			}
+			dctx.closePath();
+			dctx.globalAlpha = 0.45; dctx.fillStyle = color; dctx.fill();
+			dctx.globalAlpha = 0.9; dctx.strokeStyle = color; dctx.lineWidth = 1; dctx.stroke();
+			dctx.globalAlpha = 1;
 		}
 		function drawRing(ring, V, P, fill, stroke, lw, alpha, close) {
 			if (!ring || ring.length < 2) return;
@@ -520,14 +539,14 @@
 				buildInset(box);
 			});
 
-			// 单木识别（3779 棵，按物种着色）
+			// 单木识别（3779 个树冠多边形，按物种着色；近处填充、远处画点）
 			fetch('treestems.json').then(function (r) { return r.json(); }).then(function (ts) {
 				SPECIES = ts.species || {};
-				(ts.pts || []).forEach(function (p) {
-					if (p[2] == null) return;
-					DOTPTS.push({ E: p[0], N: p[1], Z: p[2], sp: p[3], kind: 'det' });
+				(ts.crowns || []).forEach(function (cr) {   // [Spe_ID, cE,cN,cZ, [[E,N,Z],...]]
+					if (cr[3] == null) return;
+					DOTPTS.push({ E: cr[1], N: cr[2], Z: cr[3], sp: cr[0], kind: 'det', ring: cr[4] });
 				});
-				DET_N = (ts.pts || []).length;
+				DET_N = (ts.crowns || []).length;
 				renderLegend();
 			});
 
