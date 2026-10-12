@@ -486,9 +486,15 @@
          * DT3 是最北的样点，它的弹窗向上展开，实测高约 285px，
          * 所以上方要留 310px；右侧留 310px 给图层控件。 */
         function fitAll() {
+            /* 桌面端上方要留 310px 给默认弹窗、右侧留 310px 给图层控件；
+             * 手机上不弹窗、控件也折叠了，再用 310px 会把 20 棵树挤进一个角落。 */
+            var narrow = (window.innerWidth || 1024) < 700;
+            var opts = narrow
+                ? { paddingTopLeft: [24, 40], paddingBottomRight: [40, 40], maxZoom: 18 }
+                : { paddingTopLeft: [40, 310], paddingBottomRight: [310, 50], maxZoom: 18 };
             map.fitBounds(
                 L.latLngBounds(TREES.map(function (tr) { return place(tr.lat, tr.lon); })),
-                { paddingTopLeft: [40, 310], paddingBottomRight: [310, 50], maxZoom: 18 }
+                opts
             );
         }
         fitAll();
