@@ -511,7 +511,9 @@
 			viewer.fitToScreen();
 
 			var bbox = pointcloud.pcoGeometry.boundingBox;
-			var box = { min: [bbox.min.x, bbox.min.y, bbox.min.z], max: [bbox.max.x, bbox.max.y, bbox.max.z] };
+			var off = pointcloud.pcoGeometry.offset;   // 点云范围是局部坐标，要加回 CRS 偏移
+			var box = { min: [bbox.min.x + off.x, bbox.min.y + off.y, bbox.min.z + off.z],
+			            max: [bbox.max.x + off.x, bbox.max.y + off.y, bbox.max.z + off.z] };
 
 			fetch('annotations.json').then(function (r) { return r.json(); }).then(function (data) {
 				ANNOT = data;
@@ -558,8 +560,8 @@
 		});
 	</script>
 	<style>
-		.lg3d b { display:inline-block; background:#c2703d; color:#fff; font-size:10px; font-weight:700;
-			padding:1px 4px; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,.6); }
+		.lg3d b { display:inline-block; background:#c2703d; color:#fff; font-size:9px; font-weight:700;
+			padding:0 3px; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,.6); }
 	</style>
 </body>
 </html>
