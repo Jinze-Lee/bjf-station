@@ -1970,11 +1970,12 @@ body[data-lang="zh"] .net-detail { font-size: 13.5px; font-weight: 400; }
 .canopy-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
 .canopy-placeholder { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 14px; padding: 20px; text-align: center;
-    color: var(--text-soft); font-size: 14px;
+    color: #d3dccb; font-size: 15px;
     background: repeating-linear-gradient(135deg, #1a1e14 0 18px, #15180f 18px 36px); }
-.canopy-btn { padding: 10px 22px; border-radius: 6px; border: 1px solid var(--heading);
-    background: var(--surface); color: var(--heading); font-size: 15px; cursor: pointer; font-family: inherit; }
-.canopy-btn:hover { background: var(--heading); color: var(--bg); }
+.canopy-placeholder p { color: inherit; margin: 0; font-size: 15px; }
+.canopy-btn { padding: 10px 22px; border-radius: 6px; border: 1px solid rgba(226, 235, 220, 0.5);
+    background: rgba(255, 255, 255, 0.06); color: #e2ebdc; font-size: 15px; cursor: pointer; font-family: inherit; }
+.canopy-btn:hover { background: var(--heading); color: #fff; border-color: var(--heading); }
 .canopy-open { margin: 10px 0 0; font-size: 13px; }
 @media (max-width: 640px) { .canopy-frame { height: 62vh; min-height: 340px; } }
 
@@ -2305,7 +2306,7 @@ footer {
 /* 中间档：笔记本宽度下 7 项导航 + 放大的语言按钮会把表头撑爆
    （实测 1024px 时总宽 1060px，语言按钮越界 16px）。
    这里只收紧字号与内边距，仍保留完整横向导航，不提前退化成汉堡菜单。 */
-@media (max-width: 1200px) and (min-width: 900px) {
+@media (max-width: 1200px) and (min-width: 1024px) {
     .logo img       { width: 44px; height: 44px; }
     .logo-text      { font-size: 13px; }
     .logo-text em   { font-size: 11px; }
@@ -2315,7 +2316,7 @@ footer {
     .header-inner   { gap: 10px; }
 }
 
-@media (max-width: 899px) {
+@media (max-width: 1023px) {
     :root { --header-h: 74px; }
 
     .nav-toggle { display: block; }
