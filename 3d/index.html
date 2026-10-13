@@ -519,7 +519,7 @@
 		Potree.loadPointCloud('./pointclouds/index/metadata.json', 'index', function (e) {
 			var pointcloud = e.pointcloud, scene = viewer.scene;
 			var m = pointcloud.material;
-			m.size = 1; m.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+			m.size = 1; m.pointSizeType = Potree.PointSizeType.FIXED;   /* 固定像素：自适应会在贴合时把点撑大，放大就糊 */
 			m.shape = Potree.PointShape.SQUARE; m.activeAttributeName = 'rgba';
 			scene.addPointCloud(pointcloud);
 			viewer.fitToScreen();
