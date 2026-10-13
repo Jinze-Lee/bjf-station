@@ -342,7 +342,7 @@
                 { color: '#ffd27f', weight: 1.4, opacity: 0.8, fill: false });
             (BOUNDS.drainage || []).forEach(function (line) {
                 var pl = L.polyline(line.map(function (p) { return place(p[0], p[1]); }),
-                    { color: '#2fa8ff', weight: 2, opacity: 0.95 });
+                    { color: '#4d7f9e', weight: 1.2, opacity: 0.8 });   /* 水系：灰蓝细线，不抢视线 */
                 pl.addTo(drainLayer);
                 drainShapes.push({ g: { pts: line }, poly: pl });
             });
