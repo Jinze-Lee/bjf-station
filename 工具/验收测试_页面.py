@@ -411,8 +411,10 @@ with sync_playwright() as p:
     ts_labels = page.eval_on_selector_all(".leaflet-control-layers-overlays label", "e=>e.map(x=>x.textContent)")
     check("3f4. 图层控件含「单木覆盖」",
           any(("单木覆盖" in s) or ("Tree cover" in s) for s in ts_labels), str(ts_labels)[:140])
-    check("3f5. 图层控件含「样方框」",
-          any(("样方框" in s) or ("Quadrat frames" in s) for s in ts_labels), str(ts_labels)[:160])
+    check("3f5. 图层控件已无「样方框」（金总要求删除）",
+          not any(("样方框" in s) or ("Quadrat frames" in s) for s in ts_labels), str(ts_labels)[:160])
+    check("3f5b. 图层控件含设备三项（径向/液流/LAI）",
+          all(any(n in s for s in ts_labels) for n in ("Dendrometer", "Sap flow", "LAI")), str(ts_labels)[:200])
     check("3f6. 样地边界数据已加载（3 个）",
           page.evaluate("typeof BOUNDS !== 'undefined' && BOUNDS.boundaries.length === 3"))
     check("3f7. 图层控件含「样地边界」",

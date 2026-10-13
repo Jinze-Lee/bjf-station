@@ -317,21 +317,9 @@
                别的代码（联动、验收）还能引用，只是不显示。 */
         }
 
-        /* --- 样方框（由每棵主树周围的 pin 桩点取凸包推得，见 js/survey-points.js） --- */
-        var quadLayer = L.layerGroup();
-        var quadPolygons = [];
-        if (typeof SURVEY !== 'undefined' && SURVEY.quadrats) {
-            SURVEY.quadrats.forEach(function (q) {
-                var poly = L.polygon(q.pts.map(function (p) { return place(p[0], p[1]); }), {
-                    color: '#8fb4d6', weight: 1, opacity: 0.9,
-                    fillColor: '#8fb4d6', fillOpacity: 0.12
-                });
-                poly.bindTooltip(q.name, { direction: 'top', offset: [0, -4] });
-                poly.addTo(quadLayer);
-                quadPolygons.push({ q: q, poly: poly });
-            });
-            quadLayer.addTo(map);            /* 默认开 */
-        }
+        /* --- 样方框：已按金总要求从二维地图移除（2026-10-13）。
+               那 53 个框是 pin 桩点凸包、每个才 9×10 m，又小又碎；三维里本来就没有。
+               SURVEY.quadrats 数据仍保留在 js/survey-points.js 里，只是不画了。 --- */
 
         /* --- 样地边界 / 网格 / 水系（源：原始数据/bounds，见 js/bounds.js） --- */
         var boundLayer = L.layerGroup(), grid20Layer = L.layerGroup(),
@@ -361,6 +349,39 @@
             boundLayer.addTo(map);           /* 边界默认开；网格/水系默认关 */
         }
 
+        /* --- 格网编号（VIT/T）：每个网格格子取中心，找最近的 RTK 实测主树命名，
+               半透明写在格子中间 —— 与三维那个「格网编号」同一套做法。默认关。 --- */
+        var cellNumLayer = L.layerGroup();
+        var cellNumMarkers = [];
+        if (typeof BOUNDS !== 'undefined' && typeof SURVEY !== 'undefined' && SURVEY.maintrees) {
+            var MT = SURVEY.maintrees.filter(function (m) { return m.lat && m.lon; });
+            function nearestName(lat, lon) {
+                var best = '', bd = Infinity;
+                for (var i = 0; i < MT.length; i++) {
+                    var dy = (MT[i].lat - lat) * 110540;
+                    var dx = (MT[i].lon - lon) * 111320 * Math.cos(lat * Math.PI / 180);
+                    var d2 = dx * dx + dy * dy;
+                    if (d2 < bd) { bd = d2; best = MT[i].name; }
+                }
+                return best;
+            }
+            function addCellNums(list, cls) {
+                (list || []).forEach(function (g) {
+                    var r = g.pts, n = r.length - 1, la = 0, lo = 0;   /* 首尾重合，去掉最后一个 */
+                    if (n < 3) return;
+                    for (var i = 0; i < n; i++) { la += r[i][0]; lo += r[i][1]; }
+                    la /= n; lo /= n;
+                    var m = L.marker(place(la, lo), { interactive: false,
+                        icon: L.divIcon({ className: 'cellnum ' + cls, iconSize: [40, 12], iconAnchor: [20, 6],
+                            html: nearestName(la, lo) }) });
+                    m.addTo(cellNumLayer);
+                    cellNumMarkers.push({ g: g, m: m });
+                });
+            }
+            addCellNums(BOUNDS.grid20, 'c20');
+            addCellNums(BOUNDS.grid40, 'c40');
+        }
+
         /* --- 设备点（径向生长仪 / 液流 / LAI）—— 源 js/devices.js，与三维同一份数据。
                只画落在点云范围内的点（源表里有 10 个偏了约 600 m 的错坐标）。 --- */
         var devLayers = {}, devMarkers = {};
@@ -369,10 +390,26 @@
             var LAT_MIN = 39.9564368, LAT_MAX = 39.9620972;
             var LON_MIN = 115.4231939, LON_MAX = 115.4301577;
             var DEV_STYLE = {
-                dendrometer: { key: 'devDen', color: '#f0a23c', zh: '径向生长仪', en: 'Dendrometer' },
-                sapflow:     { key: 'devSap', color: '#3fa9f5', zh: '液流',       en: 'Sap flow' },
-                lai:         { key: 'devLai', color: '#b07fd8', zh: 'LAI',        en: 'LAI' }
+                /* 形状也区分开：液流=圆、径向=方、LAI=三角（金总要求，不只用颜色） */
+                dendrometer: { key: 'devDen', color: '#f0a23c', shape: 'square',   zh: '径向生长仪', en: 'Dendrometer' },
+                sapflow:     { key: 'devSap', color: '#3fa9f5', shape: 'circle',   zh: '液流',       en: 'Sap flow' },
+                lai:         { key: 'devLai', color: '#b07fd8', shape: 'triangle', zh: 'LAI',        en: 'LAI' }
             };
+            function devIcon(st, size) {
+                var s = size, h = size / 2, svg;
+                if (st.shape === 'circle') {
+                    svg = '<circle cx="' + h + '" cy="' + h + '" r="' + (h - 1.5) + '" fill="' + st.color +
+                          '" stroke="#0d0f0b" stroke-width="1.5"/>';
+                } else if (st.shape === 'square') {
+                    svg = '<rect x="1.5" y="1.5" width="' + (s - 3) + '" height="' + (s - 3) +
+                          '" fill="' + st.color + '" stroke="#0d0f0b" stroke-width="1.5"/>';
+                } else {
+                    svg = '<polygon points="' + h + ',1.5 ' + (s - 1.5) + ',' + (s - 2) + ' 1.5,' + (s - 2) +
+                          '" fill="' + st.color + '" stroke="#0d0f0b" stroke-width="1.5"/>';
+                }
+                return L.divIcon({ className: 'dev-ico', iconSize: [s, s], iconAnchor: [h, h],
+                    html: '<svg width="' + s + '" height="' + s + '" viewBox="0 0 ' + s + ' ' + s + '">' + svg + '</svg>' });
+            }
             Object.keys(DEV_STYLE).forEach(function (k) {
                 var st = DEV_STYLE[k];
                 var grp = L.layerGroup();
@@ -380,10 +417,8 @@
                 (DEVICES[k] || []).forEach(function (d) {
                     if (d.lon == null || d.lat == null) return;
                     if (d.lon < LON_MIN || d.lon > LON_MAX || d.lat < LAT_MIN || d.lat > LAT_MAX) return;
-                    var m = L.circleMarker(place(d.lat, d.lon), {
-                        radius: 4, weight: 1.5, color: '#0d0f0b',
-                        fillColor: st.color, fillOpacity: 0.95
-                    }).bindTooltip((d.name || d.id), { direction: 'top', offset: [0, -6] });
+                    var m = L.marker(place(d.lat, d.lon), { icon: devIcon(st, 13) })
+                        .bindTooltip((d.name || d.id), { direction: 'top', offset: [0, -8] });
                     m.addTo(grp);
                     devMarkers[k].push(m);
                 });
@@ -443,13 +478,15 @@
             tsMarkers.forEach(function (o) {
                 o.poly.setLatLngs(o.g.pts.map(function (p) { return place(p[0], p[1]); }));
             });
-            quadPolygons.forEach(function (o) {
-                o.poly.setLatLngs(o.q.pts.map(function (p) { return place(p[0], p[1]); }));
-            });
             [boundShapes, grid20Shapes, grid40Shapes, drainShapes].forEach(function (arr) {
                 arr.forEach(function (o) {
                     o.poly.setLatLngs(o.g.pts.map(function (p) { return place(p[0], p[1]); }));
                 });
+            });
+            cellNumMarkers.forEach(function (o) {
+                var r = o.g.pts, n = r.length - 1, la = 0, lo = 0;
+                for (var i = 0; i < n; i++) { la += r[i][0]; lo += r[i][1]; }
+                o.m.setLatLng(place(la / n, lo / n));
             });
             map.panTo(place(center[0], center[1]));
         }
@@ -477,20 +514,17 @@
                          key + ' &mdash; ' + plotName(key)] = groups[key];
             });
             overlays[t('map.loggers')] = loggerLayer;
-            /* RTK 实测主树/样方内树两个散点图层已按金总要求移除（2026-10-13） */
+            /* RTK 实测主树/样方内树 与 样方框(53) 均已按金总要求移除（2026-10-13） */
             if (typeof VORONOI !== 'undefined' && VORONOI.cells) {
                 overlays['<span style="color:#7fae54">&#9632;</span> ' + t('map.tsLayer') +
                          ' (' + VORONOI.cells.length + ')'] = tsLayer;
-            }
-            if (typeof SURVEY !== 'undefined' && SURVEY.quadrats && SURVEY.quadrats.length) {
-                overlays['<span style="color:#8fb4d6">&#9671;</span> ' + t('map.quadLayer') +
-                         ' (' + SURVEY.quadrats.length + ')'] = quadLayer;
             }
             if (typeof BOUNDS !== 'undefined') {
                 overlays['<span style="color:#f98422">&#9634;</span> ' + t('map.boundLayer')] = boundLayer;
                 overlays[t('map.grid20Layer')] = grid20Layer;
                 overlays[t('map.grid40Layer')] = grid40Layer;
                 overlays[t('map.drainLayer')] = drainLayer;
+            }
             Object.keys(devLayers || {}).forEach(function (k) {
                 var st = { dendrometer: '#f0a23c', sapflow: '#3fa9f5', lai: '#b07fd8' }[k];
                 var nm = { dendrometer: [ '径向生长仪', 'Dendrometer' ],
@@ -499,6 +533,8 @@
                 var label = (Lang.current === 'zh' ? nm[0] : nm[1]) + ' (' + devMarkers[k].length + ')';
                 overlays['<span style="color:' + st + '">&#9679;</span> ' + label] = devLayers[k];
             });
+            if (typeof BOUNDS !== 'undefined' && typeof SURVEY !== 'undefined') {
+                overlays['<span style="color:#c9c9c9">#</span> ' + t('map.cellNumLayer')] = cellNumLayer;
             }
 
             /* 窄屏折叠成一个图标，点开才展开。

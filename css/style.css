@@ -1905,6 +1905,16 @@ body[data-lang="zh"] .net-detail { font-size: 13.5px; font-weight: 400; }
     border: 1px solid var(--rule-strong);
 }
 
+/* 格网编号（VIT/T）—— 半透明小字，压在卫星图上不抢眼 */
+.cellnum.leaflet-div-icon {
+    background: none; border: 0;
+    color: rgba(255, 255, 255, .55);
+    font-size: 10px; line-height: 12px; text-align: center;
+    white-space: nowrap; overflow: visible;
+    text-shadow: 0 0 3px rgba(0, 0, 0, .85);
+}
+.cellnum.c40.leaflet-div-icon { font-size: 11px; color: rgba(255, 240, 200, .6); }
+
 .leaflet-control-layers-expanded { padding: 8px 12px 8px 8px; font-size: 13px; }
 
 .leaflet-control-scale-line {
