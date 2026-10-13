@@ -42,16 +42,18 @@
 			#potree_sidebar_container { top: 84px !important; }
 		}
 
-		/* 右上角图层控件（学 2D 地图那张白色可选面板） */
+		/* 右上角图层控件（常开，白底可选面板，同 2D 地图） */
 		.layers { position: relative; }
-		.layers-panel { display: none; position: absolute; right: 0; top: 40px; z-index: 2100;
-			background: #fff; color: #333; border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,.35);
-			padding: 10px 14px; min-width: 160px; }
-		.layers-panel.open { display: block; }
-		.layers-panel label { display: block; padding: 5px 2px; font-size: 13.5px; cursor: pointer;
-			user-select: none; white-space: nowrap; }
-		.layers-panel input { margin-right: 6px; vertical-align: middle; }
-		.layers-btn.open { background: rgba(58,72,40,.85) !important; color: #fff !important; }
+		.layers-panel { position: absolute; right: 0; top: 4px; z-index: 2100;
+			background: #fff; color: #333; border-radius: 6px; box-shadow: 0 2px 12px rgba(0,0,0,.4);
+			padding: 10px 14px 8px; min-width: 170px; }
+		.layers-panel .lp-cap { font-size: 12px; font-weight: 700; color: #666;
+			letter-spacing: .5px; margin: 0 0 4px; }
+		.layers-panel label { display: block; padding: 6px 4px; font-size: 14px; cursor: pointer;
+			user-select: none; white-space: nowrap; border-radius: 4px; }
+		.layers-panel label:hover { background: rgba(108,161,74,.14); }
+		.layers-panel input { margin-right: 7px; vertical-align: middle; width: 15px; height: 15px;
+			accent-color: #2f6fdb; cursor: pointer; }
 
 		/* 三维场景里的浮动标签 */
 		#labels { position: fixed; inset: 0; z-index: 1500; pointer-events: none; overflow: hidden; }
@@ -85,6 +87,16 @@
 		#legend3d .sl3d-i { display: inline-block; margin: 0 8px 2px 0; }
 		#legend3d .sl3d-i i { display: inline-block; width: 9px; height: 9px; border-radius: 2px;
 			margin-right: 4px; vertical-align: middle; }
+		/* 树种数量柱状图 */
+		#legend3d .bars { margin-top: 4px; }
+		#legend3d .bar-row { display: flex; align-items: center; margin: 2px 0; font-size: 11.5px; }
+		#legend3d .bar-name { width: 52px; flex: none; text-align: right; padding-right: 7px;
+			color: #cfd4c4; white-space: nowrap; }
+		#legend3d .bar-track { flex: 1; height: 11px; background: rgba(255,255,255,.07);
+			border-radius: 3px; overflow: hidden; }
+		#legend3d .bar { display: block; height: 100%; border-radius: 3px 2px 2px 3px; }
+		#legend3d .bar-n { width: 36px; flex: none; text-align: left; padding-left: 6px;
+			color: #aeb59f; font-size: 10.5px; }
 		@media (max-width: 640px) { #legend3d { font-size: 10.5px; padding: 6px 8px; } }
 
 		/* 操作提示（相机只有环绕一种模式：左键旋转 · 中键平移 · 滚轮缩放） */
@@ -121,9 +133,9 @@
 		<div class="brand"><span id="bt">北京森林生态系统定位研究站 · 三维林相</span>
 			<small id="bs">无人机 LiDAR 彩色点云 · 高德卫星底图 · 20 棵监测树 / 3 台数采</small></div>
 		<div class="spacer"></div>
-		<div class="layers">
-			<button class="btn layers-btn" id="layersBtn" title="图层">☰</button>
-			<div class="layers-panel" id="layersPanel">
+		<div class="layers" id="layersBox">
+			<div class="layers-panel open" id="layersPanel">
+				<div class="lp-cap" id="lblLayers">图层</div>
 				<label><input type="checkbox" id="chkDet" checked> <span id="lblDet">单木覆盖</span></label>
 				<label><input type="checkbox" id="chkBnd" checked> <span id="lblBnd">样地边界</span></label>
 				<label><input type="checkbox" id="chkGrid"> <span id="lblGrid">网格 + 水系</span></label>
@@ -149,11 +161,11 @@
 			zh: { title: '北京森林生态系统定位研究站 · 三维林相',
 			      sub: '无人机 LiDAR 彩色点云 · 高德卫星底图 · 20 棵监测树 / 3 台数采',
 			      back: '← 返回网站', lang: 'EN',
-			      layers: '图层', lDet: '单木覆盖', lBnd: '样地边界', lGrid: '网格 + 水系' },
+			      layers: '图层', lLayers: '图层', lDet: '单木覆盖', lBnd: '样地边界', lGrid: '网格 + 水系' },
 			en: { title: 'Beijing Forest Ecosystem Research Station · 3D Canopy',
 			      sub: 'UAV LiDAR colour point cloud · AMap satellite · 20 monitored trees / 3 loggers',
 			      back: '← Back to site', lang: '中文',
-			      layers: 'Layers', lDet: 'Tree cover', lBnd: 'Plot boundaries', lGrid: 'Grid + drainage' }
+			      layers: 'Layers', lLayers: 'Layers', lDet: 'Tree cover', lBnd: 'Plot boundaries', lGrid: 'Grid + drainage' }
 		};
 		var LANG = localStorage.getItem('bfers-3d-lang') || 'zh';
 		function applyLang() {
@@ -165,7 +177,8 @@
 			document.getElementById('langBtn').textContent = d.lang;
 			var ch = document.getElementById('ctrlHint');
 			if (ch) ch.textContent = d.ctrlHint;
-			var lb = document.getElementById('lblDet'); if (lb) lb.textContent = d.lDet;
+			var lb = document.getElementById('lblLayers'); if (lb) lb.textContent = d.lLayers;
+			lb = document.getElementById('lblDet'); if (lb) lb.textContent = d.lDet;
 			lb = document.getElementById('lblBnd'); if (lb) lb.textContent = d.lBnd;
 			lb = document.getElementById('lblGrid'); if (lb) lb.textContent = d.lGrid;
 			renderLegend();
@@ -182,12 +195,19 @@
 				'<span><i class="det"></i>' + (s ? '单木覆盖（按物种着色）' : 'Tree cover (by species)') + ' <b>' + DET_N + '</b></span>';
 			var keys = Object.keys(SPECIES || {});
 			if (DET_ON && keys.length) {
-				html += '<div class="sl3d">';
-				keys.forEach(function (k) {
-					html += '<span class="sl3d-i"><i style="background:' + SPECIES[k].color + '"></i>' +
-						SPECIES[k].zh + '</span>';
+				/* 按株数排倒序，画横向条形（颜色即该树种在点云里的着色） */
+				var rows = keys.map(function (k) {
+					return { zh: SPECIES[k].zh, color: SPECIES[k].color, n: SPECIES[k].n || 0 };
+				}).filter(function (r) { return r.n > 0; }).sort(function (a, b) { return b.n - a.n; });
+				var max = rows.length ? rows[0].n : 1;
+				html += '<div class="sl3d"><div class="bars">';
+				rows.forEach(function (r) {
+					var w = Math.max(3, Math.round(r.n / max * 100));
+					html += '<div class="bar-row"><span class="bar-name">' + r.zh + '</span>' +
+						'<span class="bar-track"><i class="bar" style="width:' + w + '%;background:' + r.color + '"></i></span>' +
+						'<span class="bar-n">' + r.n + '</span></div>';
 				});
-				html += '</div>';
+				html += '</div></div>';
 			}
 			el.innerHTML = html;
 		}
@@ -225,6 +245,8 @@
 
 		var viewer = new Potree.Viewer(document.getElementById('potree_render_area'));
 		viewer.setEDLEnabled(true);
+		/* 轮廓增强：加大 EDL 半径与强度，树冠边缘更立体（Potree 默认太平淡） */
+		try { viewer.setEDLRadius(2.2); viewer.setEDLStrength(1.9); } catch (e) {}
 		viewer.setFOV(60);
 		viewer.setPointBudget(3_000_000);
 		viewer.setDescription('');
@@ -256,16 +278,7 @@
 			});
 		}());
 
-		// 右上角图层控件：面板开合 + 复选框开关
-		var lp = document.getElementById('layersPanel'), lbtn = document.getElementById('layersBtn');
-		lbtn.addEventListener('click', function (e) {
-			e.stopPropagation();
-			lp.classList.toggle('open');
-			this.classList.toggle('open', lp.classList.contains('open'));
-		});
-		document.addEventListener('click', function (e) {
-			if (!lp.contains(e.target) && e.target !== lbtn) { lp.classList.remove('open'); lbtn.classList.remove('open'); }
-		});
+		// 右上角图层控件：复选框开关（面板常开，点选即生效）
 		document.getElementById('chkDet').addEventListener('change', function () {
 			DET_ON = this.checked; renderLegend();
 		});
@@ -498,8 +511,9 @@
 		Potree.loadPointCloud('./pointclouds/index/metadata.json', 'index', function (e) {
 			var pointcloud = e.pointcloud, scene = viewer.scene;
 			var m = pointcloud.material;
-			m.size = 1; m.pointSizeType = Potree.PointSizeType.FIXED;   /* 固定像素：自适应会在贴合时把点撑大，放大就糊 */
-			m.shape = Potree.PointShape.SQUARE; m.activeAttributeName = 'rgba';
+			m.size = 1.2; m.pointSizeType = Potree.PointSizeType.FIXED;   /* 固定像素：自适应会在贴合时把点撑大，放大就糊 */
+			m.shape = Potree.PointShape.CIRCLE;
+			m.shape = Potree.PointShape.CIRCLE; m.activeAttributeName = 'rgba';
 			scene.addPointCloud(pointcloud);
 			viewer.fitToScreen();
 
@@ -542,6 +556,7 @@
 			fetch('voronoi.json').then(function (r) { return r.json(); }).then(function (vo) {
 				SPECIES = vo.species || {};
 				(vo.cells || []).forEach(function (c) {   // [Spe_ID, [[E,N,Z],...]]
+					SPECIES[c[0]].n = (SPECIES[c[0]].n || 0) + 1;   // 该树种的单木株数
 					var ring = c[1], ax = 0, ay = 0, az = 0;
 					for (var i = 0; i < ring.length; i++) { ax += ring[i][0]; ay += ring[i][1]; az += ring[i][2]; }
 					var n = ring.length || 1;
