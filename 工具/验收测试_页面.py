@@ -421,10 +421,6 @@ with sync_playwright() as p:
           page.query_selector("#canopy") is not None and page.query_selector("#canopyFrame") is not None)
     check("3f9. 三维区块有加载按钮与全屏按钮",
           page.query_selector("#canopyLoad") is not None and page.query_selector("#canopyFull") is not None)
-    check("3f10. 三维区块默认是高清正射影像、iframe 不自动加载",
-          page.query_selector("#canopyOrtho") is not None
-          and page.evaluate("document.querySelector('.canopy-frame').classList.contains('is-3d')") is False
-          and not page.get_attribute("#canopyFrame", "src"))
 
     # 标记按数采分三色
     colors = page.evaluate("""() => {

@@ -1967,17 +1967,16 @@ body[data-lang="zh"] .net-detail { font-size: 13.5px; font-weight: 400; }
 #canopy { padding-top: 40px; }
 .canopy-frame { position: relative; width: 100%; height: 78vh; min-height: 420px;
     border: 1px solid var(--rule-strong); border-radius: 8px; overflow: hidden; background: #14170f; }
-.canopy-frame iframe { width: 100%; height: 100%; border: 0; display: none; }
-/* 默认展示：高清 LiDAR 正射影像（深度缩放），点按钮才换成实时三维点云 */
-#canopyOrtho { position: absolute; inset: 0; z-index: 1; background: #15180f; }
-.canopy-frame.is-3d #canopyOrtho { display: none; }
-.canopy-frame.is-3d iframe { display: block; }
-.canopy-overlay { position: absolute; left: 0; right: 0; bottom: 0; z-index: 500;
-    padding: 26px 20px 16px; display: flex; align-items: center; justify-content: center; gap: 16px;
-    flex-wrap: wrap; text-align: center; color: #d3dccb; font-size: 14px;
-    background: linear-gradient(rgba(20, 24, 15, 0), rgba(20, 24, 15, 0.82)); }
-.canopy-frame.is-3d .canopy-overlay { display: none; }
-.canopy-overlay p { margin: 0; color: inherit; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9); }
+.canopy-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+.canopy-placeholder { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 14px; padding: 20px; text-align: center;
+    color: #d3dccb; font-size: 15px; overflow: hidden; background: #15180f;
+    background-image: repeating-linear-gradient(135deg, #1a1e14 0 18px, #15180f 18px 36px); }
+/* 预览图：点云的一张静帧，半透明铺底，让占位区一眼看得出是什么 */
+.canopy-preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    opacity: 0.45; z-index: 0; }
+.canopy-placeholder p, .canopy-placeholder .canopy-btn { position: relative; z-index: 1; }
+.canopy-placeholder p { color: inherit; margin: 0; font-size: 15px; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9); }
 .canopy-btn { padding: 10px 22px; border-radius: 6px; border: 1px solid rgba(226, 235, 220, 0.5);
     background: rgba(255, 255, 255, 0.06); color: #e2ebdc; font-size: 15px; cursor: pointer; font-family: inherit; }
 .canopy-btn:hover { background: var(--heading); color: #fff; border-color: var(--heading); }
