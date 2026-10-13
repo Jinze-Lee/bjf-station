@@ -507,15 +507,18 @@ with sync_playwright() as p:
     # ---------------- RTK 实测点图层 ----------------
     check("3k. survey-points.js 已加载",
           page.evaluate("typeof SURVEY !== 'undefined' && Array.isArray(SURVEY.maintrees)"))
-    check("3l. 实测主树默认显示在地图上",
-          page.evaluate("SiteMap.map.hasLayer(SiteMap.surveyMainLayer)"))
-    check("3m. 样方内树默认不显示",
-          page.evaluate("!SiteMap.map.hasLayer(SiteMap.surveyTreeLayer)"))
+    check("3l. RTK 散点图层已从地图移除（金总要求）",
+          not page.evaluate("SiteMap.map.hasLayer(SiteMap.surveyMainLayer)")
+          and not page.evaluate("SiteMap.map.hasLayer(SiteMap.surveyTreeLayer)"))
+    check("3m. 图层控件里不再有实测主树/样方内树",
+          page.evaluate("""()=>{const s=document.querySelector('.leaflet-control-layers-overlays')
+              ? document.querySelector('.leaflet-control-layers-overlays').textContent : '';
+              return s.indexOf('实测主树')<0 && s.indexOf('样方内树')<0;}"""))
     n_main = page.evaluate("SiteMap.surveyMainMarkers.length")
     n_tree = page.evaluate("SiteMap.surveyTreeMarkers.length")
-    check("3n. 主树标记数与数据一致",
+    check("3n. 主树数据仍在（只是不显示）",
           n_main == page.evaluate("SURVEY.maintrees.length") and n_main > 0, "n=%s" % n_main)
-    check("3o. 样方内树标记数与数据一致",
+    check("3o. 样方内树数据仍在（只是不显示）",
           n_tree == page.evaluate("SURVEY.plotTrees.length") and n_tree > 0, "n=%s" % n_tree)
 
     # 实测点同样要过 WGS-84 -> GCJ-02（与 4a 同理）
@@ -528,22 +531,25 @@ with sync_playwright() as p:
     check("3p. 实测点在高德底图上已做 GCJ-02 偏移",
           50 < dsv < 1000, f"偏移 {dsv:.0f} m")
 
-    # 样方层勾上后应真的渲染出标记（不只是数据在内存里）
+    # 样方层手工勾上后仍应能渲染（只是不再默认挂载）
     page.evaluate("SiteMap.map.addLayer(SiteMap.surveyTreeLayer)")
     page.wait_for_timeout(400)
     tree_drawn = page.evaluate(
         "SiteMap.surveyTreeMarkers.filter(o => o.marker._path).length")
-    check("3q. 勾选样方层后标记渲染出来",
+    check("3q. 手工勾选样方层后标记仍能渲染",
           tree_drawn == n_tree, f"渲染 {tree_drawn}/{n_tree}")
     page.evaluate("SiteMap.map.removeLayer(SiteMap.surveyTreeLayer)")
 
-    # 实测点弹窗含 H (RTK) 与坐标
+    # 实测点弹窗含 H (RTK) 与坐标（散点已不默认挂载，先临时挂上再验）
+    page.evaluate("SiteMap.map.addLayer(SiteMap.surveyMainLayer)")
+    page.wait_for_timeout(300)
     page.evaluate("SiteMap.surveyMainMarkers[0].marker.openPopup()")
     page.wait_for_timeout(400)
     svp = page.evaluate(
         "(document.querySelector('.leaflet-popup-content')||{}).textContent||''")
     check("3r. 实测点弹窗含 H (RTK) 与坐标",
           "H (RTK)" in svp and "\u00b0N" in svp, repr(svp[:60]))
+    page.evaluate("SiteMap.map.removeLayer(SiteMap.surveyMainLayer)")
 
     # ---------------- WGS-84 -> GCJ-02 坐标转换 ----------------
     check("4-pre. 地图句柄 window.SiteMap 已暴露",

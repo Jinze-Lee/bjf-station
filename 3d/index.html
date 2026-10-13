@@ -43,7 +43,7 @@
 		}
 
 		/* 右上角图层控件（常开，白底可选面板，同 2D 地图） */
-		.layers { position: relative; }
+		.layers { position: relative; pointer-events: auto; }
 		.layers-panel { position: absolute; right: 0; top: 4px; z-index: 2100;
 			background: #fff; color: #333; border-radius: 6px; box-shadow: 0 2px 12px rgba(0,0,0,.4);
 			padding: 10px 14px 8px; min-width: 170px; }
@@ -190,8 +190,6 @@
 			var html =
 				'<span><i class="mon"></i>' + (s ? '监测树' : 'Monitored') + ' <b>20</b></span><br>' +
 				'<span><i class="log"></i>' + (s ? '数采' : 'Loggers') + ' <b>3</b></span><br>' +
-				'<span>\uD83C\uDF33 ' + (s ? '实测主树 RTK' : 'Surveyed main (RTK)') + ' <b>' + MAIN_N + '</b></span><br>' +
-				'<span><i class="tree"></i>' + (s ? '样方内树 RTK' : 'Quadrat trees (RTK)') + ' <b>' + TREE_N + '</b></span><br>' +
 				'<span><i class="det"></i>' + (s ? '单木覆盖（按物种着色）' : 'Tree cover (by species)') + ' <b>' + DET_N + '</b></span>';
 			var keys = Object.keys(SPECIES || {});
 			if (DET_ON && keys.length) {
@@ -245,8 +243,8 @@
 
 		var viewer = new Potree.Viewer(document.getElementById('potree_render_area'));
 		viewer.setEDLEnabled(true);
-		/* 轮廓增强：加大 EDL 半径与强度，树冠边缘更立体（Potree 默认太平淡） */
-		try { viewer.setEDLRadius(2.2); viewer.setEDLStrength(1.9); } catch (e) {}
+		/* 轮廓增强：只轻微加一点（金总：太黑了，稍微增强一点点就够） */
+		try { viewer.setEDLRadius(1.6); viewer.setEDLStrength(1.15); } catch (e) {}
 		viewer.setFOV(60);
 		viewer.setPointBudget(3_000_000);
 		viewer.setDescription('');
@@ -541,14 +539,7 @@
 					addLabel(p.E, p.N, p.Z + 30, p.nameZh, 'log',
 						'<b>' + p.nameZh + '</b><br>' + (LANG === 'zh' ? '样点数采' : 'Plot logger'));
 				});
-				(data.maintrees || []).forEach(function (m) {
-					if (m.Z != null) DOTPTS.push({ E: m.E, N: m.N, Z: m.Z, name: m.name, kind: 'main' });
-				});
-				(data.plotTrees || []).forEach(function (p) {
-					if (p.Z != null) DOTPTS.push({ E: p.E, N: p.N, Z: p.Z, name: p.name, kind: 'tree' });
-				});
-				MAIN_N = (data.maintrees || []).length;
-				TREE_N = (data.plotTrees || []).length;
+				/* RTK 实测主树/样方内树的散点已按金总要求全部移除 —— 不再往 DOTPTS 里加 */
 				renderLegend();
 			});
 

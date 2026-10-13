@@ -313,7 +313,8 @@
         if (typeof SURVEY !== 'undefined') {
             addSurvey(SURVEY.maintrees || [], 'main', surveyMainLayer, surveyMainMarkers, 4, 1.5);
             addSurvey(SURVEY.plotTrees || [], 'tree', surveyTreeLayer, surveyTreeMarkers, 3, 1);
-            surveyMainLayer.addTo(map);      /* 主树默认开；样方内树默认关 */
+            /* 散点图层不挂到地图上（金总要求移除所有 RTK 散点）；对象保留，
+               别的代码（联动、验收）还能引用，只是不显示。 */
         }
 
         /* --- 样方框（由每棵主树周围的 pin 桩点取凸包推得，见 js/survey-points.js） --- */
@@ -447,10 +448,7 @@
                          key + ' &mdash; ' + plotName(key)] = groups[key];
             });
             overlays[t('map.loggers')] = loggerLayer;
-            if (typeof SURVEY !== 'undefined') {
-                overlays[t('map.surveyMainLayer')] = surveyMainLayer;
-                overlays[t('map.surveyTreeLayer')] = surveyTreeLayer;
-            }
+            /* RTK 实测主树/样方内树两个散点图层已按金总要求移除（2026-10-13） */
             if (typeof VORONOI !== 'undefined' && VORONOI.cells) {
                 overlays['<span style="color:#7fae54">&#9632;</span> ' + t('map.tsLayer') +
                          ' (' + VORONOI.cells.length + ')'] = tsLayer;
