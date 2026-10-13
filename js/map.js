@@ -361,6 +361,35 @@
             boundLayer.addTo(map);           /* 边界默认开；网格/水系默认关 */
         }
 
+        /* --- 设备点（径向生长仪 / 液流 / LAI）—— 源 js/devices.js，与三维同一份数据。
+               只画落在点云范围内的点（源表里有 10 个偏了约 600 m 的错坐标）。 --- */
+        var devLayers = {}, devMarkers = {};
+        if (typeof DEVICES !== 'undefined') {
+            /* 点云（LiDAR 航测）覆盖范围，WGS-84；超出这个框的设备点源表里共 10 个是错坐标，不画 */
+            var LAT_MIN = 39.9564368, LAT_MAX = 39.9620972;
+            var LON_MIN = 115.4231939, LON_MAX = 115.4301577;
+            var DEV_STYLE = {
+                dendrometer: { key: 'devDen', color: '#f0a23c', zh: '径向生长仪', en: 'Dendrometer' },
+                sapflow:     { key: 'devSap', color: '#3fa9f5', zh: '液流',       en: 'Sap flow' },
+                lai:         { key: 'devLai', color: '#b07fd8', zh: 'LAI',        en: 'LAI' }
+            };
+            Object.keys(DEV_STYLE).forEach(function (k) {
+                var st = DEV_STYLE[k];
+                var grp = L.layerGroup();
+                devLayers[k] = grp; devMarkers[k] = [];
+                (DEVICES[k] || []).forEach(function (d) {
+                    if (d.lon == null || d.lat == null) return;
+                    if (d.lon < LON_MIN || d.lon > LON_MAX || d.lat < LAT_MIN || d.lat > LAT_MAX) return;
+                    var m = L.circleMarker(place(d.lat, d.lon), {
+                        radius: 4, weight: 1.5, color: '#0d0f0b',
+                        fillColor: st.color, fillOpacity: 0.95
+                    }).bindTooltip((d.name || d.id), { direction: 'top', offset: [0, -6] });
+                    m.addTo(grp);
+                    devMarkers[k].push(m);
+                });
+            });
+        }
+
         /* --- 单木覆盖（Voronoi / 泰森多边形）：整片区域按最近的树填色 ---
          * 数据见 js/voronoi.js。用 canvas 渲染器承载 3779 个面。
          * 默认关（和「样方内树」一致），否则会把那 20 棵监测树淹掉。 */
@@ -462,6 +491,14 @@
                 overlays[t('map.grid20Layer')] = grid20Layer;
                 overlays[t('map.grid40Layer')] = grid40Layer;
                 overlays[t('map.drainLayer')] = drainLayer;
+            Object.keys(devLayers || {}).forEach(function (k) {
+                var st = { dendrometer: '#f0a23c', sapflow: '#3fa9f5', lai: '#b07fd8' }[k];
+                var nm = { dendrometer: [ '径向生长仪', 'Dendrometer' ],
+                           sapflow: [ '液流', 'Sap flow' ],
+                           lai: [ 'LAI', 'LAI' ] }[k];
+                var label = (Lang.current === 'zh' ? nm[0] : nm[1]) + ' (' + devMarkers[k].length + ')';
+                overlays['<span style="color:' + st + '">&#9679;</span> ' + label] = devLayers[k];
+            });
             }
 
             /* 窄屏折叠成一个图标，点开才展开。

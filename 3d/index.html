@@ -391,15 +391,21 @@
 		   由右上角三个复选框分别控制显隐。源：js/devices.js（WGS-84 经纬度 + 海拔）。 */
 		function addDevices() {
 			if (typeof DEVICES === 'undefined') return;
+			var B = window.PCBOX, n_skip = 0;
 			var groups = [['dendrometer', 'dev-den'], ['sapflow', 'dev-sap'], ['lai', 'dev-lai']];
 			groups.forEach(function (g) {
 				(DEVICES[g[0]] || []).forEach(function (d) {
 					if (d.lon == null || d.lat == null) return;
 					var p = proj4('EPSG:4326', 'EPSG:32650', [d.lon, d.lat]);   // -> [E, N]
+					/* 点云范围外的点不画：源表里有 10 个（DEN-039~046、HB-004/005）偏了约 600 m，
+					   明显是错坐标/别的场地，画出来会飘在点云外面（金总已指出）。 */
+					if (B && (p[0] < B.min[0] - 2 || p[0] > B.max[0] + 2 ||
+					          p[1] < B.min[1] - 2 || p[1] > B.max[1] + 2)) { n_skip++; return; }
 					DOTPTS.push({ E: p[0], N: p[1], Z: (d.z || 0) + 1.5,
 						name: d.name || d.id, kind: g[1] });
 				});
 			});
+			if (n_skip) console.info('[3d] 有 ' + n_skip + ' 个设备点在点云范围外，已略过');
 		}
 		function drawDots() {
 			dctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
@@ -612,6 +618,7 @@
 			}
 			var box = { min: [bbox.min.x + off.x, bbox.min.y + off.y, bbox.min.z + off.z],
 			            max: [bbox.max.x + off.x, bbox.max.y + off.y, bbox.max.z + off.z] };
+			window.PCBOX = box;    /* 设备点越界过滤用 */
 
 			fetch('annotations.json').then(function (r) { return r.json(); }).then(function (data) {
 				ANNOT = data;

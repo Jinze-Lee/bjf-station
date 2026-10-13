@@ -55,6 +55,7 @@
                 'js/survey-points.js',
                 'js/voronoi.js',
                 'js/bounds.js',
+                'js/devices.js',
                 'js/map.js'
             ]
         },
