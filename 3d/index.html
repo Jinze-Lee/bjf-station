@@ -128,6 +128,7 @@
 	<script src="./libs/potree/potree.js"></script>
 	<script src="./libs/plasio/js/laslaz.js"></script>
 	<script src="../js/leaflet.js"></script>
+	<script src="../js/devices.js"></script>
 
 	<div id="topbar">
 		<div class="brand"><span id="bt">北京森林生态系统定位研究站 · 三维林相</span>
@@ -138,7 +139,13 @@
 				<div class="lp-cap" id="lblLayers">图层</div>
 				<label><input type="checkbox" id="chkDet" checked> <span id="lblDet">单木覆盖</span></label>
 				<label><input type="checkbox" id="chkBnd" checked> <span id="lblBnd">样地边界</span></label>
-				<label><input type="checkbox" id="chkGrid"> <span id="lblGrid">网格 + 水系</span></label>
+				<label><input type="checkbox" id="chkG20"> <span id="lblG20">20 m 网格</span></label>
+				<label><input type="checkbox" id="chkG40"> <span id="lblG40">40 m 网格</span></label>
+				<label><input type="checkbox" id="chkDrain"> <span id="lblDrain">水系</span></label>
+				<label><input type="checkbox" id="chkNum"> <span id="lblNum">格网编号（VIT/T）</span></label>
+				<label><input type="checkbox" id="chkSap"> <span id="lblSap">液流</span></label>
+				<label><input type="checkbox" id="chkDen"> <span id="lblDen">径向生长</span></label>
+				<label><input type="checkbox" id="chkLai"> <span id="lblLai">LAI</span></label>
 			</div>
 		</div>
 		<button class="btn" id="langBtn">EN</button>
@@ -161,11 +168,15 @@
 			zh: { title: '北京森林生态系统定位研究站 · 三维林相',
 			      sub: '无人机 LiDAR 彩色点云 · 高德卫星底图 · 20 棵监测树 / 3 台数采',
 			      back: '← 返回网站', lang: 'EN',
-			      layers: '图层', lLayers: '图层', lDet: '单木覆盖', lBnd: '样地边界', lGrid: '网格 + 水系' },
+			      layers: '图层', lLayers: '图层', lDet: '单木覆盖', lBnd: '样地边界',
+			      lG20: '20 m 网格', lG40: '40 m 网格', lDrain: '水系', lNum: '格网编号（VIT/T）',
+			      lSap: '液流', lDen: '径向生长', lLai: 'LAI' },
 			en: { title: 'Beijing Forest Ecosystem Research Station · 3D Canopy',
 			      sub: 'UAV LiDAR colour point cloud · AMap satellite · 20 monitored trees / 3 loggers',
 			      back: '← Back to site', lang: '中文',
-			      layers: 'Layers', lLayers: 'Layers', lDet: 'Tree cover', lBnd: 'Plot boundaries', lGrid: 'Grid + drainage' }
+			      layers: 'Layers', lLayers: 'Layers', lDet: 'Tree cover', lBnd: 'Plot boundaries',
+			      lG20: '20 m grid', lG40: '40 m grid', lDrain: 'Drainage', lNum: 'Grid IDs (VIT/T)',
+			      lSap: 'Sap flow', lDen: 'Dendrometer', lLai: 'LAI' }
 		};
 		var LANG = localStorage.getItem('bfers-3d-lang') || 'zh';
 		function applyLang() {
@@ -180,7 +191,13 @@
 			var lb = document.getElementById('lblLayers'); if (lb) lb.textContent = d.lLayers;
 			lb = document.getElementById('lblDet'); if (lb) lb.textContent = d.lDet;
 			lb = document.getElementById('lblBnd'); if (lb) lb.textContent = d.lBnd;
-			lb = document.getElementById('lblGrid'); if (lb) lb.textContent = d.lGrid;
+			lb = document.getElementById('lblG20'); if (lb) lb.textContent = d.lG20;
+			lb = document.getElementById('lblG40'); if (lb) lb.textContent = d.lG40;
+			lb = document.getElementById('lblDrain'); if (lb) lb.textContent = d.lDrain;
+			lb = document.getElementById('lblNum'); if (lb) lb.textContent = d.lNum;
+			lb = document.getElementById('lblSap'); if (lb) lb.textContent = d.lSap;
+			lb = document.getElementById('lblDen'); if (lb) lb.textContent = d.lDen;
+			lb = document.getElementById('lblLai'); if (lb) lb.textContent = d.lLai;
 			renderLegend();
 		}
 		function renderLegend() {
@@ -277,18 +294,24 @@
 		}());
 
 		// 右上角图层控件：复选框开关（面板常开，点选即生效）
-		document.getElementById('chkDet').addEventListener('change', function () {
-			DET_ON = this.checked; renderLegend();
-		});
-		document.getElementById('chkBnd').addEventListener('change', function () {
-			BND_ON = this.checked;
-		});
-		document.getElementById('chkGrid').addEventListener('change', function () {
-			GRID_ON = this.checked;
-		});
+		function bindChk(id, fn) {
+			var el = document.getElementById(id);
+			if (el) el.addEventListener('change', function () { fn(this.checked); });
+		}
+		bindChk('chkDet', function (v) { DET_ON = v; renderLegend(); });
+		bindChk('chkBnd', function (v) { BND_ON = v; });
+		bindChk('chkG20', function (v) { G20_ON = v; });
+		bindChk('chkG40', function (v) { G40_ON = v; });
+		bindChk('chkDrain', function (v) { DRAIN_ON = v; });
+		bindChk('chkNum', function (v) { NUM_ON = v; });
+		bindChk('chkSap', function (v) { SAP_ON = v; });
+		bindChk('chkDen', function (v) { DEN_ON = v; });
+		bindChk('chkLai', function (v) { LAI_ON = v; });
 
 		var ANNOT = null, MAIN_N = 0, TREE_N = 0, SPECIES = {}, DET_ON = true, DET_N = 0,
-		    BNDS = null, BND_ON = true, GRID_ON = false;
+		    BNDS = null, BND_ON = true,
+		    G20_ON = false, G40_ON = false, DRAIN_ON = false, NUM_ON = false,
+		    SAP_ON = false, DEN_ON = false, LAI_ON = false, MAINT = [];
 
 		// 世界坐标(CRS) -> 屏幕像素（用相机矩阵，不需要 THREE 全局）
 		function m4mul(a, b) { var o = new Array(16);
@@ -364,6 +387,20 @@
 		sizeCanvas();
 		window.addEventListener('resize', sizeCanvas);
 
+		/* 设备点（径向生长仪 / 液流 / LAI）转成三维用的 UTM 坐标，塞进 DOTPTS，
+		   由右上角三个复选框分别控制显隐。源：js/devices.js（WGS-84 经纬度 + 海拔）。 */
+		function addDevices() {
+			if (typeof DEVICES === 'undefined') return;
+			var groups = [['dendrometer', 'dev-den'], ['sapflow', 'dev-sap'], ['lai', 'dev-lai']];
+			groups.forEach(function (g) {
+				(DEVICES[g[0]] || []).forEach(function (d) {
+					if (d.lon == null || d.lat == null) return;
+					var p = proj4('EPSG:4326', 'EPSG:32650', [d.lon, d.lat]);   // -> [E, N]
+					DOTPTS.push({ E: p[0], N: p[1], Z: (d.z || 0) + 1.5,
+						name: d.name || d.id, kind: g[1] });
+				});
+			});
+		}
 		function drawDots() {
 			dctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
 			dctx.clearRect(0, 0, innerWidth, innerHeight);
@@ -397,6 +434,19 @@
 					dctx.font = es + 'px "Segoe UI Emoji","Noto Color Emoji",serif';
 					dctx.textAlign = 'center'; dctx.textBaseline = 'middle';
 					dctx.fillText('\uD83C\uDF33', sx, sy);
+				} else if (p.kind && p.kind.indexOf('dev-') === 0) {
+					/* 设备点：液流 / 径向生长 / LAI，各自跟复选框走 */
+					if (p.kind === 'dev-sap' && !SAP_ON) continue;
+					if (p.kind === 'dev-den' && !DEN_ON) continue;
+					if (p.kind === 'dev-lai' && !LAI_ON) continue;
+					var dc = p.kind === 'dev-sap' ? '#3fa9f5' : (p.kind === 'dev-den' ? '#f0a23c' : '#b07fd8');
+					var rr = d2 > 400 * 400 ? 2.6 : (d2 > 150 * 150 ? 3.4 : 4.6);
+					dctx.beginPath(); dctx.arc(sx, sy, rr, 0, 6.2832);
+					dctx.fillStyle = dc; dctx.fill();
+					dctx.lineWidth = 1.4; dctx.strokeStyle = 'rgba(10,13,8,.85)'; dctx.stroke();
+					DOTSCREEN.push({ x: sx, y: sy, name: p.name, kind: p.kind });
+					if (d2 < LABEL_DIST * LABEL_DIST) texts.push({ sx: sx, sy: sy, d2: d2, name: p.name });
+					continue;
 				} else {
 					var r = d2 > 400 * 400 ? 1.7 : (d2 > 150 * 150 ? 2.2 : 3.2);
 					dctx.globalAlpha = 0.9;
@@ -475,11 +525,44 @@
 					drawRing(b.pts, V, P, '#f98422', '#f98422', 2.5, 0.16, true);
 				});
 			}
-			if (GRID_ON) {
-				(BNDS.grid20 || []).forEach(function (g) { drawRing(g.pts, V, P, null, 'rgba(235,235,235,.75)', 1.1, 0, true); });
-				(BNDS.grid40 || []).forEach(function (g) { drawRing(g.pts, V, P, null, 'rgba(255,210,127,.85)', 1.6, 0, true); });
-				(BNDS.drainage || []).forEach(function (l) { drawRing(l, V, P, null, 'rgba(60,175,255,1)', 2.2, 0, false); });
+			if (G20_ON) (BNDS.grid20 || []).forEach(function (g) { drawRing(g.pts, V, P, null, 'rgba(235,235,235,.75)', 1.1, 0, true); });
+			if (G40_ON) (BNDS.grid40 || []).forEach(function (g) { drawRing(g.pts, V, P, null, 'rgba(255,210,127,.85)', 1.6, 0, true); });
+			if (DRAIN_ON) (BNDS.drainage || []).forEach(function (l) { drawRing(l, V, P, null, 'rgba(60,175,255,1)', 2.2, 0, false); });
+		}
+
+		/* 格网编号：每个格子取几何中心，找最近的 RTK 实测主树（VIT16/T189…），
+		 * 在中心画半透明名字。20m/40m 各自跟自己的开关走。 */
+		function nearestVIT(E, N) {
+			var best = '', bd = Infinity;
+			for (var i = 0; i < MAINT.length; i++) {
+				var dx = MAINT[i].E - E, dy = MAINT[i].N - N, d2 = dx * dx + dy * dy;
+				if (d2 < bd) { bd = d2; best = MAINT[i].name; }
 			}
+			return best;
+		}
+		function drawCells() {
+			if (!NUM_ON || !BNDS) return;
+			var pc = viewer.scene.pointclouds[0], cam = viewer.scene.getActiveCamera();
+			if (!pc || !cam) return;
+			var V = cam.matrixWorldInverse.elements, P = cam.projectionMatrix.elements;
+			var W = innerWidth, H = innerHeight;
+			dctx.font = '11px system-ui,"Segoe UI",sans-serif';
+			dctx.textAlign = 'center'; dctx.textBaseline = 'middle';
+			dctx.fillStyle = 'rgba(255,255,255,.42)';
+			function one(list) {
+				list.forEach(function (g) {
+					var r = g.pts, n = r.length - 1, ax = 0, ay = 0, az = 0;   // 首尾重合，去掉最后一个
+					for (var i = 0; i < n; i++) { ax += r[i][0]; ay += r[i][1]; az += r[i][2]; }
+					ax /= n; ay /= n; az /= n;
+					var clip = m4apply(P, m4apply(V, [ax, ay, az + 1.5, 1]));
+					if (clip[3] <= 0) return;
+					var sx = (clip[0] / clip[3] * 0.5 + 0.5) * W, sy = (-clip[1] / clip[3] * 0.5 + 0.5) * H;
+					if (sx < -40 || sx > W + 40 || sy < -20 || sy > H + 20) return;
+					dctx.fillText(nearestVIT(ax, ay), sx, sy);
+				});
+			}
+			if (G20_ON) one(BNDS.grid20 || []);
+			if (G40_ON) one(BNDS.grid40 || []);
 		}
 
 		// 悬停实测点显示名称
@@ -495,6 +578,11 @@
 				if (best.kind === 'det') {
 					tip.innerHTML = '<b>' + ((SPECIES[best.sp] && SPECIES[best.sp].zh) || '') + '</b><br>' +
 						(LANG === 'zh' ? '单木识别' : 'Detected tree');
+				} else if (best.kind && best.kind.indexOf('dev-') === 0) {
+					var dn = best.kind === 'dev-sap' ? (LANG === 'zh' ? '液流' : 'Sap flow')
+					       : (best.kind === 'dev-den' ? (LANG === 'zh' ? '径向生长仪' : 'Dendrometer')
+					       : 'LAI');
+					tip.innerHTML = '<b>' + best.name + '</b><br>' + dn;
 				} else {
 					tip.innerHTML = '<b>' + best.name + '</b><br>' +
 						(best.kind === 'main' ? (LANG === 'zh' ? '实测主树 (RTK)' : 'Surveyed main tree (RTK)')
@@ -510,7 +598,6 @@
 			var pointcloud = e.pointcloud, scene = viewer.scene;
 			var m = pointcloud.material;
 			m.size = 1.2; m.pointSizeType = Potree.PointSizeType.FIXED;   /* 固定像素：自适应会在贴合时把点撑大，放大就糊 */
-			m.shape = Potree.PointShape.CIRCLE;
 			m.shape = Potree.PointShape.CIRCLE; m.activeAttributeName = 'rgba';
 			scene.addPointCloud(pointcloud);
 			viewer.fitToScreen();
@@ -528,18 +615,19 @@
 
 			fetch('annotations.json').then(function (r) { return r.json(); }).then(function (data) {
 				ANNOT = data;
-				(data.trees || []).forEach(function (t) {
-					if (t.Z == null) return;
-					var info = '<b>' + t.id + '</b><br>' + (t.speciesZh || '') + ' ' + (t.species || '') +
-						'<br>' + (LANG === 'zh' ? '胸径' : 'DBH') + ' ' + t.dbh + ' cm';
-					addLabel(t.E, t.N, t.Z + 2, t.id, 'tree', info);
-				});
+				/* 20 棵监测树的浮动标签（DT1-BH1-1137 那种）已按金总要求删除。
+				   只留三个样地标签；第三个原来叫「气象站下方样地」，改成「油松样地」。 */
 				(data.plots || []).forEach(function (p) {
 					if (p.Z == null) return;
-					addLabel(p.E, p.N, p.Z + 30, p.nameZh, 'log',
-						'<b>' + p.nameZh + '</b><br>' + (LANG === 'zh' ? '样点数采' : 'Plot logger'));
+					var nm = (p.nameZh === '气象站下方样地') ? '油松样地' : p.nameZh;
+					addLabel(p.E, p.N, p.Z + 30, nm, 'log',
+						'<b>' + nm + '</b><br>' + (LANG === 'zh' ? '样点数采' : 'Plot logger'));
 				});
-				/* RTK 实测主树/样方内树的散点已按金总要求全部移除 —— 不再往 DOTPTS 里加 */
+				/* 103 棵 RTK 实测主树的 E/N（VIT16/T189…）—— 给「格网编号」找最近的点用 */
+				MAINT = (data.maintrees || []).filter(function (m) { return m.E != null && m.N != null; })
+					.map(function (m) { return { name: m.name, E: m.E, N: m.N }; });
+				/* RTK 实测主树/样方内树的散点已按金总要求全部移除 */
+				addDevices();
 				renderLegend();
 			});
 
@@ -560,7 +648,7 @@
 			// 样地边界 / 网格 / 水系
 			fetch('bounds.json').then(function (r) { return r.json(); }).then(function (b) { BNDS = b; });
 
-			(function loop() { project(); drawDots(); drawBounds(); requestAnimationFrame(loop); })();
+			(function loop() { project(); drawDots(); drawBounds(); drawCells(); requestAnimationFrame(loop); })();
 		});
 	</script>
 	<style>
