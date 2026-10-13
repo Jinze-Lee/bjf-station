@@ -76,6 +76,14 @@
                    和 EnvChart.reload，那时两个句柄必须已经存在 */
                 'js/unlock.js'
             ]
+        },
+        /* 三维区块默认铺高清正射影像（canopy-ortho.js）。复用 map 组的 Leaflet，
+           不重复下发一份；deps 让 load() 先把 map 组跑完。 */
+        canopy: {
+            anchor: '#canopy',
+            deps: ['map'],
+            css: [],
+            js: ['js/canopy-ortho.js']
         }
     };
 
@@ -109,8 +117,10 @@
         var g = GROUPS[name];
         state[name] = 'loading';
 
-        /* CSS 可以并发（互不依赖），JS 必须串行 */
-        var p = Promise.all(g.css.map(loadCss));
+        /* 先把依赖组跑完（如 canopy 依赖 map 里的 Leaflet），再下自己的 CSS/JS。
+           CSS 可以并发（互不依赖），JS 必须串行 */
+        var p = Promise.all((g.deps || []).map(load));
+        p = p.then(function () { return Promise.all(g.css.map(loadCss)); });
         g.js.forEach(function (item) {
             p = p.then(function () {
                 if (typeof item === 'string') { return loadScript(item); }
@@ -140,15 +150,13 @@
          * 与 JS 懒加载分开处理（iframe 不是脚本）。 */
         var frame = document.getElementById('canopyFrame');
         if (frame) {
+            var frameBox = frame.parentNode;
             var loadFrame = function () {
                 if (!frame.getAttribute('src')) { frame.setAttribute('src', frame.getAttribute('data-src')); }
+                if (frameBox) { frameBox.classList.add('is-3d'); }
             };
-            frame.addEventListener('load', function () {
-                var ph = document.getElementById('canopyPlaceholder');
-                if (ph) { ph.style.display = 'none'; }
-            });
-            /* 点击「加载三维点云」按钮，或点任何指向 #canopy 的链接（导航「三维」/ 地图区的入口）
-             * 才加载。不随滚动自动加载 —— 三维点云约 100 MB，滚过就下不合适。 */
+            /* 默认铺的是 canopy-ortho.js 的高清正射影像（静态瓦片，不实时）。
+               点「加载三维点云」才换成 Potree 实时点云 —— 约 100 MB，按需才下。 */
             var cbtn = document.getElementById('canopyLoad');
             if (cbtn) { cbtn.addEventListener('click', loadFrame); }
             /* 「全屏」：对 iframe 元素本身请求全屏（进了全屏也就顺手把点云加载上） */
@@ -158,11 +166,6 @@
                 var req = frame.requestFullscreen || frame.webkitRequestFullscreen;
                 if (req) { try { req.call(frame); } catch (e) {} }
             }); }
-            if (location.hash === '#canopy') { loadFrame(); }
-            document.addEventListener('click', function (e) {
-                var a = e.target.closest && e.target.closest('a[href="#canopy"]');
-                if (a) { loadFrame(); }
-            });
         }
 
         if (!('IntersectionObserver' in window)) {
