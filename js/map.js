@@ -165,6 +165,15 @@
             { maxNativeZoom: 19, maxZoom: 21,
               attribution: '&copy; OpenStreetMap contributors (WGS-84)' });
 
+        /* 本站自制的 LiDAR 正射影像（0.10 m/px 真彩，切瓦片深度缩放）。
+         * 用不着实时加载点云，初始只拉几块瓦片，比三维点云轻得多、也清楚得多。
+         * 坐标系是 WGS-84/Web Mercator（和高德那两张 GCJ-02 底图不同）——
+         * 切到它时 useGcj 要跟着变，见 baselayerchange。 */
+        var ortho = L.tileLayer(
+            'ortho_tiles/{z}/{x}/{y}.webp',
+            { minNativeZoom: 14, maxNativeZoom: 20, maxZoom: 21,
+              attribution: '无人机 LiDAR 正射影像 0.10 m（本站自制）' });
+
         amapSat.addTo(map);
 
         /* 树木标记要盖在数采标签之上，否则会被完全遮住
@@ -425,7 +434,8 @@
         }
 
         map.on('baselayerchange', function (e) {
-            useGcj = (e.name !== 'OpenStreetMap');
+            /* 高德两张是 GCJ-02 加偏；OpenStreetMap 与自制正射影像都是 WGS-84/Web Mercator */
+            useGcj = (e.name !== 'OpenStreetMap' && e.name !== t('map.ortho'));
             replaceAll();
         });
 
@@ -440,6 +450,7 @@
             bases[t('map.satellite')] = amapSat;
             bases[t('map.street')]    = amapStreet;
             bases[t('map.osm')]       = osm;
+            bases[t('map.ortho')]     = ortho;
 
             var overlays = {};
             Object.keys(PLOTS).forEach(function (key) {
