@@ -86,11 +86,11 @@
 			margin-right: 4px; vertical-align: middle; }
 		@media (max-width: 640px) { #legend3d { font-size: 10.5px; padding: 6px 8px; } }
 
-		/* 漫游 */
-		#roamBtn.active { background: rgba(108,161,74,.9); color: #14170f; border-color: #6ca14a; }
-		#roamHint { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 1900;
-			display: none; background: rgba(20,24,15,.86); color: #d7d2c6;
-			border: 1px solid rgba(160,180,120,.35); border-radius: 6px; padding: 7px 14px; font-size: 12.5px; }
+		/* 操作提示（相机只有环绕一种模式：左键旋转 · 中键平移 · 滚轮缩放） */
+		#ctrlHint { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 1900;
+			background: rgba(20,24,15,.72); color: #d7d2c6; pointer-events: none;
+			border: 1px solid rgba(160,180,120,.28); border-radius: 6px; padding: 6px 13px; font-size: 12.5px; }
+		@media (max-width: 640px) { #ctrlHint { font-size: 11px; padding: 5px 10px; bottom: 10px; } }
 
 		.potree_container { position: absolute; width: 100%; height: 100%; left: 0; top: 0; }
 		/* 把 Potree 的菜单按钮下移，避免和顶部标题重叠 */
@@ -120,11 +120,10 @@
 		<button class="btn active" id="detBtn">单木</button>
 		<button class="btn active" id="bndBtn">边界</button>
 		<button class="btn" id="gridBtn">网格</button>
-		<button class="btn" id="roamBtn">漫游</button>
 		<button class="btn" id="langBtn">EN</button>
 		<a class="btn" href="../index.html" id="backBtn">← 返回网站</a>
 	</div>
-	<div id="roamHint"></div>
+	<div id="ctrlHint"></div>
 
 	<div id="inset">
 		<div class="cap">样地位置 · AMap Satellite</div>
@@ -146,15 +145,12 @@
 			zh: { title: '北京森林生态系统定位研究站 · 三维林相',
 			      sub: '无人机 LiDAR 彩色点云 · 高德卫星底图 · 20 棵监测树 / 3 台数采',
 			      back: '← 返回网站', lang: 'EN', mapcap: '样地位置 · AMap Satellite',
-			      roam: '漫游', roamExit: '退出漫游',
-			      hintRoam: 'WASD / 方向键 移动　·　按住左键拖动环顾　·　滚轮调速' },
+			      ctrlHint: '左键旋转　·　中键拖动平移　·　滚轮缩放' },
 			en: { title: 'Beijing Forest Ecosystem Research Station · 3D Canopy',
 			      sub: 'UAV LiDAR colour point cloud · AMap satellite · 20 monitored trees / 3 loggers',
 			      back: '← Back to site', lang: '中文', mapcap: 'Plot location · AMap Satellite',
-			      roam: 'Roam', roamExit: 'Exit roam',
-			      hintRoam: 'WASD / arrows to move · drag to look around · scroll to adjust speed' }
+			      ctrlHint: 'Left-drag rotate · Middle-drag pan · Wheel zoom' }
 		};
-		var ROAM = false;
 		var LANG = localStorage.getItem('bfers-3d-lang') || 'zh';
 		function applyLang() {
 			var d = I18N[LANG];
@@ -164,10 +160,8 @@
 			document.getElementById('backBtn').textContent = d.back;
 			document.getElementById('langBtn').textContent = d.lang;
 			document.querySelector('#inset .cap').textContent = d.mapcap;
-			var rb = document.getElementById('roamBtn');
-			if (rb) rb.textContent = ROAM ? d.roamExit : d.roam;
-			var rh = document.getElementById('roamHint');
-			if (rh) rh.textContent = d.hintRoam;
+			var ch = document.getElementById('ctrlHint');
+			if (ch) ch.textContent = d.ctrlHint;
 			var db = document.getElementById('detBtn');
 			if (db) db.textContent = (LANG === 'zh') ? '单木' : 'Trees';
 			var bb = document.getElementById('bndBtn');
@@ -243,24 +237,24 @@
 			if (viewer.sidebar && viewer.sidebar.isOpen) { viewer.toggleSidebar(); }
 		});
 
-		// 相机「漫游」：在环绕（orbit）与第一人称自由飞行（fpControls）之间切换
-		var canvasEl = viewer.renderer.domElement;
-		canvasEl.setAttribute('tabindex', '0');   // 让画布可获得键盘焦点（Potree 的按键绑在画布上）
-		canvasEl.style.outline = 'none';
-		document.getElementById('roamBtn').addEventListener('click', function () {
-			ROAM = !ROAM;
-			if (ROAM && viewer.fpControls) {
-				try { viewer.setMoveSpeed(viewer.scene.view.radius / 40); } catch (e) {}
-				viewer.setControls(viewer.fpControls);
-				canvasEl.focus();                 // 直接获得焦点，无需再点画面
-			} else {
-				viewer.setControls(viewer.orbitControls);
-				ROAM = false;
-			}
-			this.classList.toggle('active', ROAM);
-			document.getElementById('roamHint').style.display = ROAM ? 'block' : 'none';
-			this.textContent = I18N[LANG][ROAM ? 'roamExit' : 'roam'];
-		});
+		// 相机：只有环绕（orbit）一种模式 —— 原来的第一人称「漫游」(WASD) 已去掉。
+		// 中键拖动 = 平移（控制走向）；滚轮 = 固定步长缩放（原来是按当前距离的比例，远处快、近处慢）。
+		(function () {
+			var oc = viewer.orbitControls;
+			if (!oc) return;
+			// 滚轮：覆盖掉内置的「按距离比例」步长，改成固定步长（scrollStep 在点云载入后按场景半径设定）
+			oc.addEventListener('mousewheel', function (e) {
+				if (this.scrollStep) { this.radiusDelta = -e.delta * this.scrollStep; }
+			});
+			// 中键拖动 = 平移
+			oc.addEventListener('drag', function (e) {
+				if (e.drag.object !== null || e.drag.mouse !== 4) { return; }   // 4 = MIDDLE（e.buttons 位掩码）
+				var el = this.renderer.domElement;
+				this.panDelta.x += e.drag.lastDrag.x / el.clientWidth;
+				this.panDelta.y += e.drag.lastDrag.y / el.clientHeight;
+				this.stopTweens();
+			});
+		}());
 
 		// 单木识别图层开关（默认开）
 		document.getElementById('detBtn').addEventListener('click', function () {
@@ -532,6 +526,12 @@
 
 			var bbox = pointcloud.pcoGeometry.boundingBox;
 			var off = pointcloud.pcoGeometry.offset;   // 点云范围是局部坐标，要加回 CRS 偏移
+			// 滚轮缩放步长固定：取点云包围盒对角线的一个固定比例，之后不再随当前距离变化
+			// （Potree 默认步长是「当前距离 × 0.1」，所以远处快、近处慢）
+			if (viewer.orbitControls) {
+				var _dx = bbox.max.x - bbox.min.x, _dy = bbox.max.y - bbox.min.y, _dz = bbox.max.z - bbox.min.z;
+				viewer.orbitControls.scrollStep = Math.sqrt(_dx * _dx + _dy * _dy + _dz * _dz) * 0.07;
+			}
 			var box = { min: [bbox.min.x + off.x, bbox.min.y + off.y, bbox.min.z + off.z],
 			            max: [bbox.max.x + off.x, bbox.max.y + off.y, bbox.max.z + off.z] };
 
