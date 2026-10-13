@@ -151,6 +151,13 @@
              * 才加载。不随滚动自动加载 —— 三维点云约 100 MB，滚过就下不合适。 */
             var cbtn = document.getElementById('canopyLoad');
             if (cbtn) { cbtn.addEventListener('click', loadFrame); }
+            /* 「全屏」：对 iframe 元素本身请求全屏（进了全屏也就顺手把点云加载上） */
+            var cfull = document.getElementById('canopyFull');
+            if (cfull) { cfull.addEventListener('click', function () {
+                loadFrame();
+                var req = frame.requestFullscreen || frame.webkitRequestFullscreen;
+                if (req) { try { req.call(frame); } catch (e) {} }
+            }); }
             if (location.hash === '#canopy') { loadFrame(); }
             document.addEventListener('click', function (e) {
                 var a = e.target.closest && e.target.closest('a[href="#canopy"]');

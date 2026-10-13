@@ -1976,7 +1976,10 @@ body[data-lang="zh"] .net-detail { font-size: 13.5px; font-weight: 400; }
 .canopy-btn { padding: 10px 22px; border-radius: 6px; border: 1px solid rgba(226, 235, 220, 0.5);
     background: rgba(255, 255, 255, 0.06); color: #e2ebdc; font-size: 15px; cursor: pointer; font-family: inherit; }
 .canopy-btn:hover { background: var(--heading); color: #fff; border-color: var(--heading); }
-.canopy-open { margin: 10px 0 0; font-size: 13px; }
+.canopy-open { margin: 10px 0 0; font-size: 13px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.canopy-linkbtn { background: none; border: 0; padding: 0; font: inherit; font-size: 13px;
+    color: var(--link); cursor: pointer; }
+.canopy-open a:hover, .canopy-linkbtn:hover { color: var(--link-hover); text-decoration: underline; }
 @media (max-width: 640px) { .canopy-frame { height: 62vh; min-height: 340px; } }
 
 /* 单木覆盖的物种图例（勾选该图层时出现） */
@@ -2600,6 +2603,7 @@ footer {
        padding 要够把行高撑到 40 —— 12.5px 的字撑 40 需要上下各 12px。 */
     .site-facts dd a,
     .canopy-open a,
+    .canopy-linkbtn,
     .copyright a {
         display: inline-block;
         padding: 12px 0;

@@ -419,6 +419,8 @@ with sync_playwright() as p:
           any(("样地边界" in s) or ("Plot boundaries" in s) for s in ts_labels), str(ts_labels)[:200])
     check("3f8. 主页有内嵌三维区块（iframe 懒加载）",
           page.query_selector("#canopy") is not None and page.query_selector("#canopyFrame") is not None)
+    check("3f9. 三维区块有加载按钮与全屏按钮",
+          page.query_selector("#canopyLoad") is not None and page.query_selector("#canopyFull") is not None)
 
     # 标记按数采分三色
     colors = page.evaluate("""() => {

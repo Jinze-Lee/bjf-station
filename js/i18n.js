@@ -156,6 +156,7 @@ zh: {
     'canopy.hint':          '三维林相基于无人机 LiDAR 彩色点云（约 100 MB），按需加载。',
     'canopy.load':          '加载三维点云',
     'canopy.open':          '在新标签打开三维林相 ↗',
+    'canopy.fullscreen':    '全屏查看',
 
     /* --- 树木数据 --- */
     'treedata.h3':          '树木数据',
@@ -432,6 +433,7 @@ en: {
     'canopy.hint':          'The 3D canopy is a UAV LiDAR colour point cloud (~100 MB), loaded on demand.',
     'canopy.load':          'Load the 3D point cloud',
     'canopy.open':          'Open the 3D canopy in a new tab ↗',
+    'canopy.fullscreen':    'Full screen',
 
     'treedata.h3':          'Tree data',
     'treedata.p':           'The dynamic chart below displays sap flux density and radial change for the selected tree. Using the ‘zoom’ buttons it is possible to select a different time range. A specific time range can also be defined. Furthermore data ranges can be selected by simple clicking and dragging your cursor along the chart horizontally.',
