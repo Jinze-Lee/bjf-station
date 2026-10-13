@@ -564,7 +564,8 @@ body[data-lang="zh"] .data-table    { font-size: 14px; font-weight: 400; }
    正文
    ========================================================================== */
 
-#primary-container {
+#primary-container,
+.content-wrap {
     max-width: var(--maxw);
     margin: 0 auto;
     padding: 0 20px;
@@ -1962,6 +1963,21 @@ body[data-lang="zh"] .net-detail { font-size: 13.5px; font-weight: 400; }
 }
 .view3d-link a:hover { background: var(--heading); color: var(--bg); }
 
+/* 三维林相区块（内嵌 iframe） */
+#canopy { padding-top: 40px; }
+.canopy-frame { position: relative; width: 100%; height: 78vh; min-height: 420px;
+    border: 1px solid var(--rule-strong); border-radius: 8px; overflow: hidden; background: #14170f; }
+.canopy-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+.canopy-placeholder { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 14px; padding: 20px; text-align: center;
+    color: var(--text-soft); font-size: 14px;
+    background: repeating-linear-gradient(135deg, #1a1e14 0 18px, #15180f 18px 36px); }
+.canopy-btn { padding: 10px 22px; border-radius: 6px; border: 1px solid var(--heading);
+    background: var(--surface); color: var(--heading); font-size: 15px; cursor: pointer; font-family: inherit; }
+.canopy-btn:hover { background: var(--heading); color: var(--bg); }
+.canopy-open { margin: 10px 0 0; font-size: 13px; }
+@media (max-width: 640px) { .canopy-frame { height: 62vh; min-height: 340px; } }
+
 /* 单木覆盖的物种图例（勾选该图层时出现） */
 .species-legend { background: var(--surface); border: 1px solid var(--rule-strong);
     border-radius: 6px; padding: 6px 9px; font-size: 11.5px; color: var(--text);
@@ -2582,6 +2598,7 @@ footer {
     /* 邮箱（在 .site-facts 的 dd 里）与页脚机构链接，原先只有 16px / 14px 高。
        padding 要够把行高撑到 40 —— 12.5px 的字撑 40 需要上下各 12px。 */
     .site-facts dd a,
+    .canopy-open a,
     .copyright a {
         display: inline-block;
         padding: 12px 0;

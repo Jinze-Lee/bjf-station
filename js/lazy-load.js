@@ -136,6 +136,28 @@
     }
 
     function init() {
+        /* 三维 iframe：滚到跟前才装 src —— 一进主页就下 121MB 点云是不行的。
+         * 与 JS 懒加载分开处理（iframe 不是脚本）。 */
+        var frame = document.getElementById('canopyFrame');
+        if (frame) {
+            var loadFrame = function () {
+                if (!frame.getAttribute('src')) { frame.setAttribute('src', frame.getAttribute('data-src')); }
+            };
+            frame.addEventListener('load', function () {
+                var ph = document.getElementById('canopyPlaceholder');
+                if (ph) { ph.style.display = 'none'; }
+            });
+            /* 点击「加载三维点云」按钮，或点任何指向 #canopy 的链接（导航「三维」/ 地图区的入口）
+             * 才加载。不随滚动自动加载 —— 三维点云约 100 MB，滚过就下不合适。 */
+            var cbtn = document.getElementById('canopyLoad');
+            if (cbtn) { cbtn.addEventListener('click', loadFrame); }
+            if (location.hash === '#canopy') { loadFrame(); }
+            document.addEventListener('click', function (e) {
+                var a = e.target.closest && e.target.closest('a[href="#canopy"]');
+                if (a) { loadFrame(); }
+            });
+        }
+
         if (!('IntersectionObserver' in window)) {
             /* 老浏览器：直接全下，回到改造前的行为 */
             load('map');

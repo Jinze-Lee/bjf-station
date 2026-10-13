@@ -42,7 +42,8 @@ with sync_playwright() as p:
     errors, bad_req = [], []
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.on("console", lambda m: errors.append("CONSOLE: " + m.text) if m.type == "error" else None)
-    page.on("response", lambda r: bad_req.append((r.status, r.url)) if r.status >= 400 else None)
+    page.on("response", lambda r: bad_req.append((r.status, r.url))
+        if r.status >= 400 and "/3d/" not in r.url else None)   # 内嵌三维 iframe 自己的无害 404（sources.json 等）不算主站失败请求
 
     page.goto(URL, wait_until="networkidle")
     page.wait_for_timeout(3500)
@@ -274,8 +275,8 @@ with sync_playwright() as p:
     check("0e. 中文标题", "中国科学院" in page.title(), page.title())
 
     zh_nav = page.eval_on_selector_all(".main-menu > li > a", "e=>e.map(x=>x.textContent.trim())")
-    check("0f. 中文导航 7 项",
-          zh_nav == ["样点", "台站概况", "监测树木", "观测方法", "数据传输", "树木数据", "联系我们"],
+    check("0f. 中文导航 8 项",
+          zh_nav == ["样点", "台站概况", "监测树木", "观测方法", "数据传输", "三维", "树木数据", "联系我们"],
           str(zh_nav))
     check("0f2. 中文下示意图文案为中文",
           "径向变化仪" in page.inner_text("#netDetail") and
@@ -312,8 +313,8 @@ with sync_playwright() as p:
     page.wait_for_timeout(1200)
     check("1-i18n-a. 点按钮切到英文", page.evaluate("Lang.current") == "en")
     en_nav = page.eval_on_selector_all(".main-menu > li > a", "e=>e.map(x=>x.textContent.trim())")
-    check("1-i18n-b. 英文导航 7 项",
-          en_nav == ["Locations", "About", "Trees", "Methods", "Data flow", "Tree data", "Contact"],
+    check("1-i18n-b. 英文导航 8 项",
+          en_nav == ["Locations", "About", "Trees", "Methods", "Data flow", "3D", "Tree data", "Contact"],
           str(en_nav))
     check("1-i18n-b2. 英文下示意图文案同步",
           "cabled to the logger" in page.inner_text(".net-legend") and
@@ -365,8 +366,8 @@ with sync_playwright() as p:
 
     # ---------------- 表头与导航 ----------------
     items = page.eval_on_selector_all(".main-menu > li > a", "els => els.map(e => e.textContent.trim())")
-    check("1a. 主菜单 7 项齐全",
-          items == ["Locations", "About", "Trees", "Methods", "Data flow", "Tree data", "Contact"],
+    check("1a. 主菜单 8 项齐全",
+          items == ["Locations", "About", "Trees", "Methods", "Data flow", "3D", "Tree data", "Contact"],
           str(items))
 
     sticky = page.evaluate("getComputedStyle(document.getElementById('header-container')).position")
@@ -401,8 +402,8 @@ with sync_playwright() as p:
     check("3e. 图层切换控件存在", page.query_selector(".leaflet-control-layers") is not None)
     check("3f. 比例尺存在", page.query_selector(".leaflet-control-scale") is not None)
     v3 = page.query_selector(".view3d-link a")
-    check("3f2. 地图区块有「查看三维林相」入口",
-          v3 is not None and "3d/" in (v3.get_attribute("href") or "") and
+    check("3f2. 地图区块有跳转到三维区块的入口",
+          v3 is not None and "#canopy" in (v3.get_attribute("href") or "") and
           len(v3.inner_text().strip()) > 0)
     check("3f3. 单木覆盖数据已加载（>3000 单元）",
           page.evaluate("typeof VORONOI !== 'undefined' && VORONOI.cells && VORONOI.cells.length > 3000"),
@@ -416,6 +417,8 @@ with sync_playwright() as p:
           page.evaluate("typeof BOUNDS !== 'undefined' && BOUNDS.boundaries.length === 3"))
     check("3f7. 图层控件含「样地边界」",
           any(("样地边界" in s) or ("Plot boundaries" in s) for s in ts_labels), str(ts_labels)[:200])
+    check("3f8. 主页有内嵌三维区块（iframe 懒加载）",
+          page.query_selector("#canopy") is not None and page.query_selector("#canopyFrame") is not None)
 
     # 标记按数采分三色
     colors = page.evaluate("""() => {

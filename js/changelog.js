@@ -25,6 +25,25 @@
     /* 倒序：最新的在最前面 */
     var LOG = [
         {
+            v: '2.1', date: '2026-10-13', kind: 'feat',
+            zh: {
+                title: '三维林相整合进主页',
+                items: [
+                    '三维林相不再是一个独立页面：主页新增「三维林相」区块，从导航「三维」或地图区的入口点进去，按「加载三维点云」即可在主页内直接查看点云，一体体验。',
+                    '三维点云约 100 MB，改为按需加载（点了才下），不会因为浏览主页就自动下载。',
+                    '独立的三维页 /3d/ 仍然保留，供直接访问或国际镜像。',
+                ]
+            },
+            en: {
+                title: '3D canopy integrated into the main page',
+                items: [
+                    'The 3D canopy is no longer a separate page: a "3D canopy" section now lives on the main page — reach it from the "3D" nav item or the map-area link, then press "Load the 3D point cloud" to view it inline, as one experience.',
+                    'The point cloud is ~100 MB, so it now loads on demand (only when you press the button), never automatically just from browsing the main page.',
+                    'The standalone 3D page /3d/ is kept for direct access or as an international mirror.',
+                ]
+            }
+        },
+        {
             v: '2.0', date: '2026-10-13', kind: 'feat',
             zh: {
                 title: '三维林相页 + 多源实测数据图层',

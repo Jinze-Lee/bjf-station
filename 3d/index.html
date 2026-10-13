@@ -198,6 +198,11 @@
 			el.innerHTML = html;
 		}
 		applyLang();
+		/* 被主页以 iframe 内嵌（?embed=1）时，去掉「返回网站」按钮（就在主页上，多余） */
+		if (/[?&]embed=1/.test(location.search)) {
+			var _back = document.getElementById('backBtn');
+			if (_back) { _back.style.display = 'none'; }
+		}
 		document.getElementById('langBtn').addEventListener('click', function () {
 			LANG = (LANG === 'zh') ? 'en' : 'zh';
 			localStorage.setItem('bfers-3d-lang', LANG); applyLang();

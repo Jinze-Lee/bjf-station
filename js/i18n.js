@@ -149,7 +149,13 @@ zh: {
     /* --- 树木位置 --- */
     'location.h3':          '树木位置',
     'location.p':           '下图显示全部二十棵监测树木与三台数采。标记按样点着色——<span class="key dt1">DT1</span> <span class="key dt2">DT2</span> <span class="key dt3">DT3</span>。点击任意树木可查看其详细信息，并可通过弹窗内的按钮把该树的观测数据载入下方图表。右上角图层控件可切换底图，或隐藏某个样点。在地图上先点击一下，即可用鼠标滚轮缩放。',
-    'location.view3d':      '查看三维林相（无人机 LiDAR 彩色点云）→',
+    'location.view3d':      '查看三维林相（无人机 LiDAR 彩色点云）↓',
+    'nav.canopy':           '三维',
+    'canopy.h3':            '三维林相',
+    'canopy.p':             '无人机 LiDAR 彩色点云（8.19 亿点抽稀到 877 万点）。可旋转、缩放、第一人称漫游飞行；叠高德卫星小地图，标出 20 棵监测树、3 台数采、103 棵实测主树与 318 个样方内树。',
+    'canopy.hint':          '三维林相基于无人机 LiDAR 彩色点云（约 100 MB），按需加载。',
+    'canopy.load':          '加载三维点云',
+    'canopy.open':          '在新标签打开三维林相 ↗',
 
     /* --- 树木数据 --- */
     'treedata.h3':          '树木数据',
@@ -198,7 +204,7 @@ zh: {
     'contact.f.person':     '网站维护',
     'contact.f.location':   '地址',
     'contact.v.location':   '北京市门头沟区东灵山',
-    'site.version':         '网站版本 v2.0',
+    'site.version':         '网站版本 v2.1',
     'site.updatedLabel':    '数据更新至',
 
     /* 更新日志弹层。条目正文写在 js/changelog.js 里（中英各一份），
@@ -419,7 +425,13 @@ en: {
 
     'location.h3':          'Tree Location',
     'location.p':           'The map below shows all twenty monitored trees and the three data loggers. Markers are coloured by plot — <span class="key dt1">DT1</span> <span class="key dt2">DT2</span> <span class="key dt3">DT3</span>. Click any tree to see its details, and use the button in the popup to load that tree’s measurements into the chart below. Use the layer control in the upper right to switch base maps or to hide a plot. Click the map before scrolling to enable zooming with the mouse wheel.',
-    'location.view3d':      'View the 3D canopy (UAV LiDAR colour point cloud) →',
+    'location.view3d':      'View the 3D canopy (UAV LiDAR colour point cloud) ↓',
+    'nav.canopy':           '3D',
+    'canopy.h3':            '3D canopy',
+    'canopy.p':             'UAV LiDAR colour point cloud (819M points thinned to 8.77M). Rotate, zoom and fly through in first person; overlaid on an AMap satellite inset with the 20 monitored trees, 3 loggers, 103 surveyed main trees and 318 quadrat trees marked.',
+    'canopy.hint':          'The 3D canopy is a UAV LiDAR colour point cloud (~100 MB), loaded on demand.',
+    'canopy.load':          'Load the 3D point cloud',
+    'canopy.open':          'Open the 3D canopy in a new tab ↗',
 
     'treedata.h3':          'Tree data',
     'treedata.p':           'The dynamic chart below displays sap flux density and radial change for the selected tree. Using the ‘zoom’ buttons it is possible to select a different time range. A specific time range can also be defined. Furthermore data ranges can be selected by simple clicking and dragging your cursor along the chart horizontally.',
@@ -466,7 +478,7 @@ en: {
     'contact.f.person':     'Site maintainer',
     'contact.f.location':   'Location',
     'contact.v.location':   'Dongling Mountain, Mentougou District, Beijing, China',
-    'site.version':         'Site version v2.0',
+    'site.version':         'Site version v2.1',
     'site.updatedLabel':    'data updated to',
 
     'unlock.title':         'Showing the last {days} days.',

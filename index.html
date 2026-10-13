@@ -63,6 +63,7 @@
 				<li><a href="#trees" data-i18n="nav.trees">监测树木</a></li>
 				<li><a href="#methods" data-i18n="nav.methods">观测方法</a></li>
 				<li><a href="#network" data-i18n="nav.network">数据传输</a></li>
+				<li><a href="#canopy" data-i18n="nav.canopy">三维</a></li>
 				<li><a href="#treedata" data-i18n="nav.treedata">树木数据</a></li>
 				<li><a href="#contact" data-i18n="nav.contact">联系我们</a></li>
 			</ul>
@@ -402,12 +403,30 @@
 		<section id="location">
 			<h3 data-i18n="location.h3"></h3>
 			<p data-i18n-html="location.p"></p>
-			<p class="view3d-link"><a href="3d/index.html" target="_blank" rel="noopener" data-i18n="location.view3d"></a></p>
+			<p class="view3d-link"><a href="#canopy" data-i18n="location.view3d"></a></p>
 		</section>
 	</div>
 </div>
 
 <div id="map_canvas"></div>
+
+<!-- ---------------------- 三维林相 ---------------------- -->
+<section id="canopy">
+	<div class="content-wrap">
+		<div class="row">
+			<h3 data-i18n="canopy.h3"></h3>
+			<p data-i18n="canopy.p"></p>
+			<div class="canopy-frame">
+				<div class="canopy-placeholder" id="canopyPlaceholder">
+					<p data-i18n="canopy.hint"></p>
+					<button type="button" id="canopyLoad" class="canopy-btn" data-i18n="canopy.load"></button>
+				</div>
+				<iframe id="canopyFrame" data-src="3d/index.html?embed=1" title="3D canopy" allowfullscreen></iframe>
+			</div>
+			<p class="canopy-open"><a href="3d/index.html" target="_blank" rel="noopener" data-i18n="canopy.open"></a></p>
+		</div>
+	</div>
+</section>
 
 <div id="primary-container">
 	<div class="row">
