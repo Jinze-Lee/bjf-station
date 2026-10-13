@@ -1970,9 +1970,13 @@ body[data-lang="zh"] .net-detail { font-size: 13.5px; font-weight: 400; }
 .canopy-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
 .canopy-placeholder { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 14px; padding: 20px; text-align: center;
-    color: #d3dccb; font-size: 15px;
-    background: repeating-linear-gradient(135deg, #1a1e14 0 18px, #15180f 18px 36px); }
-.canopy-placeholder p { color: inherit; margin: 0; font-size: 15px; }
+    color: #d3dccb; font-size: 15px; overflow: hidden; background: #15180f;
+    background-image: repeating-linear-gradient(135deg, #1a1e14 0 18px, #15180f 18px 36px); }
+/* 预览图：点云的一张静帧，半透明铺底，让占位区一眼看得出是什么 */
+.canopy-preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    opacity: 0.45; z-index: 0; }
+.canopy-placeholder p, .canopy-placeholder .canopy-btn { position: relative; z-index: 1; }
+.canopy-placeholder p { color: inherit; margin: 0; font-size: 15px; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9); }
 .canopy-btn { padding: 10px 22px; border-radius: 6px; border: 1px solid rgba(226, 235, 220, 0.5);
     background: rgba(255, 255, 255, 0.06); color: #e2ebdc; font-size: 15px; cursor: pointer; font-family: inherit; }
 .canopy-btn:hover { background: var(--heading); color: #fff; border-color: var(--heading); }
