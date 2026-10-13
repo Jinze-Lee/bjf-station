@@ -643,25 +643,36 @@
 			} else { hideTip(); }
 		});
 
-		Potree.loadPointCloud('./pointclouds/index/metadata.json', 'index', function (e) {
-			var pointcloud = e.pointcloud, scene = viewer.scene;
-			var m = pointcloud.material;
-			m.size = 1.2; m.pointSizeType = Potree.PointSizeType.FIXED;   /* 固定像素：自适应会在贴合时把点撑大，放大就糊 */
-			m.shape = Potree.PointShape.CIRCLE; m.activeAttributeName = 'rgba';
-			scene.addPointCloud(pointcloud);
+		/* 点云按空间切成 9 块（整块八叉树 274 MB 超 GitHub 单文件 100 MB 上限），
+		   这里一次全加载 —— 观感与整块一致，只是分成多个文件。 */
+		var TILES = ['t0', 't1', 't2', 't3', 't4', 't5', 't6', 't7', 't8'];
+		var _left = TILES.length, _min = null, _max = null;
+		function onAllLoaded() {
 			viewer.fitToScreen();
-
-			var bbox = pointcloud.pcoGeometry.boundingBox;
-			var off = pointcloud.pcoGeometry.offset;   // 点云范围是局部坐标，要加回 CRS 偏移
-			// 滚轮缩放步长固定：取点云包围盒对角线的一个固定比例，之后不再随当前距离变化
-			// （Potree 默认步长是「当前距离 × 0.1」，所以远处快、近处慢）
-			if (viewer.orbitControls) {
-				var _dx = bbox.max.x - bbox.min.x, _dy = bbox.max.y - bbox.min.y, _dz = bbox.max.z - bbox.min.z;
-				viewer.orbitControls.scrollStep = Math.sqrt(_dx * _dx + _dy * _dy + _dz * _dz) * 0.07;
+			if (_min) {
+				var dx = _max[0] - _min[0], dy = _max[1] - _min[1], dz = _max[2] - _min[2];
+				// 滚轮步长固定（Potree 默认按当前距离，远处快近处慢）
+				if (viewer.orbitControls) viewer.orbitControls.scrollStep = Math.sqrt(dx * dx + dy * dy + dz * dz) * 0.07;
+				window.PCBOX = { min: _min, max: _max };   /* 设备点越界过滤用 */
 			}
-			var box = { min: [bbox.min.x + off.x, bbox.min.y + off.y, bbox.min.z + off.z],
-			            max: [bbox.max.x + off.x, bbox.max.y + off.y, bbox.max.z + off.z] };
-			window.PCBOX = box;    /* 设备点越界过滤用 */
+			loadAnnotations();
+		}
+		TILES.forEach(function (t) {
+			Potree.loadPointCloud('./pointclouds/' + t + '/metadata.json', t, function (e) {
+				var pc = e.pointcloud, m = pc.material;
+				m.size = 1.2; m.pointSizeType = Potree.PointSizeType.FIXED;   /* 固定像素：自适应会撑大点，放大就糊 */
+				m.shape = Potree.PointShape.CIRCLE; m.activeAttributeName = 'rgba';
+				viewer.scene.addPointCloud(pc);
+				var bb = pc.pcoGeometry.boundingBox, off = pc.pcoGeometry.offset;
+				var mn = [bb.min.x + off.x, bb.min.y + off.y, bb.min.z + off.z];
+				var mx = [bb.max.x + off.x, bb.max.y + off.y, bb.max.z + off.z];
+				if (!_min) { _min = mn.slice(); _max = mx.slice(); }
+				else { for (var i = 0; i < 3; i++) { if (mn[i] < _min[i]) _min[i] = mn[i]; if (mx[i] > _max[i]) _max[i] = mx[i]; } }
+				if (--_left === 0) onAllLoaded();
+			});
+		});
+
+		function loadAnnotations() {
 
 			fetch('annotations.json').then(function (r) { return r.json(); }).then(function (data) {
 				ANNOT = data;
@@ -697,9 +708,9 @@
 
 			// 样地边界 / 网格 / 水系
 			fetch('bounds.json').then(function (r) { return r.json(); }).then(function (b) { BNDS = b; });
+		}
 
-			(function loop() { project(); drawDots(); drawBounds(); drawCells(); requestAnimationFrame(loop); })();
-		});
+		(function loop() { project(); drawDots(); drawBounds(); drawCells(); requestAnimationFrame(loop); })();
 	</script>
 	<style>
 		.lg3d b { display:inline-block; background:#c2703d; color:#fff; font-size:9px; font-weight:700;
