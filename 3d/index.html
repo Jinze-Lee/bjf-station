@@ -42,6 +42,19 @@
 			#potree_sidebar_container { top: 84px !important; }
 		}
 
+		/* 自动镜头按钮条（底部中央） */
+		#camBar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 1950;
+			display: flex; gap: 6px; padding: 6px 8px; border-radius: 20px; max-width: 94vw;
+			background: rgba(20, 24, 15, .82); border: 1px solid rgba(160, 180, 120, .3);
+			box-shadow: 0 6px 20px rgba(0,0,0,.5); overflow-x: auto; }
+		#camBar .cbtn { flex: none; padding: 6px 12px; border-radius: 14px; cursor: pointer;
+			font-size: 12.5px; font-family: inherit; color: #d7d2c6;
+			background: rgba(58, 72, 40, .5); border: 1px solid rgba(160, 180, 120, .35); }
+		#camBar .cbtn:hover { background: rgba(88, 110, 62, .8); color: #fff; }
+		#camBar .cbtn.active { background: #6ca14a; color: #14170f; border-color: #9ed06a; font-weight: 700; }
+		#camBar .cbtn.stop { background: rgba(90, 55, 45, .6); border-color: rgba(190, 120, 100, .4); }
+		@media (max-width: 640px) { #camBar .cbtn { padding: 5px 9px; font-size: 11.5px; } }
+
 		/* 加载进度框 */
 		#loading { position: fixed; left: 50%; top: 46%; transform: translate(-50%, -50%); z-index: 3000;
 			background: rgba(16, 20, 12, .88); border: 1px solid rgba(160, 180, 120, .35);
@@ -125,7 +138,7 @@
 		@media (max-width: 640px) { #legend3d { font-size: 10.5px; padding: 6px 8px; } }
 
 		/* 操作提示（相机只有环绕一种模式：左键旋转 · 中键平移 · 滚轮缩放） */
-		#ctrlHint { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 1900;
+		#ctrlHint { position: fixed; left: 50%; bottom: 58px; transform: translateX(-50%); z-index: 1900;
 			background: rgba(20,24,15,.72); color: #d7d2c6; pointer-events: none;
 			border: 1px solid rgba(160,180,120,.28); border-radius: 6px; padding: 6px 13px; font-size: 12.5px; }
 		@media (max-width: 640px) { #ctrlHint { font-size: 11px; padding: 5px 10px; bottom: 10px; } }
@@ -178,6 +191,15 @@
 	</div>
 	<div id="ctrlHint"></div>
 
+	<!-- 自动镜头：懒得自己操作就按一个，画面自己动（再点同键 / 用户一动手 = 停） -->
+	<div id="camBar">
+		<button class="cbtn" data-cam="orbit" id="camOrbit">环绕</button>
+		<button class="cbtn" data-cam="flyover" id="camFly">低空巡航</button>
+		<button class="cbtn" data-cam="dolly" id="camDolly">推拉</button>
+		<button class="cbtn" data-cam="rise" id="camRise">升空俯瞰</button>
+		<button class="cbtn stop" id="camStop" title="停止">■ 停</button>
+	</div>
+
 	<!-- 加载进度：点云 9 块 + 首屏渲染，慢的时候让用户知道在动 -->
 	<div id="loading">
 		<div class="spin"></div>
@@ -204,6 +226,7 @@
 			      layers: '图层', lLayers: '图层', lDet: '单木覆盖', lBnd: '样地边界',
 			      lG20: '20 m 网格', lG40: '40 m 网格', lDrain: '水系', lNum: '格网编号（VIT/T）',
 			      lSap: '液流', lDen: '径向生长', lLai: 'LAI',
+			      camOrbit: '环绕', camFly: '低空巡航', camDolly: '推拉', camRise: '升空俯瞰', camStop: '■ 停',
 			      loadCloud: '正在加载三维点云…', loadRender: '正在渲染首屏…' },
 			en: { title: 'Beijing Forest Ecosystem Research Station · 3D Canopy',
 			      sub: 'UAV LiDAR colour point cloud · AMap satellite · 20 monitored trees / 3 loggers',
@@ -211,6 +234,7 @@
 			      layers: 'Layers', lLayers: 'Layers', lDet: 'Tree cover', lBnd: 'Plot boundaries',
 			      lG20: '20 m grid', lG40: '40 m grid', lDrain: 'Drainage', lNum: 'Grid IDs (VIT/T)',
 			      lSap: 'Sap flow', lDen: 'Dendrometer', lLai: 'LAI',
+			      camOrbit: 'Orbit', camFly: 'Low flyover', camDolly: 'Dolly', camRise: 'Rise & overlook', camStop: '■ Stop',
 			      loadCloud: 'Loading 3D point cloud…', loadRender: 'Rendering first view…' }
 		};
 		var LANG = localStorage.getItem('bfers-3d-lang') || 'zh';
@@ -233,6 +257,11 @@
 			lb = document.getElementById('lblSap'); if (lb) lb.textContent = d.lSap;
 			lb = document.getElementById('lblDen'); if (lb) lb.textContent = d.lDen;
 			lb = document.getElementById('lblLai'); if (lb) lb.textContent = d.lLai;
+			var cb = document.getElementById('camOrbit'); if (cb) cb.textContent = d.camOrbit;
+			cb = document.getElementById('camFly'); if (cb) cb.textContent = d.camFly;
+			cb = document.getElementById('camDolly'); if (cb) cb.textContent = d.camDolly;
+			cb = document.getElementById('camRise'); if (cb) cb.textContent = d.camRise;
+			cb = document.getElementById('camStop'); if (cb) cb.textContent = d.camStop;
 			renderLegend();
 		}
 		function renderLegend() {
@@ -714,15 +743,14 @@
 		function onAllLoaded() {
 			window.__allLoaded = true;
 			viewer.fitToScreen();
-			/* 渐进加密：首屏先用 40 万点快出图，之后每隔几秒抬高预算，
-			   让人"马上看到东西"，而不是干等几十 MB 下完（跨境链路尤其重要）。 */
-			(function rampBudget() {
-				var steps = [400000, 900000, 1600000, 2400000, 3000000], i = 0;
-				(function step() {
-					if (++i >= steps.length) return;
-					if (!document.hidden) viewer.setPointBudget(steps[i]);
-					setTimeout(step, 5000);
-				}());
+			/* 渐进加密：首屏先用 40 万点快出图，之后每隔几秒抬高预算。
+			   自动镜头期间压到 40 万（画面一直在动，压低才不卡、也少下数据）。 */
+			var steps = [400000, 900000, 1600000, 2400000, 3000000], si = 0;
+			(function step() {
+				if (++si >= steps.length) return;
+				budgetWant = steps[si];
+				applyBudget();
+				setTimeout(step, 5000);
 			}());
 			if (_min) {
 				var dx = _max[0] - _min[0], dy = _max[1] - _min[1], dz = _max[2] - _min[2];
@@ -807,7 +835,111 @@
 			fetch('bounds.json').then(function (r) { return r.json(); }).then(function (b) { BNDS = b; });
 		}
 
-		(function loop() { project(); drawDots(); drawBounds(); drawCells(); requestAnimationFrame(loop); })();
+		/* ---------------- 自动镜头 ----------------
+		 * 4 条预设轨迹，点按钮画面自己动；再点同键、或用户一动手就停。
+		 * 轨迹只用「相机位置 + 注视点」两个量描述，不依赖全局 THREE。 */
+		var CAM = { on: false, name: null, t0: 0 };
+		var CAM_DUR = { orbit: 60000, flyover: 45000, dolly: 50000, rise: 50000 };
+		var budgetWant = 400000;
+		function applyBudget() {
+			viewer.setPointBudget(CAM.on ? Math.min(700000, budgetWant) : budgetWant);
+		}
+		var ease = function (x) { return x * x * (3 - 2 * x); };        /* smoothstep */
+		var tri = function (t) { return 1 - Math.abs(2 * t - 1); };     /* 往返 0→1→0 */
+
+		function camRef() {
+			var c = window.PCBOX;
+			if (!c) return null;
+			var cx = (c.min[0] + c.max[0]) / 2, cy = (c.min[1] + c.max[1]) / 2;
+			var R = Math.max(c.max[0] - c.min[0], c.max[1] - c.min[1]) * 0.5;
+			/* 注视高度取实际点的中位高程 —— 八叉树包围盒的 z 是立方体、不是地形 */
+			var zs = [];
+			for (var i = 0; i < DOTPTS.length; i++) { var z = DOTPTS[i].Z; if (isFinite(z)) zs.push(z); }
+			zs.sort(function (a, b) { return a - b; });
+			var zc = zs.length ? zs[Math.floor(zs.length / 2)] : (c.min[2] + c.max[2]) / 2;
+			return { cx: cx, cy: cy, R: R, zc: zc };
+		}
+
+		function camPose(name, T) {
+			var r = camRef();
+			if (!r) return null;
+			var cx = r.cx, cy = r.cy, R = r.R, zc = r.zc, a, d, h;
+			if (name === 'orbit') {                    /* 环绕：匀速转一圈 */
+				a = T * Math.PI * 2;
+				return { p: [cx + R * 1.75 * Math.cos(a), cy + R * 1.75 * Math.sin(a), zc + R * 0.85],
+				         t: [cx, cy, zc] };
+			}
+			if (name === 'flyover') {                  /* 低空巡航：沿固定方向来回掠飞（样地在坡上，得抬高+俯视，不然会贴着坡面侧看） */
+				a = -Math.PI * 0.32;
+				var e = ease(tri(T)), L = R * 2.4;
+				var px = cx - Math.cos(a) * L / 2 + Math.cos(a) * L * e;
+				var py = cy - Math.sin(a) * L / 2 + Math.sin(a) * L * e;
+				return { p: [px, py, zc + R * 0.55],
+				         t: [px + Math.cos(a) * R * 0.8, py + Math.sin(a) * R * 0.8, zc - R * 0.30] };
+			}
+			if (name === 'dolly') {                    /* 推拉：推近 → 停一下 → 退回 */
+				a = -Math.PI * 0.4;
+				var u = T < 0.35 ? ease(T / 0.35) : (T < 0.65 ? 1 : 1 - ease((T - 0.65) / 0.35));
+				d = R * (2.7 - 1.9 * u);
+				return { p: [cx + Math.cos(a) * d, cy + Math.sin(a) * d, zc + d * 0.42],
+				         t: [cx, cy, zc] };
+			}
+			/* rise：升空俯瞰，升上去再落回 */
+			a = -Math.PI * 0.75; d = R * 0.95;
+			h = R * (0.12 + 1.7 * ease(tri(T)));
+			return { p: [cx + Math.cos(a) * d, cy + Math.sin(a) * d, zc + h], t: [cx, cy, zc] };
+		}
+
+		function camStep(now) {
+			if (!CAM.on) return;
+			var pose = camPose(CAM.name, ((now - CAM.t0) % CAM_DUR[CAM.name]) / CAM_DUR[CAM.name]);
+			if (!pose) return;
+			var view = viewer.scene.view;
+			view.position.set(pose.p[0], pose.p[1], pose.p[2]);
+			var tv = view.position.clone(); tv.set(pose.t[0], pose.t[1], pose.t[2]);
+			view.lookAt(tv);
+		}
+
+		function camMark() {
+			var bs = document.querySelectorAll('#camBar .cbtn[data-cam]');
+			for (var i = 0; i < bs.length; i++) {
+				bs[i].classList.toggle('active', CAM.on && bs[i].getAttribute('data-cam') === CAM.name);
+			}
+		}
+		function camStart(name) {
+			if (!window.PCBOX) { return; }              /* 点云还没就绪 */
+			CAM.on = true; CAM.name = name; CAM.t0 = performance.now();
+			camMark(); applyBudget();
+		}
+		function camStop() {
+			if (!CAM.on) return;
+			CAM.on = false; camMark(); applyBudget();
+		}
+		(function bindCam() {
+			var bs = document.querySelectorAll('#camBar .cbtn[data-cam]');
+			for (var i = 0; i < bs.length; i++) {
+				(function (b) {
+					b.addEventListener('click', function () {
+						var n = b.getAttribute('data-cam');
+						if (CAM.on && CAM.name === n) { camStop(); } else { camStart(n); }
+					});
+				}(bs[i]));
+			}
+			var st = document.getElementById('camStop');
+			if (st) st.addEventListener('click', camStop);
+			/* 用户一动手就停，不跟他抢控制权 */
+			['mousedown', 'wheel', 'touchstart'].forEach(function (ev) {
+				var el = document.getElementById('potree_render_area');
+				if (el) el.addEventListener(ev, function () { camStop(); }, { passive: true });
+			});
+		}());
+
+		(function loop() {
+			var now = performance.now();
+			if (CAM.on) camStep(now);
+			project(); drawDots(); drawBounds(); drawCells();
+			requestAnimationFrame(loop);
+		})();
 	</script>
 	<style>
 		.lg3d b { display:inline-block; background:#c2703d; color:#fff; font-size:9px; font-weight:700;
