@@ -901,25 +901,52 @@
 		}
 
 		var CAM_ORDER = ['orbit', 'flyover', 'dolly', 'rise'];
+		var CAM_TRANS = 1500;                      /* 换轨迹时的平滑过渡时长（ms） */
+		var CAM_BLEND = null;                      /* {p0,t0,p1,t1,start} */
+		function camPoseNow(view) {
+			var p = view.position, t = view.getPivot();
+			return { p: [p.x, p.y, p.z], t: [t.x, t.y, t.z] };
+		}
+		function camApply(view, p, t) {
+			view.position.set(p[0], p[1], p[2]);
+			var tv = view.position.clone(); tv.set(t[0], t[1], t[2]);
+			view.lookAt(tv);
+		}
 		function camStep(now) {
 			if (!CAM.on) return;
+			var view = viewer.scene.view;
+
+			/* 过渡中：把相机从上一段终点缓动到这一段起点 */
+			if (CAM_BLEND) {
+				var u = (now - CAM_BLEND.start) / CAM_TRANS;
+				if (u < 1) {
+					var e = ease(Math.max(0, u));
+					camApply(view,
+						[0, 1, 2].map(function (i) { return CAM_BLEND.p0[i] + (CAM_BLEND.p1[i] - CAM_BLEND.p0[i]) * e; }),
+						[0, 1, 2].map(function (i) { return CAM_BLEND.t0[i] + (CAM_BLEND.t1[i] - CAM_BLEND.t0[i]) * e; }));
+					return;
+				}
+				CAM_BLEND = null;
+				CAM.t0 = now;                      /* 过渡完再从这段的开头算起 */
+			}
+
 			var dur = CAM_DUR[CAM.name];
 			var el = (now - CAM.t0) * camSpeedNow();          /* 已播时长（含倍速） */
 			if (el >= dur) {
 				if (!CAM_LOOP) { camStop(); return; }         /* 不连播：播完一遍就停 */
-				/* 连播：换到下一条轨迹，接着放（四条依次循环） */
+				/* 连播：换到下一条轨迹，并做平滑过渡（不是硬切） */
+				var from = camPoseNow(view);
 				var i = CAM_ORDER.indexOf(CAM.name);
 				CAM.name = CAM_ORDER[(i + 1) % CAM_ORDER.length];
-				CAM.t0 = now;
-				el = 0;
+				var to = camPose(CAM.name, 0);
+				if (to) { CAM_BLEND = { p0: from.p, t0: from.t, p1: to.p, t1: to.t, start: now }; }
+				CAM.t0 = now; el = 0;
 				camMark();
+				return;
 			}
-			var pose = camPose(CAM.name, el / CAM_DUR[CAM.name]);
+			var pose = camPose(CAM.name, el / dur);
 			if (!pose) return;
-			var view = viewer.scene.view;
-			view.position.set(pose.p[0], pose.p[1], pose.p[2]);
-			var tv = view.position.clone(); tv.set(pose.t[0], pose.t[1], pose.t[2]);
-			view.lookAt(tv);
+			camApply(view, pose.p, pose.t);
 		}
 
 		function camMark() {
@@ -930,7 +957,12 @@
 		}
 		function camStart(name) {
 			if (!window.PCBOX) { return; }              /* 点云还没就绪 */
+			var view = viewer.scene.view;
+			var from = camPoseNow(view);
 			CAM.on = true; CAM.name = name; CAM.t0 = performance.now();
+			/* 从当前机位平滑飞入这条轨迹的起点，而不是"瞬移"过去 */
+			var to = camPose(name, 0);
+			CAM_BLEND = to ? { p0: from.p, t0: from.t, p1: to.p, t1: to.t, start: CAM.t0 } : null;
 			camMark(); applyBudget();
 		}
 		function camStop() {
