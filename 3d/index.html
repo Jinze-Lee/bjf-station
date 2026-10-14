@@ -79,6 +79,7 @@
 			max-height: calc(100vh - 132px); overflow-y: auto; }   /* 开关多了：矮窗口里滚动，别顶出屏 */
 		.layers-panel .lp-cap { font-size: 12px; font-weight: 700; color: #666;
 			letter-spacing: .5px; margin: 0 0 4px; }
+		.lbtn { display: none; }   /* 桌面：面板常开，用不到折叠按钮 */
 		.layers-panel label { display: block; padding: 5px 4px; font-size: 14px; cursor: pointer;   /* 5px：14 行时别顶到右下角图例 */
 			user-select: none; white-space: nowrap; border-radius: 4px; }
 		.layers-panel label:hover { background: rgba(108,161,74,.14); }
@@ -175,6 +176,8 @@
 			<small id="bs">无人机 LiDAR 彩色点云 · 高德卫星底图 · 20 棵监测树 / 3 台数采</small></div>
 		<div class="spacer"></div>
 		<div class="layers" id="layersBox">
+			<!-- 窄屏折叠按钮：桌面端隐藏（面板常开），手机上跟二维地图一样默认收起来 -->
+			<button class="btn lbtn" id="layersBtn" aria-expanded="false">图层</button>
 			<div class="layers-panel open" id="layersPanel">
 				<div class="lp-cap" id="lblLayers">图层</div>
 				<label><input type="checkbox" id="chkPC" checked> <span id="lblPC">点云</span></label>
@@ -263,6 +266,7 @@
 			var ch = document.getElementById('ctrlHint');
 			if (ch) ch.textContent = d.ctrlHint;
 			var lb = document.getElementById('lblLayers'); if (lb) lb.textContent = d.lLayers;
+			var bl = document.getElementById('layersBtn'); if (bl) bl.textContent = d.lLayers;
 			lb = document.getElementById('lblDet'); if (lb) lb.textContent = d.lDet;
 			lb = document.getElementById('lblBnd'); if (lb) lb.textContent = d.lBnd;
 			lb = document.getElementById('lblPC'); if (lb) lb.textContent = d.lPC;
@@ -421,6 +425,22 @@
 			var el = document.getElementById('labels');
 			if (el) el.style.visibility = v ? 'visible' : 'hidden';
 		});
+
+		/* 窄屏图层面板默认收起（跟二维地图一个做法：那边金总已经认了「默认折叠」），
+		   点「图层」展开、点面板以外收起 —— 手机上别一直盖住三分之一屏幕。 */
+		(function () {
+			var box = document.getElementById('layersBox'), btn = document.getElementById('layersBtn'),
+			    pan = document.getElementById('layersPanel');
+			if (!box || !btn || !pan) return;
+			function narrow() { return (window.innerWidth || 1024) < 640; }
+			function setOpen(v) { pan.classList.toggle('open', v); btn.setAttribute('aria-expanded', v ? 'true' : 'false'); }
+			setOpen(!narrow());                       /* 桌面常开；窄屏默认收起 */
+			btn.addEventListener('click', function () { setOpen(!pan.classList.contains('open')); });
+			/* 捕获阶段：Potree 的输入处理会吞掉冒泡，挂冒泡收不到 */
+			document.addEventListener('pointerdown', function (e) {
+				if (narrow() && pan.classList.contains('open') && !box.contains(e.target)) setOpen(false);
+			}, true);
+		}());
 
 		var ANNOT = null, MAIN_N = 0, TREE_N = 0, SPECIES = {}, DET_ON = true, DET_N = 0,
 		    BNDS = null, BND_ON = true,
@@ -1355,8 +1375,12 @@
 			#legend3d { bottom: 66px; max-height: calc(100vh - 460px); overflow-y: auto; }
 		}
 		@media (max-width: 640px) {
-			.layers-panel { left: 0; right: auto; top: 44px; max-height: calc(100vh - 300px); }
+			.layers-panel { left: 0; right: auto; top: 44px; max-height: calc(100vh - 300px); display: none; }
+			.layers-panel.open { display: block; }         /* 窄屏默认收起，点「图层」才展开 */
+			.lbtn { display: inline-block; }
 			.layers-panel label { padding: 7px 4px; }      /* 手机上手指要够大 */
+			/* 手机上底部被镜头条+图例占满，提示条会压在图上；而且「右键拖动」对触屏也不适用 */
+			#ctrlHint { display: none; }
 		}
 		/* 更窄的屏：图例限宽，别钻到左边面板底下（面板 z-index 更高，会把它左半边盖住） */
 		@media (max-width: 430px) {
