@@ -847,12 +847,202 @@
 			fetch('bounds.json').then(function (r) { return r.json(); }).then(function (b) { BNDS = b; });
 		}
 
-		/* ---------------- 影像地面 ----------------
-		 * 点云周围原本一片黑（航测覆盖不规则）。这里用高德卫星影像铺一块地面把它填上。
-		 * 这个 Potree 打包版不暴露 THREE、也没有自带 Earth —— 于是从场景里已有的 Mesh
-		 * （罗盘/导航立方体）借 Mesh / PlaneGeometry / MeshBasicMaterial / Texture 四个构造器。
-		 * 高德瓦片返回 Access-Control-Allow-Origin: *，所以能画进 canvas 当 WebGL 纹理。
-		 * 高德是 GCJ-02、点云是 WGS-84，差约 500 m —— 用四角换算做整体补正。 */
+		/* ---------------- 影像地面（真地形） ----------------
+		 * 不能是一块平板压在坡地上 —— 按高程把地面做成起伏的网格，影像贴上去。
+		 * 高程来源：样地内用高精 DEM（3d/dem.json，0.5 m 源），周边用全球高程瓦片
+		 * （Mapzen/AWS terrarium，免费免 key、ACAO:*）。两者基准不同，用样地中心的
+		 * 差值做一次对齐，再在边界附近做带状过渡。
+		 * Potree 这版不暴露 THREE，Mesh/PlaneGeometry/MeshBasicMaterial/Texture 从
+		 * 场景已有 Mesh（罗盘/导航立方体）借。 */
+		var GROUND_SRC = 'tianditu';
+		var TIANDITU_TK = 'faa2a38ebee2231bb08b9176019b1652';
+		var TERRAIN_Z = 12;                       /* 全球高程瓦片层级（约 30 m/px） */
+		function groundTileURL(x, y, z, i) {
+			if (GROUND_SRC === 'tianditu') {
+				return 'https://t' + (i % 8) + '.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile' +
+					'&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles' +
+					'&TILEMATRIX=' + z + '&TILEROW=' + y + '&TILECOL=' + x + '&tk=' + TIANDITU_TK;
+			}
+			return 'https://webst0' + ((i % 4) + 1) + '.is.autonavi.com/appmaptile?style=6&x=' + x + '&y=' + y + '&z=' + z;
+		}
+		function terrariumURL(x, y, z, i) {
+			return 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/' + z + '/' + x + '/' + y + '.png';
+		}
+		function merc(lat, lon) {                  /* -> 归一化墨卡托 [0,1] */
+			var r = lat * Math.PI / 180;
+			return [(lon + 180) / 360, (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2];
+		}
+		function loadImage(src) {
+			return new Promise(function (res, rej) {
+				var im = new Image();
+				im.crossOrigin = 'anonymous';
+				im.onload = function () { res(im); };
+				im.onerror = rej;
+				im.src = src;
+			});
+		}
+
+		function buildGround() {
+			if (GROUND || !window.PCBOX || typeof proj4 !== 'function') return;
+			var P = findProtos();
+			if (!P) { console.info('[3d] 借不到 THREE 构造器，影像地面跳过'); return; }
+			var c = window.PCBOX;
+			var cx = (c.min[0] + c.max[0]) / 2, cy = (c.min[1] + c.max[1]) / 2;
+			var S = 3200, SEG = 160, VN = SEG + 1;          /* 地面 3.2 km、160 段（约 20 m 一格） */
+			var MAXTILE = 64;
+			var dem = null;                                  /* 样地 DEM 高程栅格 */
+			var ter = null, tW = 0, tH = 0;                   /* 全球高程栅格（周边地形） */
+
+			/* 地面四角（WGS-84 与 GCJ 各一份，分别给高程与影像用） */
+			var corners = [[cx - S / 2, cy - S / 2], [cx + S / 2, cy - S / 2],
+			               [cx + S / 2, cy + S / 2], [cx - S / 2, cy + S / 2]];
+			var wgs = corners.map(function (p) {
+				var w = proj4('EPSG:32650', 'EPSG:4326', [p[0], p[1]]);
+				return [w[1], w[0]];                        /* [lat, lon] */
+			});
+			var imgLL = wgs.map(function (p) {                /* 影像用（高德要转 GCJ） */
+				if (GROUND_SRC === 'amap') { return gcj(p[0], p[1]); }
+				return p;
+			});
+			function bbox(list) {
+				return {
+					latMin: Math.min.apply(null, list.map(function (p) { return p[0]; })),
+					latMax: Math.max.apply(null, list.map(function (p) { return p[0]; })),
+					lonMin: Math.min.apply(null, list.map(function (p) { return p[1]; })),
+					lonMax: Math.max.apply(null, list.map(function (p) { return p[1]; }))
+				};
+			}
+			var bI = bbox(imgLL), bW = bbox(wgs);
+
+			/* ---- 1) 影像瓦片拼图（天地图 / 高德） ---- */
+			var n = Math.pow(2, 16);
+			var x0 = Math.floor((bI.lonMin + 180) / 360 * n), x1 = Math.floor((bI.lonMax + 180) / 360 * n);
+			var y0 = Math.floor(merc(bI.latMax, 0)[1] * n), y1 = Math.floor(merc(bI.latMin, 0)[1] * n);
+			var nx = x1 - x0 + 1, ny = y1 - y0 + 1;
+			if (nx * ny > MAXTILE || nx < 1 || ny < 1) { console.info('[3d] 影像瓦片数异常，跳过'); return; }
+			var cv = document.createElement('canvas');
+			cv.width = nx * 256; cv.height = ny * 256;
+			var ictx = cv.getContext('2d');
+
+			/* ---- 2) 全球高程瓦片（周边地形） ---- */
+			var tn = Math.pow(2, TERRAIN_Z);
+			var tx0 = Math.floor(merc(bW.latMax, 0)[1] * 0 + (bW.lonMin + 180) / 360 * tn);
+			var tx1 = Math.floor((bW.lonMax + 180) / 360 * tn);
+			var ty0 = Math.floor(merc(bW.latMax, 0)[1] * tn), ty1 = Math.floor(merc(bW.latMin, 0)[1] * tn);
+			var tnx = tx1 - tx0 + 1, tny = ty1 - ty0 + 1;
+			var tcv = document.createElement('canvas');
+			tcv.width = tnx * 256; tcv.height = tny * 256;
+			var tctx = tcv.getContext('2d');
+
+			var jobs = [];
+			var imgOK = 0, terOK = 0;
+			for (var ix = 0; ix < nx; ix++) for (var iy = 0; iy < ny; iy++) {
+				(function (ix, iy) {
+					jobs.push(loadImage(groundTileURL(x0 + ix, y0 + iy, 16, ix + iy)).then(function (im) {
+						ictx.drawImage(im, ix * 256, iy * 256); imgOK++;
+					}).catch(function () {}));
+				}(ix, iy));
+			}
+			if (tnx * tny <= 16) {
+				for (var tx = 0; tx < tnx; tx++) for (var ty = 0; ty < tny; ty++) {
+					(function (tx, ty) {
+						jobs.push(loadImage(terrariumURL(tx0 + tx, ty0 + ty, TERRAIN_Z, 0)).then(function (im) {
+							tctx.drawImage(im, tx * 256, ty * 256); terOK++;
+						}).catch(function () {}));
+					}(tx, ty));
+				}
+			}
+
+			Promise.all(jobs).then(function () {
+				if (!imgOK) { console.info('[3d] 影像瓦片全失败，地面跳过'); return; }
+				if (terOK) {
+					try {
+						tW = tcv.width; tH = tcv.height;
+						ter = tctx.getImageData(0, 0, tW, tH).data;
+					} catch (e) { ter = null; }
+				}
+				/* 样地 DEM */
+				fetch('dem.json').then(function (r) { return r.json(); }).catch(function () { return null; })
+					.then(function (d) { dem = d; makeMesh(); });
+			});
+
+			/* 全球高程瓦片 -> 米（terrarium 编码：(R*256+G+B/256)-32768） */
+			function terHeight(lat, lon) {
+				if (!ter) return null;
+				var m = merc(lat, lon);
+				var px = m[0] * tn * 256 - tx0 * 256, py = m[1] * tn * 256 - ty0 * 256;
+				var xi = Math.max(0, Math.min(tW - 1, Math.round(px)));
+				var yi = Math.max(0, Math.min(tH - 1, Math.round(py)));
+				var o = (yi * tW + xi) * 4;
+				return (ter[o] * 256 + ter[o + 1] + ter[o + 2] / 256) - 32768;
+			}
+
+			function demHeight(E, N) {                        /* 双线性取样地 DEM；界外返回 null */
+				if (!dem) return null;
+				var b = dem.bounds;
+				if (E < b[0] || E > b[2] || N < b[1] || N > b[3]) return null;
+				var fx = (E - b[0]) / (b[2] - b[0]) * (dem.nx - 1);
+				var fy = (b[3] - N) / (b[3] - b[1]) * (dem.ny - 1);
+				var ix = Math.min(dem.nx - 2, Math.floor(fx)), iy = Math.min(dem.ny - 2, Math.floor(fy));
+				var u = fx - ix, v = fy - iy, z = dem.z;
+				return (z[iy * dem.nx + ix] * (1 - u) + z[iy * dem.nx + ix + 1] * u) * (1 - v) +
+				       (z[(iy + 1) * dem.nx + ix] * (1 - u) + z[(iy + 1) * dem.nx + ix + 1] * u) * v;
+			}
+
+			function makeMesh() {
+				/* 基准对齐：样地中心处 DEM 与全球高程的差值 */
+				var off = 0;
+				var dC = demHeight(cx, cy), tC = terHeight(wgs[0][0], wgs[0][1]);
+				if (dC != null && tC != null) {
+					var wc = proj4('EPSG:32650', 'EPSG:4326', [cx, cy]);
+					tC = terHeight(wc[1], wc[0]);
+					if (tC != null) off = dC - tC;
+				}
+				var geo = new P.Geo(1, 1, SEG, SEG);
+				var verts = geo.vertices || [];
+				/* 顶点顺序：行 0 在北（+Y），列 0 在西（-X） */
+				for (var iy = 0; iy < VN; iy++) {
+					for (var ix = 0; ix < VN; ix++) {
+						var vi = iy * VN + ix;
+						if (!verts[vi]) continue;
+						var E = cx - S / 2 + S * ix / SEG;
+						var N = cy + S / 2 - S * iy / SEG;
+						var dz = demHeight(E, N);
+						var w = proj4('EPSG:32650', 'EPSG:4326', [E, N]);
+						var th = terHeight(w[1], w[0]);
+						var zz;
+						if (dz != null && th != null) {
+							/* 界内用 DEM；离边界 150 m 内与全球高程做过渡 */
+							var b = dem.bounds;
+							var dist = Math.min(E - b[0], b[2] - E, N - b[1], b[3] - N);
+							var t = Math.min(1, Math.max(0, dist / 150));
+							zz = dz * t + (th + off) * (1 - t);
+						} else if (dz != null) { zz = dz; }
+						else if (th != null) { zz = th + off; }
+						else { zz = dC != null ? dC : c.min[2]; }
+						verts[vi].z = zz;
+					}
+				}
+				if ('verticesNeedUpdate' in geo) geo.verticesNeedUpdate = true;
+				if (geo.computeVertexNormals) geo.computeVertexNormals();
+
+				var tex = new P.Tex(cv);
+				tex.needsUpdate = true;
+				if ('generateMipmaps' in tex) tex.generateMipmaps = false;
+				if ('minFilter' in tex) tex.minFilter = 1006;
+				var mat = new P.Mat({ map: tex });
+				mat.side = 2;
+				var mesh = new P.Mesh(geo, mat);
+				mesh.position.set(cx, cy, 0);            /* 顶点 z 已是绝对高程，这里不平移 */
+				mesh.scale.set(S, S, 1);
+				mesh.visible = GROUND_ON;
+				viewer.scene.scene.add(mesh);
+				GROUND = mesh;
+				console.info('[3d] 地形地面已铺好：影像 ' + imgOK + ' 张、高程瓦片 ' + terOK + ' 张、基准差 ' +
+				             Math.round(off) + ' m');
+			}
+		}
+
 		function findProtos() {
 			var protos = null;
 			function walk(o, d) {
@@ -868,90 +1058,6 @@
 			return protos;
 		}
 
-		/* 影像地面瓦片源：tianditu = 天地图（WGS-84 天然对齐，国内快）；amap = 高德（GCJ-02 需补正） */
-		var GROUND_SRC = 'tianditu';
-		var TIANDITU_TK = 'faa2a38ebee2231bb08b9176019b1652';   /* 金总的浏览器端 key */
-		function groundTileURL(x, y, z, i) {
-			if (GROUND_SRC === 'tianditu') {
-				return 'https://t' + (i % 8) + '.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile' +
-					'&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles' +
-					'&TILEMATRIX=' + z + '&TILEROW=' + y + '&TILECOL=' + x + '&tk=' + TIANDITU_TK;
-			}
-			return 'https://webst0' + ((i % 4) + 1) + '.is.autonavi.com/appmaptile?style=6&x=' + x + '&y=' + y + '&z=' + z;
-		}
-
-		function buildGround() {
-			if (GROUND || !window.PCBOX || typeof proj4 !== 'function') return;
-			var P = findProtos();
-			if (!P) { console.info('[3d] 借不到 THREE 构造器，影像地面跳过'); return; }
-			var c = window.PCBOX;
-			var cx = (c.min[0] + c.max[0]) / 2, cy = (c.min[1] + c.max[1]) / 2;
-			var S = 3200;                                   /* 地面边长 m（够大，边缘不易露） */
-			var MAXTILE = 64;                               /* 瓦片数上限，别让慢链路下太多 */
-			var zs = [];
-			for (var i = 0; i < DOTPTS.length; i++) { if (isFinite(DOTPTS[i].Z)) zs.push(DOTPTS[i].Z); }
-			zs.sort(function (a, b) { return a - b; });
-			var z = (zs.length ? zs[0] : c.min[2]) - 3;      /* 略低于最低地面，别盖住点云 */
-
-			/* 四角 UTM -> 经纬度。天地图是 WGS-84（天然对齐）；高德是 GCJ-02，要补正 */
-			var corners = [[cx - S / 2, cy - S / 2], [cx + S / 2, cy - S / 2],
-			               [cx + S / 2, cy + S / 2], [cx - S / 2, cy + S / 2]];
-			var g = corners.map(function (p) {
-				var w = proj4('EPSG:32650', 'EPSG:4326', [p[0], p[1]]);   /* -> [lon, lat] */
-				if (GROUND_SRC === 'amap') { return gcj(w[1], w[0]); }    /* gcj(lat,lon) -> [lat,lon] */
-				return [w[1], w[0]];
-			});
-			var lonMin = Math.min.apply(null, g.map(function (p) { return p[1]; }));
-			var lonMax = Math.max.apply(null, g.map(function (p) { return p[1]; }));
-			var latMin = Math.min.apply(null, g.map(function (p) { return p[0]; }));
-			var latMax = Math.max.apply(null, g.map(function (p) { return p[0]; }));
-
-			var Z = 16, n = Math.pow(2, Z);
-			function txf(lon) { return Math.floor((lon + 180) / 360 * n); }
-			function tyf(lat) {
-				var r = lat * Math.PI / 180;
-				return Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n);
-			}
-			var x0 = txf(lonMin), x1 = txf(lonMax), y0 = tyf(latMax), y1 = tyf(latMin);
-			var nx = x1 - x0 + 1, ny = y1 - y0 + 1;
-			if (nx * ny > MAXTILE || nx < 1 || ny < 1) { console.info('[3d] 地面瓦片数异常(' + nx + 'x' + ny + ')，跳过'); return; }
-
-			var cv = document.createElement('canvas');
-			cv.width = nx * 256; cv.height = ny * 256;
-			var ctx = cv.getContext('2d');
-			var left = nx * ny, got = 0, done = 0;
-			function finish() {
-				if (done || !got) { return; }
-				done = 1;
-				var tex = new P.Tex(cv);
-				tex.needsUpdate = true;
-				if ('generateMipmaps' in tex) tex.generateMipmaps = false;   /* 画布非 2 次幂，别用 mipmap */
-				if ('minFilter' in tex) tex.minFilter = 1006;                /* LinearFilter */
-				var mat = new P.Mat({ map: tex });
-				mat.side = 2;                                                /* DoubleSide */
-				var mesh = new P.Mesh(new P.Geo(1, 1), mat);
-				mesh.position.set(cx, cy, z);
-				mesh.scale.set(S, S, 1);
-				mesh.visible = GROUND_ON;
-				viewer.scene.scene.add(mesh);
-				GROUND = mesh;
-				console.info('[3d] 影像地面已铺好：' + nx + 'x' + ny + ' 瓦片，' + got + ' 张成功');
-			}
-			for (var ix = 0; ix < nx; ix++) {
-				for (var iy = 0; iy < ny; iy++) {
-					(function (ix, iy) {
-						var im = new Image();
-						im.crossOrigin = 'anonymous';
-						im.onload = function () {
-							try { ctx.drawImage(im, ix * 256, iy * 256); got++; } catch (e) {}
-							if (--left === 0) { finish(); }
-						};
-						im.onerror = function () { if (--left === 0) { finish(); } };
-						im.src = groundTileURL(x0 + ix, y0 + iy, Z, ix + iy);
-					}(ix, iy));
-				}
-			}
-		}
 
 
 		/* ---------------- 自动镜头 ----------------
