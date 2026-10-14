@@ -10,7 +10,7 @@
 var PLOTS = {
     DT1: { name: 'Mixed forest plot', nameZh: '综合林样地', color: '#4a7c59', lat: 39.9575558, lon: 115.4252819 },
     DT2: { name: 'Larch plot', nameZh: '落叶松样地', color: '#2c6e8f', lat: 39.9584771, lon: 115.4259859 },
-    DT3: { name: 'Plot below the meteorological station', nameZh: '气象站下方样地', color: '#c2703d', lat: 39.9599965, lon: 115.4286265 },
+    DT3: { name: 'Pine plot', nameZh: '油松样地', color: '#c2703d', lat: 39.9599965, lon: 115.4286265 },
 };
 
 var TREES = [

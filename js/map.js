@@ -355,6 +355,9 @@
         var siteLayer = L.layerGroup(), bigLayer = L.layerGroup(), nameLayer = L.layerGroup();
         var siteShapes = [], bigShapes = [], nameMarkers = [];
 
+        /* 站点名字按当前语言取 */
+        function siteName(g) { return (window.Lang && Lang.current !== 'zh') ? g.name : g.nameZh; }
+
         function polyCenter(g) {
             var r = g.pts, n = r.length, la = 0, lo = 0;
             if (r[0][0] === r[n - 1][0] && r[0][1] === r[n - 1][1]) { n--; }   /* 首尾重合，去掉最后一个 */
@@ -373,29 +376,39 @@
             var c = polyCenter(g);
             if (c) { addNameLabel(c[0], c[1], text); }
         }
+        /* 名称标注：按当前语言重建（切语言时也要跟着换） */
+        function rebuildNameLabels() {
+            nameLayer.clearLayers();
+            nameMarkers = [];
+            var zh = !window.Lang || Lang.current === 'zh';
+            if (typeof SITES !== 'undefined') {
+                (SITES.areas || []).forEach(function (a) { addNameLabelPoly(a, zh ? a.nameZh : a.name); });
+                (SITES.points || []).forEach(function (q) { addNameLabel(q.lat, q.lon, zh ? q.nameZh : q.name); });
+            }
+            if (typeof BOUNDS !== 'undefined') {
+                (BOUNDS.boundaries || []).forEach(function (b) { addNameLabelPoly(b, b.name); });
+            }
+        }
         if (typeof SITES !== 'undefined') {
             (SITES.points || []).forEach(function (p) {
                 var m = L.circleMarker(place(p.lat, p.lon), {
                     radius: 5, color: '#20242a', weight: 1.6, fillColor: '#ffd400', fillOpacity: 1 });
-                m.bindPopup('<b>' + esc(p.nameZh) + '</b>' + (p.alt != null ? '<br>' + p.alt + ' m' : ''));
+                m.bindPopup('<b>' + esc(siteName(p)) + '</b>' + (p.alt != null ? '<br>' + p.alt + ' m' : ''));
                 m.addTo(siteLayer);
                 siteShapes.push({ g: p, m: m });
             });
             (SITES.areas || []).forEach(function (a) {
                 var poly = L.polygon(a.pts.map(function (q) { return place(q[0], q[1]); }), {
                     color: '#3f8fd0', weight: 2.4, opacity: 1, fillColor: '#3f8fd0', fillOpacity: 0.1 });
-                poly.bindTooltip(a.nameZh, { direction: 'top', offset: [0, -4] });
+                poly.bindTooltip(siteName(a), { direction: 'top', offset: [0, -4] });
                 poly.addTo(bigLayer);
                 bigShapes.push({ g: a, poly: poly });
             });
-            /* 名称标注默认开：两个新区、三个样地、以及生活区/林场都是常显名字 */
-            (SITES.areas || []).forEach(function (a) { addNameLabelPoly(a, a.nameZh); });
-            (SITES.points || []).forEach(function (q) { addNameLabel(q.lat, q.lon, q.nameZh); });
-            if (typeof BOUNDS !== 'undefined') {
-                (BOUNDS.boundaries || []).forEach(function (b) { addNameLabelPoly(b, b.name); });
-            }
-            siteLayer.addTo(map); bigLayer.addTo(map); nameLayer.addTo(map);
+            /* 名称标注默认开（不跟 SITES 成不成功绑一起：三个样地的名字也要能开关） */
         }
+        rebuildNameLabels();
+        nameLayer.addTo(map);
+        if (typeof SITES !== 'undefined') { siteLayer.addTo(map); bigLayer.addTo(map); }
 
         /* --- 格网编号（VIT/T）：每个网格格子取中心，找最近的 RTK 实测主树命名，
                半透明写在格子中间 —— 与三维那个「格网编号」同一套做法。默认关。 --- */
@@ -647,6 +660,12 @@
         if (window.Lang) {
             Lang.onChange(function () {
                 buildLayerControl();
+                rebuildNameLabels();
+                siteShapes.forEach(function (o) {
+                    o.m.setPopupContent('<b>' + esc(siteName(o.g)) + '</b>' +
+                        (o.g.alt != null ? '<br>' + o.g.alt + ' m' : ''));
+                });
+                bigShapes.forEach(function (o) { o.poly.setTooltipContent(siteName(o.g)); });
                 TREES.forEach(function (tr) {
                     markers[tr.id].setPopupContent(treePopup(tr));
                 });

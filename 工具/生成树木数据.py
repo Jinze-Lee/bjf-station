@@ -53,7 +53,7 @@ EPSG_SRC = "EPSG:4548"      # CGCS2000 / Gauss-Kruger CM 117E, k=1.0
 PLOTS = {
     "DT1": {"zh": "综合林样地",        "en": "Mixed forest plot",                  "color": "#4a7c59"},
     "DT2": {"zh": "落叶松样地",        "en": "Larch plot",                         "color": "#2c6e8f"},
-    "DT3": {"zh": "气象站下方样地",    "en": "Plot below the meteorological station", "color": "#c2703d"},
+    "DT3": {"zh": "油松样地",          "en": "Pine plot",                          "color": "#c2703d"},
 }
 
 # 树种：中文名 -> (拉丁名, 英文名, 木材解剖类型)

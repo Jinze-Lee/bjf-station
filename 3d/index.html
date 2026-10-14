@@ -282,6 +282,8 @@
 			if (cb) cb.textContent = d.camSpeed + ' ' + (typeof camSpeedNow === 'function' ? camSpeedNow() : 1) + '×';
 			cb = document.getElementById('camLoop'); if (cb) cb.textContent = d.camLoop;
 			cb = document.getElementById('lblGround'); if (cb) cb.textContent = d.lGround;
+			/* 三维场景里的名字标签跟着语言换（首屏调用时 NAME_LABELS 还没建，得兜一下） */
+			(NAME_LABELS || []).forEach(function (L) { L.el.textContent = (LANG === 'zh') ? L.zh : L.en; });
 			renderLegend();
 		}
 		function renderLegend() {
@@ -435,14 +437,16 @@
 			m[2]*v[0]+m[6]*v[1]+m[10]*v[2]+m[14]*v[3],
 			m[3]*v[0]+m[7]*v[1]+m[11]*v[2]+m[15]*v[3]]; }
 
-		var LABELS = [], tip = null;
-		function addLabel(x, y, z, text, cls, info) {
+		var LABELS = [], tip = null, NAME_LABELS = [];   /* NAME_LABELS：切语言要跟着改文字的名字标签 */
+		function addLabel(x, y, z, text, cls, info, textEn) {
 			var el = document.createElement('div');
 			el.className = 'lbl ' + cls; el.textContent = text;
-			el.addEventListener('mousemove', function (ev) { showTip(ev, info); });
+			el.addEventListener('mousemove', function (ev) { if (info) { showTip(ev, info); } });
 			el.addEventListener('mouseleave', hideTip);
 			document.getElementById('labels').appendChild(el);
 			LABELS.push({ el: el, p: [x, y, z], cls: cls });
+			if (textEn) { NAME_LABELS.push({ el: el, zh: text, en: textEn, info: info }); }
+			return LABELS[LABELS.length - 1];
 		}
 		function showTip(ev, html) { tip = tip || document.getElementById('tip');
 			tip.innerHTML = html; tip.style.display = 'block';
@@ -683,18 +687,21 @@
 			});
 			SITE3 = { areas: areas, points: points };
 
-			/* 名称标签（与三个样地标签同一套样式） */
+			/* 名称标签（与三个样地标签同一套样式）；文字按语言切换见 applyLang */
 			areas.forEach(function (a) {
 				var n = a.ring.length, ax = 0, ay = 0, az = 0;
 				for (var i = 0; i < n; i++) { ax += a.ring[i][0]; ay += a.ring[i][1]; az += a.ring[i][2]; }
-				addLabel(ax / n, ay / n, az / n + 25,
-					(LANG === 'zh' ? a.nameZh : a.name), 'log',
-					'<b>' + (LANG === 'zh' ? a.nameZh : a.name) + '</b>');
+				var L = addLabel(ax / n, ay / n, az / n + 25, a.nameZh, 'log', null, a.name);
+				L.el.addEventListener('mousemove', function (ev) {
+					showTip(ev, '<b>' + L.el.textContent + '</b>');
+				});
 			});
 			points.forEach(function (p) {
-				addLabel(p.E, p.N, p.Z + 25, (LANG === 'zh' ? p.nameZh : p.name), 'log',
-					'<b>' + (LANG === 'zh' ? p.nameZh : p.name) + '</b>' +
-					(p.alt != null ? '<br>' + (LANG === 'zh' ? '海拔 ' : 'Elev. ') + p.alt + ' m' : ''));
+				var L = addLabel(p.E, p.N, p.Z + 25, p.nameZh, 'log', null, p.name);
+				L.el.addEventListener('mousemove', function (ev) {
+					showTip(ev, '<b>' + L.el.textContent + '</b>' +
+						(p.alt != null ? '<br>' + p.alt + ' m' : ''));
+				});
 			});
 		}
 
@@ -895,11 +902,13 @@
 				ANNOT = data;
 				/* 20 棵监测树的浮动标签（DT1-BH1-1137 那种）已按金总要求删除。
 				   只留三个样地标签；第三个原来叫「气象站下方样地」，改成「油松样地」。 */
+				var PLOT_EN = { '综合林样地': 'Mixed forest plot', '落叶松样地': 'Larch plot', '油松样地': 'Pine plot' };
 				(data.plots || []).forEach(function (p) {
 					if (p.Z == null) return;
 					var nm = (p.nameZh === '气象站下方样地') ? '油松样地' : p.nameZh;
 					addLabel(p.E, p.N, p.Z + 30, nm, 'log',
-						'<b>' + nm + '</b><br>' + (LANG === 'zh' ? '样点数采' : 'Plot logger'));
+						'<b>' + nm + '</b><br>' + (LANG === 'zh' ? '样点数采' : 'Plot logger'),
+						PLOT_EN[nm] || nm);
 				});
 				/* 103 棵 RTK 实测主树的 E/N（VIT16/T189…）—— 给「格网编号」找最近的点用 */
 				MAINT = (data.maintrees || []).filter(function (m) { return m.E != null && m.N != null; })
