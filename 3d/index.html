@@ -197,6 +197,8 @@
 		<button class="cbtn" data-cam="flyover" id="camFly">低空巡航</button>
 		<button class="cbtn" data-cam="dolly" id="camDolly">推拉</button>
 		<button class="cbtn" data-cam="rise" id="camRise">升空俯瞰</button>
+		<button class="cbtn" id="camSpeed">速度 1×</button>
+		<button class="cbtn active" id="camLoop">循环</button>
 		<button class="cbtn stop" id="camStop" title="停止">■ 停</button>
 	</div>
 
@@ -227,6 +229,7 @@
 			      lG20: '20 m 网格', lG40: '40 m 网格', lDrain: '水系', lNum: '格网编号（VIT/T）',
 			      lSap: '液流', lDen: '径向生长', lLai: 'LAI',
 			      camOrbit: '环绕', camFly: '低空巡航', camDolly: '推拉', camRise: '升空俯瞰', camStop: '■ 停',
+			      camSpeed: '速度', camLoop: '循环',
 			      loadCloud: '正在加载三维点云…', loadRender: '正在渲染首屏…' },
 			en: { title: 'Beijing Forest Ecosystem Research Station · 3D Canopy',
 			      sub: 'UAV LiDAR colour point cloud · AMap satellite · 20 monitored trees / 3 loggers',
@@ -235,6 +238,7 @@
 			      lG20: '20 m grid', lG40: '40 m grid', lDrain: 'Drainage', lNum: 'Grid IDs (VIT/T)',
 			      lSap: 'Sap flow', lDen: 'Dendrometer', lLai: 'LAI',
 			      camOrbit: 'Orbit', camFly: 'Low flyover', camDolly: 'Dolly', camRise: 'Rise & overlook', camStop: '■ Stop',
+			      camSpeed: 'Speed', camLoop: 'Loop',
 			      loadCloud: 'Loading 3D point cloud…', loadRender: 'Rendering first view…' }
 		};
 		var LANG = localStorage.getItem('bfers-3d-lang') || 'zh';
@@ -262,6 +266,9 @@
 			cb = document.getElementById('camDolly'); if (cb) cb.textContent = d.camDolly;
 			cb = document.getElementById('camRise'); if (cb) cb.textContent = d.camRise;
 			cb = document.getElementById('camStop'); if (cb) cb.textContent = d.camStop;
+			cb = document.getElementById('camSpeed');
+			if (cb) cb.textContent = d.camSpeed + ' ' + (typeof camSpeedNow === 'function' ? camSpeedNow() : 1) + '×';
+			cb = document.getElementById('camLoop'); if (cb) cb.textContent = d.camLoop;
 			renderLegend();
 		}
 		function renderLegend() {
@@ -840,6 +847,9 @@
 		 * 轨迹只用「相机位置 + 注视点」两个量描述，不依赖全局 THREE。 */
 		var CAM = { on: false, name: null, t0: 0 };
 		var CAM_DUR = { orbit: 60000, flyover: 45000, dolly: 50000, rise: 50000 };
+		var CAM_SPEEDS = [0.5, 1, 2], camSpeedIdx = 1, CAM_LOOP = true;
+		/* 注意：函数不能叫 camSpeed —— 按钮 id="camSpeed" 会生成同名全局变量，撞名会让脚本早退 */
+		var camSpeedNow = function () { return CAM_SPEEDS[camSpeedIdx]; };
 		var budgetWant = 400000;
 		function applyBudget() {
 			viewer.setPointBudget(CAM.on ? Math.min(700000, budgetWant) : budgetWant);
@@ -892,7 +902,11 @@
 
 		function camStep(now) {
 			if (!CAM.on) return;
-			var pose = camPose(CAM.name, ((now - CAM.t0) % CAM_DUR[CAM.name]) / CAM_DUR[CAM.name]);
+			var dur = CAM_DUR[CAM.name];
+			var el = (now - CAM.t0) * camSpeedNow();          /* 已播时长（含倍速） */
+			if (!CAM_LOOP && el >= dur) { camStop(); return; }
+			var T = CAM_LOOP ? (el % dur) / dur : Math.min(el / dur, 1);
+			var pose = camPose(CAM.name, T);
 			if (!pose) return;
 			var view = viewer.scene.view;
 			view.position.set(pose.p[0], pose.p[1], pose.p[2]);
@@ -927,6 +941,18 @@
 			}
 			var st = document.getElementById('camStop');
 			if (st) st.addEventListener('click', camStop);
+			/* 速度：点一下在 0.5× / 1× / 2× 之间循环 */
+			var sp = document.getElementById('camSpeed');
+			if (sp) sp.addEventListener('click', function () {
+				camSpeedIdx = (camSpeedIdx + 1) % CAM_SPEEDS.length;
+				sp.textContent = ((I18N[LANG] || {}).camSpeed || '速度') + ' ' + camSpeedNow() + '×';
+			});
+			/* 循环：关掉就只播一遍，播完自动停 */
+			var lp = document.getElementById('camLoop');
+			if (lp) lp.addEventListener('click', function () {
+				CAM_LOOP = !CAM_LOOP;
+				lp.classList.toggle('active', CAM_LOOP);
+			});
 			/* 用户一动手就停，不跟他抢控制权 */
 			['mousedown', 'wheel', 'touchstart'].forEach(function (ev) {
 				var el = document.getElementById('potree_render_area');
