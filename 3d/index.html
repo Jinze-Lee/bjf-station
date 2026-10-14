@@ -75,7 +75,8 @@
 		.layers { position: relative; pointer-events: auto; }
 		.layers-panel { position: absolute; right: 0; top: 4px; z-index: 2100;
 			background: #fff; color: #333; border-radius: 6px; box-shadow: 0 2px 12px rgba(0,0,0,.4);
-			padding: 10px 14px 8px; min-width: 170px; }
+			padding: 10px 14px 8px; min-width: 170px;
+			max-height: calc(100vh - 132px); overflow-y: auto; }   /* 开关多了：矮窗口里滚动，别顶出屏 */
 		.layers-panel .lp-cap { font-size: 12px; font-weight: 700; color: #666;
 			letter-spacing: .5px; margin: 0 0 4px; }
 		.layers-panel label { display: block; padding: 6px 4px; font-size: 14px; cursor: pointer;
@@ -175,8 +176,12 @@
 		<div class="layers" id="layersBox">
 			<div class="layers-panel open" id="layersPanel">
 				<div class="lp-cap" id="lblLayers">图层</div>
+				<label><input type="checkbox" id="chkPC" checked> <span id="lblPC">点云</span></label>
 				<label><input type="checkbox" id="chkDet" checked> <span id="lblDet">单木覆盖</span></label>
 				<label><input type="checkbox" id="chkBnd" checked> <span id="lblBnd">样地边界</span></label>
+				<label><input type="checkbox" id="chkBig" checked> <span id="lblBig">大样地·白桦林</span></label>
+				<label><input type="checkbox" id="chkSite" checked> <span id="lblSite">生活区·林场</span></label>
+				<label><input type="checkbox" id="chkName" checked> <span id="lblName">名称标注</span></label>
 				<label><input type="checkbox" id="chkG20"> <span id="lblG20">20 m 网格</span></label>
 				<label><input type="checkbox" id="chkG40"> <span id="lblG40">40 m 网格</span></label>
 				<label><input type="checkbox" id="chkDrain"> <span id="lblDrain">水系</span></label>
@@ -227,6 +232,7 @@
 			      sub: '无人机 LiDAR 彩色点云 · 高德卫星底图 · 20 棵监测树 / 3 台数采',
 			      back: '← 返回网站', lang: 'EN',
 			      layers: '图层', lLayers: '图层', lDet: '单木覆盖', lBnd: '样地边界',
+			      lPC: '点云', lBig: '大样地·白桦林', lSite: '生活区·林场', lName: '名称标注',
 			      lG20: '20 m 网格', lG40: '40 m 网格', lDrain: '水系', lNum: '格网编号（VIT/T）',
 			      lSap: '液流', lDen: '径向生长', lLai: 'LAI',
 			      camOrbit: '环绕', camFly: '低空巡航', camDolly: '推拉', camRise: '升空俯瞰', camStop: '■ 停',
@@ -236,6 +242,7 @@
 			      sub: 'UAV LiDAR colour point cloud · AMap satellite · 20 monitored trees / 3 loggers',
 			      back: '← Back to site', lang: '中文',
 			      layers: 'Layers', lLayers: 'Layers', lDet: 'Tree cover', lBnd: 'Plot boundaries',
+			      lPC: 'Point cloud', lBig: '20 ha / birch plots', lSite: 'Station · forestry farm', lName: 'Labels',
 			      lG20: '20 m grid', lG40: '40 m grid', lDrain: 'Drainage', lNum: 'Grid IDs (VIT/T)',
 			      lSap: 'Sap flow', lDen: 'Dendrometer', lLai: 'LAI',
 			      camOrbit: 'Orbit', camFly: 'Low flyover', camDolly: 'Dolly', camRise: 'Rise & overlook', camStop: '■ Stop',
@@ -255,6 +262,10 @@
 			var lb = document.getElementById('lblLayers'); if (lb) lb.textContent = d.lLayers;
 			lb = document.getElementById('lblDet'); if (lb) lb.textContent = d.lDet;
 			lb = document.getElementById('lblBnd'); if (lb) lb.textContent = d.lBnd;
+			lb = document.getElementById('lblPC'); if (lb) lb.textContent = d.lPC;
+			lb = document.getElementById('lblBig'); if (lb) lb.textContent = d.lBig;
+			lb = document.getElementById('lblSite'); if (lb) lb.textContent = d.lSite;
+			lb = document.getElementById('lblName'); if (lb) lb.textContent = d.lName;
 			lb = document.getElementById('lblG20'); if (lb) lb.textContent = d.lG20;
 			lb = document.getElementById('lblG40'); if (lb) lb.textContent = d.lG40;
 			lb = document.getElementById('lblDrain'); if (lb) lb.textContent = d.lDrain;
@@ -393,12 +404,25 @@
 		bindChk('chkDen', function (v) { DEN_ON = v; renderLegend(); });
 		bindChk('chkLai', function (v) { LAI_ON = v; renderLegend(); });
 		bindChk('chkGround', function (v) { GROUND_ON = v; if (GROUND) GROUND.visible = v; });
+		function setPointClouds(v) {
+			var pcs = viewer.scene.pointclouds || [];
+			for (var i = 0; i < pcs.length; i++) pcs[i].visible = v;
+		}
+		bindChk('chkPC', function (v) { PC_ON = v; setPointClouds(v); });
+		bindChk('chkBig', function (v) { BIG_ON = v; });
+		bindChk('chkSite', function (v) { SITE_ON = v; });
+		bindChk('chkName', function (v) {
+			NAME_ON = v;
+			var el = document.getElementById('labels');
+			if (el) el.style.visibility = v ? 'visible' : 'hidden';
+		});
 
 		var ANNOT = null, MAIN_N = 0, TREE_N = 0, SPECIES = {}, DET_ON = true, DET_N = 0,
 		    BNDS = null, BND_ON = true,
 		    G20_ON = false, G40_ON = false, DRAIN_ON = false, NUM_ON = false,
 		    SAP_ON = false, DEN_ON = false, LAI_ON = false, MAINT = [], TREE_IDS = {},
-		    GROUND_ON = true, GROUND = null;
+		    GROUND_ON = true, GROUND = null,
+		    PC_ON = true, BIG_ON = true, SITE_ON = true, NAME_ON = true, SITES = null;
 
 		// 世界坐标(CRS) -> 屏幕像素（用相机矩阵，不需要 THREE 全局）
 		function m4mul(a, b) { var o = new Array(16);
@@ -631,6 +655,49 @@
 			if (stroke) { dctx.globalAlpha = 1; dctx.strokeStyle = stroke; dctx.lineWidth = lw; dctx.stroke(); }
 			dctx.globalAlpha = 1;
 		}
+		/* --- 生活区 / 林场 / 大样地 / 白桦林样地（3d/sites.json） ---
+		 * 这几处都在样地 DEM 覆盖之外，高程只能等地形铺好（window.groundZ）再算，
+		 * 所以这里做一次性缓存，顺便把名称标签挂上。 */
+		var SITE3 = null;
+		function ensureSiteZ() {
+			if (SITE3 || !SITES || !window.groundZ) return;
+			function gz(E, N) { var z = window.groundZ(E, N); return isFinite(z) ? z + 1.0 : null; }
+			function ring(list) {
+				var out = [];
+				for (var i = 0; i < list.length; i++) {
+					var z = gz(list[i][0], list[i][1]);
+					if (z == null) return null;
+					out.push([list[i][0], list[i][1], z]);
+				}
+				return out;
+			}
+			var areas = [], points = [];
+			(SITES.areas || []).forEach(function (a) {
+				var r = ring(a.pts);
+				if (r) areas.push({ id: a.id, nameZh: a.nameZh, name: a.name, ring: r });
+			});
+			(SITES.points || []).forEach(function (p) {
+				var z = gz(p.E, p.N);
+				if (z == null) return;
+				points.push({ id: p.id, nameZh: p.nameZh, name: p.name, E: p.E, N: p.N, Z: z, alt: p.alt });
+			});
+			SITE3 = { areas: areas, points: points };
+
+			/* 名称标签（与三个样地标签同一套样式） */
+			areas.forEach(function (a) {
+				var n = a.ring.length, ax = 0, ay = 0, az = 0;
+				for (var i = 0; i < n; i++) { ax += a.ring[i][0]; ay += a.ring[i][1]; az += a.ring[i][2]; }
+				addLabel(ax / n, ay / n, az / n + 25,
+					(LANG === 'zh' ? a.nameZh : a.name), 'log',
+					'<b>' + (LANG === 'zh' ? a.nameZh : a.name) + '</b>');
+			});
+			points.forEach(function (p) {
+				addLabel(p.E, p.N, p.Z + 25, (LANG === 'zh' ? p.nameZh : p.name), 'log',
+					'<b>' + (LANG === 'zh' ? p.nameZh : p.name) + '</b>' +
+					(p.alt != null ? '<br>' + (LANG === 'zh' ? '海拔 ' : 'Elev. ') + p.alt + ' m' : ''));
+			});
+		}
+
 		function drawBounds() {
 			var pc = viewer.scene.pointclouds[0], cam = viewer.scene.getActiveCamera();
 			if (!pc || !cam || !BNDS) return;
@@ -643,6 +710,21 @@
 			if (G20_ON) (BNDS.grid20 || []).forEach(function (g) { drawRing(g.pts, V, P, null, 'rgba(235,235,235,.75)', 1.1, 0, true); });
 			if (G40_ON) (BNDS.grid40 || []).forEach(function (g) { drawRing(g.pts, V, P, null, 'rgba(255,210,127,.85)', 1.6, 0, true); });
 			if (DRAIN_ON) (BNDS.drainage || []).forEach(function (l) { drawRing(l, V, P, null, 'rgba(72,138,178,0.85)', 1.3, 0, false); });   /* 水系：灰蓝细线，不抢视线 */
+			/* 大样地 / 白桦林样地：蓝色描边，跟橙色三个样地区分开 */
+			if (BIG_ON && SITE3) {
+				SITE3.areas.forEach(function (a) { drawRing(a.ring, V, P, '#3f8fd0', '#3f8fd0', 2.4, 0.14, true); });
+			}
+			/* 生活区 / 林场：地面上的黄点 */
+			if (SITE_ON && SITE3) {
+				SITE3.points.forEach(function (p) {
+					var s = projXYZ(V, P, p.E, p.N, p.Z);
+					if (!s) return;
+					dctx.beginPath();
+					dctx.arc(s[0], s[1], 5.5, 0, Math.PI * 2);
+					dctx.fillStyle = '#ffd400'; dctx.globalAlpha = 1; dctx.fill();
+					dctx.lineWidth = 2; dctx.strokeStyle = '#20242a'; dctx.stroke();
+				});
+			}
 		}
 
 		/* 格网编号：每个格子取几何中心，找最近的 RTK 实测主树（VIT16/T189…），
@@ -791,6 +873,7 @@
 				m.size = 1.2; m.pointSizeType = Potree.PointSizeType.FIXED;   /* 固定像素：自适应会撑大点，放大就糊 */
 				m.shape = Potree.PointShape.CIRCLE; m.activeAttributeName = 'rgba';
 				viewer.scene.addPointCloud(pc);
+				if (!PC_ON) { setPointClouds(false); }   /* 点云开关提前被关掉就保持关 */
 				var bb = pc.pcoGeometry.boundingBox, off = pc.pcoGeometry.offset;
 				var mn = [bb.min.x + off.x, bb.min.y + off.y, bb.min.z + off.z];
 				var mx = [bb.max.x + off.x, bb.max.y + off.y, bb.max.z + off.z];
@@ -845,6 +928,8 @@
 
 			// 样地边界 / 网格 / 水系
 			fetch('bounds.json').then(function (r) { return r.json(); }).then(function (b) { BNDS = b; });
+			/* 生活区 / 林场 / 大样地 / 白桦林样地（高程等地形铺好后现算，见 ensureSiteZ） */
+			fetch('sites.json').then(function (r) { return r.json(); }).then(function (s) { SITES = s; });
 		}
 
 		/* ---------------- 影像地面（真地形） ----------------
@@ -854,7 +939,10 @@
 		 * 差值做一次对齐，再在边界附近做带状过渡。
 		 * Potree 这版不暴露 THREE，Mesh/PlaneGeometry/MeshBasicMaterial/Texture 从
 		 * 场景已有 Mesh（罗盘/导航立方体）借。 */
-		var GROUND_SRC = 'tianditu';
+		/* 天地图在这一带是「夏绿 / 冬灰」两块拼接（实测 5x5 瓦片平均色最大差 76），
+		   铺出来一块颜色明显不一样；高德同一区域是统一的（最大差 16），所以用高德。
+		   高德是 GCJ-02，用四角换算做整体补正（见下面 imgLL）。 */
+		var GROUND_SRC = 'amap';
 		var TIANDITU_TK = 'faa2a38ebee2231bb08b9176019b1652';
 		var TERRAIN_Z = 12;                       /* 全球高程瓦片层级（约 30 m/px） */
 		function groundTileURL(x, y, z, i) {
@@ -998,6 +1086,16 @@
 					tC = terHeight(wc[1], wc[0]);
 					if (tC != null) off = dC - tC;
 				}
+				/* 页面别处要用任意点的地面高程（生活区/林场/大样地/白桦林都在 DEM 之外，
+				   只能取全球高程 + 上面这个基准差）。 */
+				window.groundZ = function (E, N) {
+					var dz = demHeight(E, N);
+					if (dz != null) return dz;
+					var w2 = proj4('EPSG:32650', 'EPSG:4326', [E, N]);
+					var th = terHeight(w2[1], w2[0]);
+					if (th != null) return th + off;
+					return dC != null ? dC : c.min[2];
+				};
 				var geo = new P.Geo(1, 1, SEG, SEG);
 				var verts = geo.vertices || [];
 				/* 顶点顺序：行 0 在北（+Y），列 0 在西（-X） */
@@ -1224,7 +1322,7 @@
 		(function loop() {
 			var now = performance.now();
 			if (CAM.on) camStep(now);
-			project(); drawDots(); drawBounds(); drawCells();
+			project(); drawDots(); ensureSiteZ(); drawBounds(); drawCells();
 			requestAnimationFrame(loop);
 		})();
 	</script>

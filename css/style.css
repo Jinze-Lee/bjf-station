@@ -1915,6 +1915,14 @@ body[data-lang="zh"] .net-detail { font-size: 13.5px; font-weight: 400; }
 }
 .cellnum.c40.leaflet-div-icon { font-size: 11px; color: rgba(255, 240, 200, .6); }
 
+/* 样地 / 站点名称常显标注（图层控件里「名称标注」勾掉就整体隐藏） */
+.plotname.leaflet-div-icon {
+    background: none; border: 0;
+    color: #fff; font-size: 12px; font-weight: 600; line-height: 16px; text-align: center;
+    white-space: nowrap; overflow: visible;
+    text-shadow: 0 0 3px rgba(0, 0, 0, .9), 0 0 6px rgba(0, 0, 0, .7);
+}
+
 .leaflet-control-layers-expanded { padding: 8px 12px 8px 8px; font-size: 13px; }
 
 .leaflet-control-scale-line {

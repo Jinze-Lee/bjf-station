@@ -349,6 +349,54 @@
             boundLayer.addTo(map);           /* 边界默认开；网格/水系默认关 */
         }
 
+        /* --- 站点标注：定位站生活区 / 林场 / 大样地 / 白桦林样地（源 js/sites.js，
+               由 工具/生成站点标注.py 生成）。金总要求「所有标签也加个按钮」，
+               所以站点、大样地/白桦林、以及名称标注各挂一个开关。 --- */
+        var siteLayer = L.layerGroup(), bigLayer = L.layerGroup(), nameLayer = L.layerGroup();
+        var siteShapes = [], bigShapes = [], nameMarkers = [];
+
+        function polyCenter(g) {
+            var r = g.pts, n = r.length, la = 0, lo = 0;
+            if (r[0][0] === r[n - 1][0] && r[0][1] === r[n - 1][1]) { n--; }   /* 首尾重合，去掉最后一个 */
+            if (n < 3) { return null; }
+            for (var i = 0; i < n; i++) { la += r[i][0]; lo += r[i][1]; }
+            return [la / n, lo / n];
+        }
+        function addNameLabel(lat, lon, text) {
+            var m = L.marker(place(lat, lon), { interactive: false,
+                icon: L.divIcon({ className: 'plotname', iconSize: [140, 16], iconAnchor: [70, 8], html: text }) });
+            m.addTo(nameLayer);
+            nameMarkers.push({ lat: lat, lon: lon, m: m });
+            return m;
+        }
+        function addNameLabelPoly(g, text) {
+            var c = polyCenter(g);
+            if (c) { addNameLabel(c[0], c[1], text); }
+        }
+        if (typeof SITES !== 'undefined') {
+            (SITES.points || []).forEach(function (p) {
+                var m = L.circleMarker(place(p.lat, p.lon), {
+                    radius: 5, color: '#20242a', weight: 1.6, fillColor: '#ffd400', fillOpacity: 1 });
+                m.bindPopup('<b>' + esc(p.nameZh) + '</b>' + (p.alt != null ? '<br>' + p.alt + ' m' : ''));
+                m.addTo(siteLayer);
+                siteShapes.push({ g: p, m: m });
+            });
+            (SITES.areas || []).forEach(function (a) {
+                var poly = L.polygon(a.pts.map(function (q) { return place(q[0], q[1]); }), {
+                    color: '#3f8fd0', weight: 2.4, opacity: 1, fillColor: '#3f8fd0', fillOpacity: 0.1 });
+                poly.bindTooltip(a.nameZh, { direction: 'top', offset: [0, -4] });
+                poly.addTo(bigLayer);
+                bigShapes.push({ g: a, poly: poly });
+            });
+            /* 名称标注默认开：两个新区、三个样地、以及生活区/林场都是常显名字 */
+            (SITES.areas || []).forEach(function (a) { addNameLabelPoly(a, a.nameZh); });
+            (SITES.points || []).forEach(function (q) { addNameLabel(q.lat, q.lon, q.nameZh); });
+            if (typeof BOUNDS !== 'undefined') {
+                (BOUNDS.boundaries || []).forEach(function (b) { addNameLabelPoly(b, b.name); });
+            }
+            siteLayer.addTo(map); bigLayer.addTo(map); nameLayer.addTo(map);
+        }
+
         /* --- 格网编号（VIT/T）：每个网格格子取中心，找最近的 RTK 实测主树命名，
                半透明写在格子中间 —— 与三维那个「格网编号」同一套做法。默认关。 --- */
         var cellNumLayer = L.layerGroup();
@@ -488,6 +536,11 @@
                 for (var i = 0; i < n; i++) { la += r[i][0]; lo += r[i][1]; }
                 o.m.setLatLng(place(la / n, lo / n));
             });
+            siteShapes.forEach(function (o) { o.m.setLatLng(place(o.g.lat, o.g.lon)); });
+            bigShapes.forEach(function (o) {
+                o.poly.setLatLngs(o.g.pts.map(function (q) { return place(q[0], q[1]); }));
+            });
+            nameMarkers.forEach(function (o) { o.m.setLatLng(place(o.lat, o.lon)); });
             map.panTo(place(center[0], center[1]));
         }
 
@@ -524,6 +577,11 @@
                 overlays[t('map.grid20Layer')] = grid20Layer;
                 overlays[t('map.grid40Layer')] = grid40Layer;
                 overlays[t('map.drainLayer')] = drainLayer;
+            }
+            if (typeof SITES !== 'undefined') {
+                overlays['<span style="color:#3f8fd0">&#9634;</span> ' + t('map.bigLayer')] = bigLayer;
+                overlays['<span style="color:#ffd400">&#9679;</span> ' + t('map.siteLayer')] = siteLayer;
+                overlays['<span style="color:#c9c9c9">A</span> ' + t('map.nameLayer')] = nameLayer;
             }
             Object.keys(devLayers || {}).forEach(function (k) {
                 var st = { dendrometer: '#f0a23c', sapflow: '#3fa9f5', lai: '#b07fd8' }[k];
