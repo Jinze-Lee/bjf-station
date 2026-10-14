@@ -868,6 +868,18 @@
 			return protos;
 		}
 
+		/* 影像地面瓦片源：tianditu = 天地图（WGS-84 天然对齐，国内快）；amap = 高德（GCJ-02 需补正） */
+		var GROUND_SRC = 'tianditu';
+		var TIANDITU_TK = 'faa2a38ebee2231bb08b9176019b1652';   /* 金总的浏览器端 key */
+		function groundTileURL(x, y, z, i) {
+			if (GROUND_SRC === 'tianditu') {
+				return 'https://t' + (i % 8) + '.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile' +
+					'&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles' +
+					'&TILEMATRIX=' + z + '&TILEROW=' + y + '&TILECOL=' + x + '&tk=' + TIANDITU_TK;
+			}
+			return 'https://webst0' + ((i % 4) + 1) + '.is.autonavi.com/appmaptile?style=6&x=' + x + '&y=' + y + '&z=' + z;
+		}
+
 		function buildGround() {
 			if (GROUND || !window.PCBOX || typeof proj4 !== 'function') return;
 			var P = findProtos();
@@ -881,12 +893,13 @@
 			zs.sort(function (a, b) { return a - b; });
 			var z = (zs.length ? zs[0] : c.min[2]) - 3;      /* 略低于最低地面，别盖住点云 */
 
-			/* 四角 UTM -> WGS84 -> GCJ（高德瓦片是 GCJ-02） */
+			/* 四角 UTM -> 经纬度。天地图是 WGS-84（天然对齐）；高德是 GCJ-02，要补正 */
 			var corners = [[cx - S / 2, cy - S / 2], [cx + S / 2, cy - S / 2],
 			               [cx + S / 2, cy + S / 2], [cx - S / 2, cy + S / 2]];
 			var g = corners.map(function (p) {
 				var w = proj4('EPSG:32650', 'EPSG:4326', [p[0], p[1]]);   /* -> [lon, lat] */
-				return gcj(w[1], w[0]);                                    /* gcj(lat,lon) -> [lat,lon] */
+				if (GROUND_SRC === 'amap') { return gcj(w[1], w[0]); }    /* gcj(lat,lon) -> [lat,lon] */
+				return [w[1], w[0]];
 			});
 			var lonMin = Math.min.apply(null, g.map(function (p) { return p[1]; }));
 			var lonMax = Math.max.apply(null, g.map(function (p) { return p[1]; }));
@@ -934,9 +947,7 @@
 							if (--left === 0) { finish(); }
 						};
 						im.onerror = function () { if (--left === 0) { finish(); } };
-						var s = ((ix + iy) % 4) + 1;
-						im.src = 'https://webst0' + s + '.is.autonavi.com/appmaptile?style=6&x=' +
-						         (x0 + ix) + '&y=' + (y0 + iy) + '&z=' + Z;
+						im.src = groundTileURL(x0 + ix, y0 + iy, Z, ix + iy);
 					}(ix, iy));
 				}
 			}
