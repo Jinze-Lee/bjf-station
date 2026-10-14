@@ -143,7 +143,7 @@
 		#ctrlHint { position: fixed; left: 50%; bottom: 58px; transform: translateX(-50%); z-index: 1900;
 			background: rgba(20,24,15,.72); color: #d7d2c6; pointer-events: none;
 			border: 1px solid rgba(160,180,120,.28); border-radius: 6px; padding: 6px 13px; font-size: 12.5px; }
-		@media (max-width: 640px) { #ctrlHint { font-size: 11px; padding: 5px 10px; bottom: 10px; } }
+		@media (max-width: 640px) { #ctrlHint { font-size: 11px; padding: 5px 10px; bottom: 58px; } }   /* 原来是 10px，正压在镜头条上 */
 
 		.potree_container { position: absolute; width: 100%; height: 100%; left: 0; top: 0; }
 		/* 把 Potree 的菜单按钮下移，避免和顶部标题重叠 */
@@ -238,6 +238,7 @@
 			      lSap: '液流', lDen: '径向生长', lLai: 'LAI',
 			      camOrbit: '环绕', camFly: '低空巡航', camDolly: '推拉', camRise: '升空俯瞰', camStop: '■ 停',
 			      camSpeed: '速度', camLoop: '循环', lGround: '影像地面',
+			      ctrlHint: '左键拖动旋转 · 滚轮缩放 · 右键拖动平移',
 			      loadCloud: '正在加载三维点云…', loadRender: '正在渲染首屏…' },
 			en: { title: 'Beijing Forest Ecosystem Research Station · 3D Canopy',
 			      sub: 'UAV LiDAR colour point cloud · AMap satellite · 20 monitored trees / 3 loggers',
@@ -248,6 +249,7 @@
 			      lSap: 'Sap flow', lDen: 'Dendrometer', lLai: 'LAI',
 			      camOrbit: 'Orbit', camFly: 'Low flyover', camDolly: 'Dolly', camRise: 'Rise & overlook', camStop: '■ Stop',
 			      camSpeed: 'Speed', camLoop: 'Loop', lGround: 'Imagery ground',
+			      ctrlHint: 'Drag to rotate · Scroll to zoom · Right-drag to pan',
 			      loadCloud: 'Loading 3D point cloud…', loadRender: 'Rendering first view…' }
 		};
 		var LANG = localStorage.getItem('bfers-3d-lang') || 'zh';
@@ -1259,7 +1261,7 @@
 			var dur = CAM_DUR[CAM.name];
 			var el = (now - CAM.t0) * camSpeedNow();          /* 已播时长（含倍速） */
 			if (el >= dur) {
-				if (!CAM_LOOP) { camStop(); return; }         /* 不连播：播完一遍就停 */
+				if (!CAM_LOOP) { camStopNow(); return; }         /* 不连播：播完一遍就停 */
 				/* 连播：换到下一条轨迹，并做平滑过渡（不是硬切） */
 				var from = camPoseNow(view);
 				var i = CAM_ORDER.indexOf(CAM.name);
@@ -1291,7 +1293,7 @@
 			CAM_BLEND = to ? { p0: from.p, t0: from.t, p1: to.p, t1: to.t, start: CAM.t0 } : null;
 			camMark(); applyBudget();
 		}
-		function camStop() {
+		function camStopNow() {
 			if (!CAM.on) return;
 			CAM.on = false; camMark(); applyBudget();
 		}
@@ -1301,12 +1303,12 @@
 				(function (b) {
 					b.addEventListener('click', function () {
 						var n = b.getAttribute('data-cam');
-						if (CAM.on && CAM.name === n) { camStop(); } else { camStart(n); }
+						if (CAM.on && CAM.name === n) { camStopNow(); } else { camStart(n); }
 					});
 				}(bs[i]));
 			}
 			var st = document.getElementById('camStop');
-			if (st) st.addEventListener('click', camStop);
+			if (st) st.addEventListener('click', camStopNow);
 			/* 速度：点一下在 0.5× / 1× / 2× 之间循环 */
 			var sp = document.getElementById('camSpeed');
 			if (sp) sp.addEventListener('click', function () {
@@ -1325,7 +1327,7 @@
 			/* 用户一动手就停，不跟他抢控制权 */
 			['mousedown', 'wheel', 'touchstart'].forEach(function (ev) {
 				var el = document.getElementById('potree_render_area');
-				if (el) el.addEventListener(ev, function () { camStop(); }, { passive: true });
+				if (el) el.addEventListener(ev, function () { camStopNow(); }, { passive: true });
 			});
 		}());
 
