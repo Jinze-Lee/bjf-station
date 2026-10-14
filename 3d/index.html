@@ -900,13 +900,21 @@
 			return { p: [cx + Math.cos(a) * d, cy + Math.sin(a) * d, zc + h], t: [cx, cy, zc] };
 		}
 
+		var CAM_ORDER = ['orbit', 'flyover', 'dolly', 'rise'];
 		function camStep(now) {
 			if (!CAM.on) return;
 			var dur = CAM_DUR[CAM.name];
 			var el = (now - CAM.t0) * camSpeedNow();          /* 已播时长（含倍速） */
-			if (!CAM_LOOP && el >= dur) { camStop(); return; }
-			var T = CAM_LOOP ? (el % dur) / dur : Math.min(el / dur, 1);
-			var pose = camPose(CAM.name, T);
+			if (el >= dur) {
+				if (!CAM_LOOP) { camStop(); return; }         /* 不连播：播完一遍就停 */
+				/* 连播：换到下一条轨迹，接着放（四条依次循环） */
+				var i = CAM_ORDER.indexOf(CAM.name);
+				CAM.name = CAM_ORDER[(i + 1) % CAM_ORDER.length];
+				CAM.t0 = now;
+				el = 0;
+				camMark();
+			}
+			var pose = camPose(CAM.name, el / CAM_DUR[CAM.name]);
 			if (!pose) return;
 			var view = viewer.scene.view;
 			view.position.set(pose.p[0], pose.p[1], pose.p[2]);
@@ -947,12 +955,15 @@
 				camSpeedIdx = (camSpeedIdx + 1) % CAM_SPEEDS.length;
 				sp.textContent = ((I18N[LANG] || {}).camSpeed || '速度') + ' ' + camSpeedNow() + '×';
 			});
-			/* 循环：关掉就只播一遍，播完自动停 */
+			/* 循环：开 = 四条轨迹依次连播；关 = 播完当前这条就停 */
 			var lp = document.getElementById('camLoop');
-			if (lp) lp.addEventListener('click', function () {
-				CAM_LOOP = !CAM_LOOP;
-				lp.classList.toggle('active', CAM_LOOP);
-			});
+			if (lp) {
+				lp.title = '开：四条轨迹依次连播　关：只播当前这条';
+				lp.addEventListener('click', function () {
+					CAM_LOOP = !CAM_LOOP;
+					lp.classList.toggle('active', CAM_LOOP);
+				});
+			}
 			/* 用户一动手就停，不跟他抢控制权 */
 			['mousedown', 'wheel', 'touchstart'].forEach(function (ev) {
 				var el = document.getElementById('potree_render_area');
