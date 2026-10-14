@@ -184,6 +184,7 @@
 				<label><input type="checkbox" id="chkSap"> <span id="lblSap">液流</span></label>
 				<label><input type="checkbox" id="chkDen"> <span id="lblDen">径向生长</span></label>
 				<label><input type="checkbox" id="chkLai"> <span id="lblLai">LAI</span></label>
+				<label><input type="checkbox" id="chkGround" checked> <span id="lblGround">影像地面</span></label>
 			</div>
 		</div>
 		<button class="btn" id="langBtn">EN</button>
@@ -229,7 +230,7 @@
 			      lG20: '20 m 网格', lG40: '40 m 网格', lDrain: '水系', lNum: '格网编号（VIT/T）',
 			      lSap: '液流', lDen: '径向生长', lLai: 'LAI',
 			      camOrbit: '环绕', camFly: '低空巡航', camDolly: '推拉', camRise: '升空俯瞰', camStop: '■ 停',
-			      camSpeed: '速度', camLoop: '循环',
+			      camSpeed: '速度', camLoop: '循环', lGround: '影像地面',
 			      loadCloud: '正在加载三维点云…', loadRender: '正在渲染首屏…' },
 			en: { title: 'Beijing Forest Ecosystem Research Station · 3D Canopy',
 			      sub: 'UAV LiDAR colour point cloud · AMap satellite · 20 monitored trees / 3 loggers',
@@ -238,7 +239,7 @@
 			      lG20: '20 m grid', lG40: '40 m grid', lDrain: 'Drainage', lNum: 'Grid IDs (VIT/T)',
 			      lSap: 'Sap flow', lDen: 'Dendrometer', lLai: 'LAI',
 			      camOrbit: 'Orbit', camFly: 'Low flyover', camDolly: 'Dolly', camRise: 'Rise & overlook', camStop: '■ Stop',
-			      camSpeed: 'Speed', camLoop: 'Loop',
+			      camSpeed: 'Speed', camLoop: 'Loop', lGround: 'Imagery ground',
 			      loadCloud: 'Loading 3D point cloud…', loadRender: 'Rendering first view…' }
 		};
 		var LANG = localStorage.getItem('bfers-3d-lang') || 'zh';
@@ -269,6 +270,7 @@
 			cb = document.getElementById('camSpeed');
 			if (cb) cb.textContent = d.camSpeed + ' ' + (typeof camSpeedNow === 'function' ? camSpeedNow() : 1) + '×';
 			cb = document.getElementById('camLoop'); if (cb) cb.textContent = d.camLoop;
+			cb = document.getElementById('lblGround'); if (cb) cb.textContent = d.lGround;
 			renderLegend();
 		}
 		function renderLegend() {
@@ -390,11 +392,13 @@
 		bindChk('chkSap', function (v) { SAP_ON = v; renderLegend(); });
 		bindChk('chkDen', function (v) { DEN_ON = v; renderLegend(); });
 		bindChk('chkLai', function (v) { LAI_ON = v; renderLegend(); });
+		bindChk('chkGround', function (v) { GROUND_ON = v; if (GROUND) GROUND.visible = v; });
 
 		var ANNOT = null, MAIN_N = 0, TREE_N = 0, SPECIES = {}, DET_ON = true, DET_N = 0,
 		    BNDS = null, BND_ON = true,
 		    G20_ON = false, G40_ON = false, DRAIN_ON = false, NUM_ON = false,
-		    SAP_ON = false, DEN_ON = false, LAI_ON = false, MAINT = [], TREE_IDS = {};
+		    SAP_ON = false, DEN_ON = false, LAI_ON = false, MAINT = [], TREE_IDS = {},
+		    GROUND_ON = true, GROUND = null;
 
 		// 世界坐标(CRS) -> 屏幕像素（用相机矩阵，不需要 THREE 全局）
 		function m4mul(a, b) { var o = new Array(16);
@@ -821,6 +825,7 @@
 				(data.trees || []).forEach(function (t) { if (t.id) TREE_IDS[t.id] = 1; });
 				/* RTK 实测主树/样方内树的散点已按金总要求全部移除 */
 				addDevices();
+				setTimeout(buildGround, 900);     /* 等 DOTPTS 有值了再铺地面（要拿最低高程） */
 				renderLegend();
 			});
 
@@ -841,6 +846,102 @@
 			// 样地边界 / 网格 / 水系
 			fetch('bounds.json').then(function (r) { return r.json(); }).then(function (b) { BNDS = b; });
 		}
+
+		/* ---------------- 影像地面 ----------------
+		 * 点云周围原本一片黑（航测覆盖不规则）。这里用高德卫星影像铺一块地面把它填上。
+		 * 这个 Potree 打包版不暴露 THREE、也没有自带 Earth —— 于是从场景里已有的 Mesh
+		 * （罗盘/导航立方体）借 Mesh / PlaneGeometry / MeshBasicMaterial / Texture 四个构造器。
+		 * 高德瓦片返回 Access-Control-Allow-Origin: *，所以能画进 canvas 当 WebGL 纹理。
+		 * 高德是 GCJ-02、点云是 WGS-84，差约 500 m —— 用四角换算做整体补正。 */
+		function findProtos() {
+			var protos = null;
+			function walk(o, d) {
+				if (!o || d > 6 || protos) return;
+				if (o.isMesh && o.geometry && o.material && o.material.map) {
+					protos = { Mesh: o.constructor, Geo: o.geometry.constructor,
+					           Mat: o.material.constructor, Tex: o.material.map.constructor };
+				}
+				(o.children || []).forEach(function (k) { walk(k, d + 1); });
+			}
+			walk(viewer.navigationCube, 0);
+			walk(viewer.compass, 0);
+			return protos;
+		}
+
+		function buildGround() {
+			if (GROUND || !window.PCBOX || typeof proj4 !== 'function') return;
+			var P = findProtos();
+			if (!P) { console.info('[3d] 借不到 THREE 构造器，影像地面跳过'); return; }
+			var c = window.PCBOX;
+			var cx = (c.min[0] + c.max[0]) / 2, cy = (c.min[1] + c.max[1]) / 2;
+			var S = 3200;                                   /* 地面边长 m（够大，边缘不易露） */
+			var MAXTILE = 64;                               /* 瓦片数上限，别让慢链路下太多 */
+			var zs = [];
+			for (var i = 0; i < DOTPTS.length; i++) { if (isFinite(DOTPTS[i].Z)) zs.push(DOTPTS[i].Z); }
+			zs.sort(function (a, b) { return a - b; });
+			var z = (zs.length ? zs[0] : c.min[2]) - 3;      /* 略低于最低地面，别盖住点云 */
+
+			/* 四角 UTM -> WGS84 -> GCJ（高德瓦片是 GCJ-02） */
+			var corners = [[cx - S / 2, cy - S / 2], [cx + S / 2, cy - S / 2],
+			               [cx + S / 2, cy + S / 2], [cx - S / 2, cy + S / 2]];
+			var g = corners.map(function (p) {
+				var w = proj4('EPSG:32650', 'EPSG:4326', [p[0], p[1]]);   /* -> [lon, lat] */
+				return gcj(w[1], w[0]);                                    /* gcj(lat,lon) -> [lat,lon] */
+			});
+			var lonMin = Math.min.apply(null, g.map(function (p) { return p[1]; }));
+			var lonMax = Math.max.apply(null, g.map(function (p) { return p[1]; }));
+			var latMin = Math.min.apply(null, g.map(function (p) { return p[0]; }));
+			var latMax = Math.max.apply(null, g.map(function (p) { return p[0]; }));
+
+			var Z = 16, n = Math.pow(2, Z);
+			function txf(lon) { return Math.floor((lon + 180) / 360 * n); }
+			function tyf(lat) {
+				var r = lat * Math.PI / 180;
+				return Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n);
+			}
+			var x0 = txf(lonMin), x1 = txf(lonMax), y0 = tyf(latMax), y1 = tyf(latMin);
+			var nx = x1 - x0 + 1, ny = y1 - y0 + 1;
+			if (nx * ny > MAXTILE || nx < 1 || ny < 1) { console.info('[3d] 地面瓦片数异常(' + nx + 'x' + ny + ')，跳过'); return; }
+
+			var cv = document.createElement('canvas');
+			cv.width = nx * 256; cv.height = ny * 256;
+			var ctx = cv.getContext('2d');
+			var left = nx * ny, got = 0, done = 0;
+			function finish() {
+				if (done || !got) { return; }
+				done = 1;
+				var tex = new P.Tex(cv);
+				tex.needsUpdate = true;
+				if ('generateMipmaps' in tex) tex.generateMipmaps = false;   /* 画布非 2 次幂，别用 mipmap */
+				if ('minFilter' in tex) tex.minFilter = 1006;                /* LinearFilter */
+				var mat = new P.Mat({ map: tex });
+				mat.side = 2;                                                /* DoubleSide */
+				var mesh = new P.Mesh(new P.Geo(1, 1), mat);
+				mesh.position.set(cx, cy, z);
+				mesh.scale.set(S, S, 1);
+				mesh.visible = GROUND_ON;
+				viewer.scene.scene.add(mesh);
+				GROUND = mesh;
+				console.info('[3d] 影像地面已铺好：' + nx + 'x' + ny + ' 瓦片，' + got + ' 张成功');
+			}
+			for (var ix = 0; ix < nx; ix++) {
+				for (var iy = 0; iy < ny; iy++) {
+					(function (ix, iy) {
+						var im = new Image();
+						im.crossOrigin = 'anonymous';
+						im.onload = function () {
+							try { ctx.drawImage(im, ix * 256, iy * 256); got++; } catch (e) {}
+							if (--left === 0) { finish(); }
+						};
+						im.onerror = function () { if (--left === 0) { finish(); } };
+						var s = ((ix + iy) % 4) + 1;
+						im.src = 'https://webst0' + s + '.is.autonavi.com/appmaptile?style=6&x=' +
+						         (x0 + ix) + '&y=' + (y0 + iy) + '&z=' + Z;
+					}(ix, iy));
+				}
+			}
+		}
+
 
 		/* ---------------- 自动镜头 ----------------
 		 * 4 条预设轨迹，点按钮画面自己动；再点同键、或用户一动手就停。
