@@ -322,6 +322,11 @@
                SURVEY.quadrats 数据仍保留在 js/survey-points.js 里，只是不画了。 --- */
 
         /* --- 样地边界 / 网格 / 水系（源：原始数据/bounds，见 js/bounds.js） --- */
+        /* bounds.js 里的样地名只有中文；英文沿用 trees.js 的说法，免得同一块样地两个名字 */
+        var BOUND_EN = { '综合林': 'Mixed forest plot', '落叶松': 'Larch plot', '油松': 'Pine plot' };
+        function boundName(g) {
+            return (window.Lang && Lang.current !== 'zh') ? (BOUND_EN[g.name] || g.name) : g.name;
+        }
         var boundLayer = L.layerGroup(), grid20Layer = L.layerGroup(),
             grid40Layer = L.layerGroup(), drainLayer = L.layerGroup();
         var boundShapes = [], grid20Shapes = [], grid40Shapes = [], drainShapes = [];
@@ -329,7 +334,7 @@
             function addPolys(list, layer, store, opts) {
                 (list || []).forEach(function (g) {
                     var poly = L.polygon(g.pts.map(function (p) { return place(p[0], p[1]); }), opts);
-                    if (g.name) { poly.bindTooltip(g.name, { direction: 'top', offset: [0, -4] }); }
+                    if (g.name) { poly.bindTooltip(boundName(g), { direction: 'top', offset: [0, -4] }); }
                     poly.addTo(layer);
                     store.push({ g: g, poly: poly });
                 });
@@ -386,7 +391,7 @@
                 (SITES.points || []).forEach(function (q) { addNameLabel(q.lat, q.lon, zh ? q.nameZh : q.name); });
             }
             if (typeof BOUNDS !== 'undefined') {
-                (BOUNDS.boundaries || []).forEach(function (b) { addNameLabelPoly(b, b.name); });
+                (BOUNDS.boundaries || []).forEach(function (b) { addNameLabelPoly(b, boundName(b)); });
             }
         }
         if (typeof SITES !== 'undefined') {
@@ -666,6 +671,7 @@
                         (o.g.alt != null ? '<br>' + o.g.alt + ' m' : ''));
                 });
                 bigShapes.forEach(function (o) { o.poly.setTooltipContent(siteName(o.g)); });
+                boundShapes.forEach(function (o) { o.poly.setTooltipContent(boundName(o.g)); });
                 TREES.forEach(function (tr) {
                     markers[tr.id].setPopupContent(treePopup(tr));
                 });
