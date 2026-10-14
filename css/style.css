@@ -1905,22 +1905,26 @@ body[data-lang="zh"] .net-detail { font-size: 13.5px; font-weight: 400; }
     border: 1px solid var(--rule-strong);
 }
 
-/* 格网编号（VIT/T）—— 半透明小字，压在卫星图上不抢眼 */
-.cellnum.leaflet-div-icon {
+/* 格网编号（VIT/T）—— 半透明小字，压在卫星图上不抢眼
+ * 注意：Leaflet 的 divIcon 只要自己指定了 className，默认的 leaflet-div-icon 类就不在了，
+ * 所以选择器里不能带它 —— 原来写成 .cellnum.leaflet-div-icon，结果一条都没生效。 */
+.cellnum {
     background: none; border: 0;
     color: rgba(255, 255, 255, .55);
     font-size: 10px; line-height: 12px; text-align: center;
     white-space: nowrap; overflow: visible;
     text-shadow: 0 0 3px rgba(0, 0, 0, .85);
 }
-.cellnum.c40.leaflet-div-icon { font-size: 11px; color: rgba(255, 240, 200, .6); }
+.cellnum.c40 { font-size: 11px; color: rgba(255, 240, 200, .6); }
 
-/* 样地 / 站点名称常显标注（图层控件里「名称标注」勾掉就整体隐藏） */
-.plotname.leaflet-div-icon {
-    background: none; border: 0;
+/* 样地 / 站点名称常显标注（图层控件里「名称标注」勾掉就整体隐藏）
+ * 深色小胶囊：卫星图（深）和街道图（浅）上都读得清。 */
+.plotname {
+    background: rgba(20, 24, 15, .62);
+    border: 0; border-radius: 3px; padding: 0 5px;
     color: #fff; font-size: 12px; font-weight: 600; line-height: 16px; text-align: center;
     white-space: nowrap; overflow: visible;
-    text-shadow: 0 0 3px rgba(0, 0, 0, .9), 0 0 6px rgba(0, 0, 0, .7);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .8);
 }
 
 .leaflet-control-layers-expanded { padding: 8px 12px 8px 8px; font-size: 13px; }
