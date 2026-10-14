@@ -651,12 +651,17 @@
 		}
 		function drawRing(ring, V, P, fill, stroke, lw, alpha, close) {
 			if (!ring || ring.length < 2) return;
+			/* 相机进到多边形里面时必然有点在相机背后。原来碰到一个就整条不画 —— 大样地 500 m 见方，
+			   飞进去整圈就没了。改成只画落在身前的段，碰到背后的顶点就断开（不断线到相机后面去）。 */
 			dctx.beginPath();
+			var started = false, drawn = 0;
 			for (var i = 0; i < ring.length; i++) {
 				var s = projXYZ(V, P, ring[i][0], ring[i][1], ring[i][2]);
-				if (!s) return;                       // 顶点跑到相机后就不画这一条
-				if (i === 0) dctx.moveTo(s[0], s[1]); else dctx.lineTo(s[0], s[1]);
+				if (!s) { started = false; continue; }
+				if (started) { dctx.lineTo(s[0], s[1]); } else { dctx.moveTo(s[0], s[1]); started = true; }
+				drawn++;
 			}
+			if (!drawn) return;
 			if (close) dctx.closePath();
 			if (fill) { dctx.globalAlpha = alpha; dctx.fillStyle = fill; dctx.fill(); }
 			if (stroke) { dctx.globalAlpha = 1; dctx.strokeStyle = stroke; dctx.lineWidth = lw; dctx.stroke(); }
