@@ -981,17 +981,18 @@
 				renderLegend();
 			}).catch(function (e) { console.info('[3d] 注解加载失败：' + (e && e.message ? e.message : e)); });
 
-			// 单木覆盖（Voronoi）：整片区域按最近的树填色
-			fetch('voronoi.json').then(function (r) { return r.json(); }).then(function (vo) {
+			// 单木覆盖：用单木识别的真树冠多边形（不是 Voronoi 近似）。
+			// treestems.json 里每冠是 [Spe_ID, cE, cN, cZ, [[E,N,Z],...]]，中心已经给好。
+			fetch('treestems.json').then(function (r) { return r.json(); }).then(function (vo) {
 				SPECIES = vo.species || {};
-				(vo.cells || []).forEach(function (c) {   // [Spe_ID, [[E,N,Z],...]]
+				(vo.crowns || []).forEach(function (c) {
+					if (!SPECIES[c[0]]) { return; }
 					SPECIES[c[0]].n = (SPECIES[c[0]].n || 0) + 1;   // 该树种的单木株数
-					var ring = c[1], ax = 0, ay = 0, az = 0;
-					for (var i = 0; i < ring.length; i++) { ax += ring[i][0]; ay += ring[i][1]; az += ring[i][2]; }
-					var n = ring.length || 1;
-					DOTPTS.push({ E: ax / n, N: ay / n, Z: az / n, sp: c[0], kind: 'det', ring: ring });
+					var ring = c[4] || c[1];
+					if (!ring || ring.length < 3) { return; }
+					DOTPTS.push({ E: c[1], N: c[2], Z: c[3], sp: c[0], kind: 'det', ring: ring });
 				});
-				DET_N = (vo.cells || []).length;
+				DET_N = (vo.crowns || []).length;
 				renderLegend();
 			}).catch(function () {});
 

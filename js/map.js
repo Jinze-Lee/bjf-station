@@ -664,15 +664,16 @@
             });
         }
 
-        /* --- 单木覆盖（Voronoi / 泰森多边形）：整片区域按最近的树填色 ---
-         * 数据见 js/voronoi.js。用 canvas 渲染器承载 3779 个面。
+        /* --- 单木覆盖（单木识别的树冠多边形，不是 Voronoi 近似）---
+         * 数据见 js/treestems.js：3779 个真树冠、平均约 23 个顶点
+         * （Voronoi 那版每株只有 6 个顶点，是直边近似）。用 canvas 渲染器承载 3779 个面。
          * 默认关（和「样方内树」一致），否则会把那 20 棵监测树淹掉。 */
         var tsLayer = L.layerGroup();
         var tsMarkers = [];
-        if (typeof VORONOI !== 'undefined' && VORONOI.cells) {
+        if (typeof TREESTEMS !== 'undefined' && TREESTEMS.crowns) {
             var tsRenderer = L.canvas({ padding: 0.5 });
-            var tsSpecies = VORONOI.species || {};
-            VORONOI.cells.forEach(function (c) {   // [Spe_ID, [[lat,lon],...]]
+            var tsSpecies = TREESTEMS.species || {};
+            TREESTEMS.crowns.forEach(function (c) {   // [Spe_ID, [[lat,lon],...]]
                 var sp = tsSpecies[String(c[0])];
                 var col = (sp && sp.color) ? sp.color : '#888888';
                 var poly = L.polygon(c[1].map(function (p) { return place(p[0], p[1]); }), {
@@ -766,9 +767,9 @@
             });
             overlays[t('map.loggers')] = loggerLayer;
             /* RTK 实测主树/样方内树 与 样方框(53) 均已按金总要求移除（2026-10-13） */
-            if (typeof VORONOI !== 'undefined' && VORONOI.cells) {
+            if (typeof TREESTEMS !== 'undefined' && TREESTEMS.crowns) {
                 overlays['<span style="color:#7fae54">&#9632;</span> ' + t('map.tsLayer') +
-                         ' (' + VORONOI.cells.length + ')'] = tsLayer;
+                         ' (' + TREESTEMS.crowns.length + ')'] = tsLayer;
             }
             if (typeof BOUNDS !== 'undefined') {
                 overlays['<span style="color:#f98422">&#9634;</span> ' + t('map.boundLayer')] = boundLayer;
