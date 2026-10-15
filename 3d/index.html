@@ -945,9 +945,15 @@
 				(data.trees || []).forEach(function (t) { if (t.id) TREE_IDS[t.id] = 1; });
 				/* RTK 实测主树/样方内树的散点已按金总要求全部移除 */
 				addDevices();
-				setTimeout(buildGround, 900);     /* 等 DOTPTS 有值了再铺地面（要拿最低高程） */
+				/* 等点云包围盒（PCBOX）与 DOTPTS 都就绪再铺地面。原来是 900ms 一把梭 ——
+				   点云那 9 块下得慢时 PCBOX 还没值，buildGround 会静默返回、再也不重试，
+				   地面就永远不铺了（实测偶发）。改成轮询等，最多等 30 秒。 */
+				(function waitGround(n) {
+					if (window.PCBOX && DOTPTS.length) { buildGround(); return; }
+					if (n < 60) { setTimeout(function () { waitGround(n + 1); }, 500); }
+				}(0));
 				renderLegend();
-			}).catch(function () {});             /* 取不到就别让控制台冒未处理的 rejection */
+			}).catch(function (e) { console.info('[3d] 注解加载失败：' + (e && e.message ? e.message : e)); });
 
 			// 单木覆盖（Voronoi）：整片区域按最近的树填色
 			fetch('voronoi.json').then(function (r) { return r.json(); }).then(function (vo) {
@@ -976,10 +982,11 @@
 		 * 差值做一次对齐，再在边界附近做带状过渡。
 		 * Potree 这版不暴露 THREE，Mesh/PlaneGeometry/MeshBasicMaterial/Texture 从
 		 * 场景已有 Mesh（罗盘/导航立方体）借。 */
-		/* 天地图在这一带是「夏绿 / 冬灰」两块拼接（实测 5x5 瓦片平均色最大差 76），
-		   铺出来一块颜色明显不一样；高德同一区域是统一的（最大差 16），所以用高德。
-		   高德是 GCJ-02，用四角换算做整体补正（见下面 imgLL）。 */
-		var GROUND_SRC = 'amap';
+		/* 影像瓦片源：tianditu = 天地图（金总觉得好看；WGS-84 天然对齐、国内快）；
+		   高德（amap）作备选，是 GCJ-02，用四角换算做整体补正（见下面 imgLL）。
+		   天地图这一带是「夏绿 / 冬灰」两块拼接（实测 5x5 瓦片平均色最大差 76），
+		   铺出来一块颜色明显不一样 —— 不换源，改用下面的逐块色调对齐来抹平。 */
+		var GROUND_SRC = 'tianditu';
 		var TIANDITU_TK = 'faa2a38ebee2231bb08b9176019b1652';
 		var TERRAIN_Z = 12;                       /* 全球高程瓦片层级（约 30 m/px） */
 		function groundTileURL(x, y, z, i) {
@@ -1005,6 +1012,47 @@
 				im.onerror = rej;
 				im.src = src;
 			});
+		}
+
+		/* 一张瓦片的 RGB 均值 / 标准差（色调对齐用；缩到 64×64 取样就够） */
+		function tileStats(im) {
+			var S = 64, c = document.createElement('canvas');
+			c.width = S; c.height = S;
+			var g = c.getContext('2d');
+			g.drawImage(im, 0, 0, S, S);
+			var d = g.getImageData(0, 0, S, S).data, n = S * S;
+			var s = [0, 0, 0], s2 = [0, 0, 0];
+			for (var i = 0; i < d.length; i += 4) {
+				for (var k = 0; k < 3; k++) { var v = d[i + k]; s[k] += v; s2[k] += v * v; }
+			}
+			var mean = [], sd = [];
+			for (var j = 0; j < 3; j++) {
+				mean[j] = s[j] / n;
+				sd[j] = Math.sqrt(Math.max(1, s2[j] / n - mean[j] * mean[j]));
+			}
+			return { mean: mean, sd: sd };
+		}
+
+		/* 把 im 的均值/标准差按 strength 比例靠向 ref（逐通道增益 + 偏移），返回新画布 */
+		function toneMatch(im, st, ref, strength) {
+			var c = document.createElement('canvas');
+			c.width = im.width; c.height = im.height;
+			var g = c.getContext('2d');
+			g.drawImage(im, 0, 0);
+			var d = g.getImageData(0, 0, c.width, c.height), px = d.data;
+			var gain = [], off = [];
+			for (var k = 0; k < 3; k++) {
+				gain[k] = 1 + (ref.sd[k] / st.sd[k] - 1) * strength;
+				off[k] = (ref.mean[k] - st.mean[k] * gain[k]) * strength;
+			}
+			for (var i = 0; i < px.length; i += 4) {
+				for (var j = 0; j < 3; j++) {
+					var v = px[i + j] * gain[j] + off[j];
+					px[i + j] = v < 0 ? 0 : (v > 255 ? 255 : v);
+				}
+			}
+			g.putImageData(d, 0, 0);
+			return c;
 		}
 
 		function buildGround() {
@@ -1059,12 +1107,17 @@
 			tcv.width = tnx * 256; tcv.height = tny * 256;
 			var tctx = tcv.getContext('2d');
 
-			var jobs = [];
+			/* ---- 3) 载入影像瓦片 ----
+			 * 天地图在这一带是「夏绿 / 冬灰」两块拼接（实测 5x5 瓦片平均色最大差 76），
+			 * 直接铺会有一大块颜色突兀。逐块把均值/标准差往「盖住样地的那张」靠一部分，
+			 * 接缝就不刺眼了 —— 这样既能用天地图（金总觉得它好看），又没有那块拼缝。 */
+			var jobs = [], tiles = [];
 			var imgOK = 0, terOK = 0;
 			for (var ix = 0; ix < nx; ix++) for (var iy = 0; iy < ny; iy++) {
 				(function (ix, iy) {
 					jobs.push(loadImage(groundTileURL(x0 + ix, y0 + iy, 16, ix + iy)).then(function (im) {
-						ictx.drawImage(im, ix * 256, iy * 256); imgOK++;
+						tiles.push({ ix: ix, iy: iy, im: im, st: tileStats(im) });
+						imgOK++;
 					}).catch(function () {}));
 				}(ix, iy));
 			}
@@ -1080,6 +1133,21 @@
 
 			Promise.all(jobs).then(function () {
 				if (!imgOK) { console.info('[3d] 影像瓦片全失败，地面跳过'); return; }
+				/* 拼图：逐块把色调靠向「全体瓦片的平均值」——
+				   样地那张恰好落在冬灰那半，拿它当基准会把整片压暗。 */
+				var ref = null;
+				if (tiles.length) {
+					var sum = [0, 0, 0], sum2 = [0, 0, 0];
+					tiles.forEach(function (t) {
+						for (var k = 0; k < 3; k++) { sum[k] += t.st.mean[k]; sum2[k] += t.st.sd[k]; }
+					});
+					ref = { mean: [], sd: [] };
+					for (var j = 0; j < 3; j++) { ref.mean[j] = sum[j] / tiles.length; ref.sd[j] = sum2[j] / tiles.length; }
+				}
+				tiles.forEach(function (t) {
+					var src = (GROUND_SRC === 'tianditu' && ref) ? toneMatch(t.im, t.st, ref, 0.7) : t.im;
+					ictx.drawImage(src, t.ix * 256, t.iy * 256);
+				});
 				if (terOK) {
 					try {
 						tW = tcv.width; tH = tcv.height;
@@ -1087,8 +1155,29 @@
 					} catch (e) { ter = null; }
 				}
 				/* 样地 DEM */
-				fetch('dem.json').then(function (r) { return r.json(); }).catch(function () { return null; })
-					.then(function (d) { dem = d; makeMesh(); });
+				/* 这个 fetch 有时会一直挂着不返回（预览服务器被 Potree 的 worker/节点请求挤住），
+				   一挂地面就永远不铺 —— 加 8 秒超时、失败重试两次；全失败就当没有 DEM
+				   （样地内退回周边全球高程，地形照样铺得出来，只是没那么细）。 */
+				function getDem(tries) {
+					var ac = (typeof AbortController === 'function') ? new AbortController() : null;
+					var to = setTimeout(function () { if (ac) { ac.abort(); } }, 8000);
+					return fetch('dem.json', ac ? { signal: ac.signal } : {})
+						.then(function (r) { return r.json(); })
+						.then(function (d) { clearTimeout(to); return d; })
+						.catch(function () {
+							clearTimeout(to);
+							return tries > 0 ? getDem(tries - 1) : null;
+						});
+				}
+				/* 先用周边全球高程把地面铺出来（不等 DEM —— DEM 慢或挂了也不至于没地面），
+				   DEM 到了再重铺一次更细的。 */
+				makeMesh();
+				getDem(2).then(function (d) {
+					if (!d) { return; }
+					dem = d;
+					try { makeMesh(); }
+					catch (e) { console.info('[3d] 地面网格出错：' + (e && e.message ? e.message : e)); }
+				});
 			});
 
 			/* 全球高程瓦片 -> 米（terrarium 编码：(R*256+G+B/256)-32768） */
@@ -1115,6 +1204,7 @@
 			}
 
 			function makeMesh() {
+				if (GROUND) { viewer.scene.scene.remove(GROUND); GROUND = null; }   /* 重铺（DEM 到位后）：先把旧网格撤掉 */
 				/* 基准对齐：样地中心处 DEM 与全球高程的差值 */
 				var off = 0;
 				var dC = demHeight(cx, cy), tC = terHeight(wgs[0][0], wgs[0][1]);
