@@ -36,9 +36,14 @@ def nav(page, url=None, reload=False):
                 page.reload(wait_until=how, timeout=20000)
             else:
                 page.goto(url or URL, wait_until=how, timeout=20000)
-            return
+            break
         except Exception:
             continue
+    # 退化到 commit 时脚本还没跑完，等页面真正就绪（否则后面会 ReferenceError）
+    try:
+        page.wait_for_function("document.readyState === 'complete'", timeout=20000)
+    except Exception:
+        pass
 
 def base_input(page, *names):
     """底图选项按名字找（页面默认英文，中文名找不到时也得认英文名）"""
@@ -1603,7 +1608,7 @@ with sync_playwright() as p:
         dev = p.devices[dev_name]
         mctx = browser.new_context(**dev)
         mp = mctx.new_page()
-        mp.goto(URL, wait_until="networkidle")
+        nav(mp)
         mp.evaluate("LazyLoad.ensureChart(); LazyLoad.ensureMap()")
         mp.wait_for_function(
             "window.SiteChart && window.EnvChart && window.EnvChart.chart()",

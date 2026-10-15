@@ -1927,8 +1927,7 @@ body[data-lang="zh"] .net-detail { font-size: 13.5px; font-weight: 400; }
     text-shadow: 0 1px 2px rgba(0, 0, 0, .8);
 }
 
-/* 台站切换按钮（地图左上角）：东灵山（本站）/ 小五台 / 驼梁 */
-.station-switch {
+/* 台站切换按钮（地图左上角）：东灵山（本站）/ 小五台 / 驼梁 */.station-switch {
     display: flex; gap: 6px; background: #fff; border-radius: 4px;
     box-shadow: 0 1px 5px rgba(0, 0, 0, .4); padding: 5px 6px;
 }
@@ -1939,6 +1938,21 @@ body[data-lang="zh"] .net-detail { font-size: 13.5px; font-weight: 400; }
 }
 .station-switch .st-btn:hover { background: #eaeaea; }
 .station-switch .st-btn.on { background: #6ca14a; color: #fff; border-color: #5b8a3e; font-weight: 700; }
+
+/* 冠层 P 图例（地图左下角）：勾选 + 日期下拉 + 渐变条 */
+.p-legend {
+    background: #fff; border-radius: 4px; box-shadow: 0 1px 5px rgba(0, 0, 0, .4);
+    padding: 6px 8px; font-size: 12.5px; color: #333;
+}
+.p-legend label { cursor: pointer; user-select: none; white-space: nowrap;
+    display: inline-flex; align-items: center; min-height: 36px; }   /* 手机上要够点（验收 11h） */
+.p-legend .p-sel { margin-top: 5px; }
+.p-legend select { font: inherit; font-size: 12px; padding: 2px 4px; max-width: 140px; min-height: 36px; }
+.p-legend .p-range { margin: 4px 0 2px; font-size: 11.5px; color: #666; }
+.p-legend .p-bar {
+    height: 8px; border-radius: 2px;
+    background: linear-gradient(90deg, #ffffcc, #fed976, #fd8d3c, #f03b20, #bd0026);
+}
 
 .leaflet-control-layers-expanded { padding: 8px 12px 8px 8px; font-size: 13px; }
 

@@ -37,6 +37,10 @@ with sync_playwright() as p:
             break
         except Exception:
             continue
+    try:      # 退化到 commit 时脚本可能还没跑完
+        page.wait_for_function("document.readyState === 'complete'", timeout=20000)
+    except Exception:
+        pass
     page.wait_for_timeout(2500)
 
     # 图表改成滚到跟前才加载（js/lazy-load.js），这里先催熟再测。

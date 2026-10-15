@@ -511,6 +511,15 @@
             if (typeof BOUNDS !== 'undefined') {
                 (BOUNDS.boundaries || []).forEach(function (b) { addNameLabelPoly(b, boundName(b)); });
             }
+            if (typeof FACILITIES !== 'undefined' && FACILITIES.points) {
+                FACILITIES.points.forEach(function (q) { addNameLabel(q.lat, q.lon, (mzh ? q.name : (q.nameEn || q.name))); });
+            }
+            if (typeof MICROCLIMATE !== 'undefined' && MICROCLIMATE.points) {
+                var mzh = !window.Lang || Lang.current === 'zh';
+                MICROCLIMATE.points.forEach(function (q) {
+                    addNameLabel(q.lat, q.lon, mzh ? q.name : (q.nameEn || q.name));
+                });
+            }
         }
         if (typeof SITES !== 'undefined') {
             (SITES.points || []).forEach(function (p) {
@@ -588,6 +597,43 @@
             sc.addTo(map);
         }
 
+        /* --- 微气候观测点（wqh1~wqh9，源 js/microclimate.js）---
+         * 9 个点在样地范围内；原始 Z 与 LiDAR 基准不一致，只作参考。 */
+        var microLayer = L.layerGroup(), microShapes = [], microLabels = [];
+        function microIcon() {
+            return L.divIcon({ className: 'microdot', iconSize: [12, 12], iconAnchor: [6, 6],
+                html: '<svg width="12" height="12"><rect x="2.4" y="2.4" width="7.2" height="7.2" ' +
+                      'transform="rotate(45 6 6)" fill="#00d1d1" stroke="#1a1a1a" stroke-width="1.3"/></svg>' });
+        }
+        if (typeof MICROCLIMATE !== 'undefined' && MICROCLIMATE.points) {
+            MICROCLIMATE.points.forEach(function (p) {
+                var m = L.marker(place(p.lat, p.lon), { icon: microIcon(), interactive: true });
+                m.bindTooltip(p.name + (p.z != null ? ' · ' + p.z + ' m' : ''), { direction: 'top', offset: [0, -8] });
+                m.addTo(microLayer);
+                microShapes.push({ g: p, m: m });
+            });
+            microLayer.addTo(map);
+        }
+
+        /* --- 监测设施点（土壤温室气体分析仪 / 土壤呼吸监测系统）---
+         * 位置从展板「无人机样地与综合监测布局」图上量取（精度约 ±15 m）；
+         * 符号沿用展板的配色：温室气体=绿星、土壤呼吸=淡蓝星。 */
+        var facLayer = L.layerGroup(), facShapes = [];
+        function facIcon(color) {
+            return L.divIcon({ className: 'facstar', iconSize: [16, 16], iconAnchor: [8, 8],
+                html: '<svg width="16" height="16"><polygon points="8,1 10,6 15.5,6 11,9.6 12.6,15 8,11.6 3.4,15 5,9.6 0.5,6 6,6" ' +
+                      'fill="' + color + '" stroke="#111" stroke-width="1.2"/></svg>' });
+        }
+        if (typeof FACILITIES !== 'undefined' && FACILITIES.points) {
+            var facColor = { '土壤温室气体分析仪': '#00e000', '土壤呼吸监测系统': '#bed2ff' };
+            FACILITIES.points.forEach(function (q) {
+                var m2 = L.marker(place(q.lat, q.lon), { icon: facIcon(facColor[q.name] || '#fff') });
+                m2.bindTooltip(q.name, { direction: 'top', offset: [0, -10] });
+                m2.addTo(facLayer);
+                facShapes.push({ g: q, m: m2 });
+            });
+            facLayer.addTo(map);
+        }
         /* --- 格网编号（VIT/T）：每个网格格子取中心，找最近的 RTK 实测主树命名，
                半透明写在格子中间 —— 与三维那个「格网编号」同一套做法。默认关。 --- */
         var cellNumLayer = L.layerGroup();
@@ -604,17 +650,35 @@
                 }
                 return best;
             }
+            /* 每棵树名只写进离它最近的那个格子；一个格只显示一个名字，
+               某棵树最近的格子被别人占了，它就空着（金总要求：不是每格都写）。 */
             function addCellNums(list, cls) {
+                var cells = [];
                 (list || []).forEach(function (g) {
                     var r = g.pts, n = r.length - 1, la = 0, lo = 0;   /* 首尾重合，去掉最后一个 */
                     if (n < 3) return;
                     for (var i = 0; i < n; i++) { la += r[i][0]; lo += r[i][1]; }
-                    la /= n; lo /= n;
-                    var m = L.marker(place(la, lo), { interactive: false,
+                    cells.push({ g: g, la: la / n, lo: lo / n });
+                });
+                var take = {};                       /* 格子下标 -> {name, d2} */
+                MT.forEach(function (mt) {
+                    var bi = -1, bd = Infinity;
+                    for (var i = 0; i < cells.length; i++) {
+                        var dy = (cells[i].la - mt.lat) * 110540;
+                        var dx = (cells[i].lo - mt.lon) * 111320 * Math.cos(mt.lat * Math.PI / 180);
+                        var d2 = dx * dx + dy * dy;
+                        if (d2 < bd) { bd = d2; bi = i; }
+                    }
+                    if (bi < 0) return;
+                    if (!take[bi] || bd < take[bi].d2) { take[bi] = { name: mt.name, d2: bd }; }
+                });
+                Object.keys(take).forEach(function (k) {
+                    var c = cells[k];
+                    var m = L.marker(place(c.la, c.lo), { interactive: false,
                         icon: L.divIcon({ className: 'cellnum ' + cls, iconSize: [40, 12], iconAnchor: [20, 6],
-                            html: nearestName(la, lo) }) });
+                            html: take[k].name }) });
                     m.addTo(cellNumLayer);
-                    cellNumMarkers.push({ g: g, m: m });
+                    cellNumMarkers.push({ g: c.g, m: m });
                 });
             }
             addCellNums(BOUNDS.grid20, 'c20');
@@ -682,7 +746,7 @@
                 });
                 if (sp) { poly.bindTooltip(sp.zh, { direction: 'top', offset: [0, -4] }); }
                 poly.addTo(tsLayer);
-                tsMarkers.push({ g: { pts: c[1] }, poly: poly });
+                tsMarkers.push({ g: { pts: c[1] }, poly: poly, sp: c[0] });
             });
 
             /* 物种图例（勾选「单木覆盖」时显示，否则收起） */
@@ -699,6 +763,77 @@
             };
             tsLayer.on('add', function () { sl.addTo(map); });
             tsLayer.on('remove', function () { map.removeControl(sl); });
+        }
+
+        /* --- 冠层 P（磷）反演图层（js/canopyP.js）---
+         * 与「单木覆盖」共用同一批树冠多边形，勾上后改成按当天 P 值着色（黄->红）。
+         * 日期用下拉切换；参考范围取 5%~95% 分位，免得极端值把整片压成一个颜色。 */
+        var pOn = false, pDate = 0, pCtl = null;
+        function pRamp(t) {
+            t = Math.max(0, Math.min(1, t));
+            var st = [[255, 255, 204], [254, 217, 118], [253, 141, 60], [240, 59, 32], [189, 0, 38]];
+            var x = t * (st.length - 1), i = Math.min(st.length - 2, Math.floor(x)), f = x - i;
+            var a = st[i], b = st[i + 1];
+            return 'rgb(' + Math.round(a[0] + (b[0] - a[0]) * f) + ',' +
+                            Math.round(a[1] + (b[1] - a[1]) * f) + ',' +
+                            Math.round(a[2] + (b[2] - a[2]) * f) + ')';
+        }
+        function applyCanopyP2D() {
+            if (typeof CANOPYP === 'undefined' || !CANOPYP.values) { return; }
+            /* 冠层 P 是给树冠着色的 —— 勾上它时顺便把「单木覆盖」图层打开，否则看不到东西 */
+            if (pOn && typeof tsLayer !== 'undefined' && !map.hasLayer(tsLayer)) { tsLayer.addTo(map); }
+            var i, vals = [];
+            if (pOn) {
+                for (i = 0; i < CANOPYP.values.length; i++) {
+                    var v = CANOPYP.values[i] && CANOPYP.values[i][pDate];
+                    if (v != null && isFinite(v)) { vals.push(v); }
+                }
+                vals.sort(function (a, b) { return a - b; });
+            }
+            var lo = vals.length ? vals[Math.floor(vals.length * 0.05)] : 0;
+            var hi = vals.length ? vals[Math.floor(vals.length * 0.95)] : 1;
+            tsMarkers.forEach(function (o, k) {
+                var col = null;
+                if (pOn) {
+                    var row = CANOPYP.values[k];
+                    var vv = row && row[pDate];
+                    if (vv != null && isFinite(vv)) { col = pRamp((vv - lo) / Math.max(1e-6, hi - lo)); }
+                }
+                if (!col) {
+                    var sp = tsSpecies[String(o.sp)] || {};
+                    col = sp.color || '#888888';
+                }
+                o.poly.setStyle({ color: col, fillColor: col });
+            });
+            var rg = document.querySelector('.p-legend .p-range');
+            if (rg) { rg.textContent = pOn ? (lo.toFixed(3) + ' ~ ' + hi.toFixed(3)) : ''; }
+            var box = document.querySelector('.p-legend .p-sel');
+            if (box) { box.style.display = pOn ? '' : 'none'; }
+        }
+        if (typeof TREESTEMS !== 'undefined' && TREESTEMS.crowns && typeof CANOPYP !== 'undefined') {
+            pCtl = L.control({ position: 'bottomleft' });
+            pCtl.onAdd = function () {
+                var div = L.DomUtil.create('div', 'p-legend');
+                var html = '<label><input type="checkbox" id="pChk"> ' + esc(t('map.pLayer')) + '</label>' +
+                           '<div class="p-sel" style="display:none">' +
+                           '<select id="pSel"></select><div class="p-range"></div>' +
+                           '<div class="p-bar"></div></div>';
+                div.innerHTML = html;
+                L.DomEvent.disableClickPropagation(div);
+                var sel = div.querySelector('#pSel');
+                (CANOPYP.dates || []).forEach(function (d, i) {
+                    var o = document.createElement('option');
+                    o.value = String(i); o.textContent = d;
+                    sel.appendChild(o);
+                });
+                div.querySelector('#pChk').addEventListener('change', function () {
+                    pOn = this.checked;
+                    applyCanopyP2D();
+                });
+                sel.addEventListener('change', function () { pDate = parseInt(this.value, 10) || 0; applyCanopyP2D(); });
+                return div;
+            };
+            pCtl.addTo(map);
         }
 
         /* --- 切换底图时按目标坐标系重新摆放所有标记 --- */
@@ -733,6 +868,8 @@
                 o.poly.setLatLngs(o.g.pts.map(function (q) { return place(q[0], q[1]); }));
             });
             nameMarkers.forEach(function (o) { o.m.setLatLng(place(o.lat, o.lon)); });
+            microShapes.forEach(function (o) { o.m.setLatLng(place(o.g.lat, o.g.lon)); });
+            facShapes.forEach(function (o) { o.m.setLatLng(place(o.g.lat, o.g.lon)); });
             Object.keys(stationShapes).forEach(function (k) {
                 stationShapes[k].forEach(function (o) {
                     o.poly.setLatLngs(o.g.pts.map(function (q) { return place(q[0], q[1]); }));
@@ -788,6 +925,14 @@
                     overlays['<span style="color:' + st.color + '">&#9634;</span> ' + stationName(st) +
                              ' ' + t('map.stationPlots')] = stationLayers[k];
                 });
+            }
+            if (typeof FACILITIES !== 'undefined') {
+                overlays['<span style="color:#00e000">&#9733;</span> ' + t('map.facLayer') +
+                         ' (' + FACILITIES.points.length + ')'] = facLayer;
+            }
+            if (typeof MICROCLIMATE !== 'undefined') {
+                overlays['<span style="color:#00d1d1">&#9670;</span> ' + t('map.microLayer') +
+                         ' (' + MICROCLIMATE.points.length + ')'] = microLayer;
             }
             Object.keys(devLayers || {}).forEach(function (k) {
                 var st = { dendrometer: '#f0a23c', sapflow: '#3fa9f5', lai: '#b07fd8' }[k];
