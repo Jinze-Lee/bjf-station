@@ -55,6 +55,17 @@
 		#camBar .cbtn.stop { background: rgba(90, 55, 45, .6); border-color: rgba(190, 120, 100, .4); }
 		@media (max-width: 640px) { #camBar .cbtn { padding: 5px 9px; font-size: 11.5px; } }
 
+		/* 台站切换按钮（左上，标题栏下面） */
+		#staBar { position: fixed; left: 12px; top: 78px; z-index: 1900; display: flex; gap: 6px; }
+		#staBar .sbtn { font: inherit; font-size: 12.5px; padding: 5px 11px; border-radius: 4px; cursor: pointer;
+			color: #d7d2c6; background: rgba(20, 24, 15, .82); border: 1px solid rgba(160, 180, 120, .3); }
+		#staBar .sbtn:hover { background: rgba(88, 110, 62, .85); color: #fff; }
+		#staBar .sbtn.on { background: #6ca14a; color: #14170f; font-weight: 700; border-color: #9ed06a; }
+		@media (max-width: 640px) {
+			#staBar { top: auto; bottom: 96px; left: 8px; gap: 4px; }
+			#staBar .sbtn { padding: 6px 9px; font-size: 12px; }
+		}
+
 		/* 加载进度框 */
 		#loading { position: fixed; left: 50%; top: 46%; transform: translate(-50%, -50%); z-index: 3000;
 			background: rgba(16, 20, 12, .88); border: 1px solid rgba(160, 180, 120, .35);
@@ -170,6 +181,7 @@
 	<script src="./libs/plasio/js/laslaz.js"></script>
 	<script src="../js/leaflet.js"></script>
 	<script src="../js/devices.js"></script>
+<script src="../js/stations.js"></script>	<!-- 小五台 / 驼梁样地（与二维同一份） -->
 
 	<div id="topbar">
 		<div class="brand"><span id="bt">北京森林生态系统定位研究站 · 三维林相</span>
@@ -200,6 +212,10 @@
 		<a class="btn" href="../index.html" id="backBtn">← 返回网站</a>
 	</div>
 	<div id="ctrlHint"></div>
+
+	<!-- 台站切换：与二维地图同一套（东灵山本站 / 小五台 / 驼梁）。切到别的站会现建一块
+	     4 km 见方的局部地形（terrarium 高程 + 天地图影像），并画上该站的样方框。 -->
+	<div id="staBar"></div>
 
 	<!-- 自动镜头：懒得自己操作就按一个，画面自己动（再点同键 / 用户一动手 = 停） -->
 	<div id="camBar">
@@ -242,6 +258,7 @@
 			      camOrbit: '环绕', camFly: '低空巡航', camDolly: '推拉', camRise: '升空俯瞰', camStop: '■ 停',
 			      camSpeed: '速度', camLoop: '循环', lGround: '影像地面',
 			      ctrlHint: '左键拖动旋转 · 中键拖动平移 · 滚轮缩放',
+			      staDl: '东灵山（本站）',
 			      loadCloud: '正在加载三维点云…', loadRender: '正在渲染首屏…' },
 			en: { title: 'Beijing Forest Ecosystem Research Station · 3D Canopy',
 			      sub: 'UAV LiDAR colour point cloud · AMap satellite · 20 monitored trees / 3 loggers',
@@ -253,6 +270,7 @@
 			      camOrbit: 'Orbit', camFly: 'Low flyover', camDolly: 'Dolly', camRise: 'Rise & overlook', camStop: '■ Stop',
 			      camSpeed: 'Speed', camLoop: 'Loop', lGround: 'Imagery ground',
 			      ctrlHint: 'Drag to rotate · Middle-drag to pan · Scroll to zoom',
+			      staDl: 'Mt. Dongling (main)',
 			      loadCloud: 'Loading 3D point cloud…', loadRender: 'Rendering first view…' }
 		};
 		var LANG = localStorage.getItem('bfers-3d-lang') || 'zh';
@@ -291,6 +309,7 @@
 			cb = document.getElementById('lblGround'); if (cb) cb.textContent = d.lGround;
 			/* 三维场景里的名字标签跟着语言换（首屏调用时 NAME_LABELS 还没建，得兜一下） */
 			(NAME_LABELS || []).forEach(function (L) { L.el.textContent = (LANG === 'zh') ? L.zh : L.en; });
+			renderStaBar();
 			renderLegend();
 		}
 		function renderLegend() {
@@ -758,6 +777,13 @@
 					dctx.arc(s[0], s[1], 5.5, 0, Math.PI * 2);
 					dctx.fillStyle = '#ffd400'; dctx.globalAlpha = 1; dctx.fill();
 					dctx.lineWidth = 2; dctx.strokeStyle = '#20242a'; dctx.stroke();
+				});
+			}
+			/* 其他台站（小五台 / 驼梁）的样方框：切过去才画 */
+			if (STA_ACTIVE && STA_RING[STA_ACTIVE]) {
+				var col = (typeof STATIONS !== 'undefined' && STATIONS[STA_ACTIVE]) ? STATIONS[STA_ACTIVE].color : '#00aaff';
+				STA_RING[STA_ACTIVE].forEach(function (a) {
+					drawRing(a.ring.concat([a.ring[0]]), V, P, col, col, 2.6, 0.16, true);
 				});
 			}
 		}
@@ -1266,6 +1292,185 @@
 				console.info('[3d] 地形地面已铺好：影像 ' + imgOK + ' 张、高程瓦片 ' + terOK + ' 张、基准差 ' +
 				             Math.round(off) + ' m');
 			}
+		}
+
+		/* ---------------- 其他台站（小五台 / 驼梁）的局部三维地面 ----------------
+		 * 这两处离东灵山 35 / 130 km，不在本站那块 3.2 km 地面里。切过去时现建一小块
+		 * 4 km 见方的地形（terrarium 全球高程 + 天地图影像，与本站地面同一套数据源），
+		 * 再画上该站的样方框 —— 做法与二维一致，数据同一份 js/stations.js。 */
+		var STA_GROUND = {}, STA_RING = {}, STA_ACTIVE = null;
+		var STA_S = 4000, STA_SEG = 80;
+
+		function buildStationGround(key, st) {
+			if (STA_GROUND[key]) { return STA_GROUND[key]; }
+			var P = findProtos();
+			if (!P) { return null; }
+			var S = STA_S, SEG = STA_SEG, VN = SEG + 1;
+			var c = proj4('EPSG:4326', 'EPSG:32650', [st.lon, st.lat]);
+			var cx = c[0], cy = c[1];
+			var corners = [[cx - S / 2, cy - S / 2], [cx + S / 2, cy - S / 2],
+			               [cx + S / 2, cy + S / 2], [cx - S / 2, cy + S / 2]];
+			var wgs = corners.map(function (p) {
+				var w = proj4('EPSG:32650', 'EPSG:4326', [p[0], p[1]]);
+				return [w[1], w[0]];
+			});
+			var bI = { latMin: Math.min.apply(null, wgs.map(function (p) { return p[0]; })),
+			           latMax: Math.max.apply(null, wgs.map(function (p) { return p[0]; })),
+			           lonMin: Math.min.apply(null, wgs.map(function (p) { return p[1]; })),
+			           lonMax: Math.max.apply(null, wgs.map(function (p) { return p[1]; })) };
+			/* 影像 z15（约 4.8 m/px）：4 km 约 4x4 张 */
+			var ZI = 15, n = Math.pow(2, ZI);
+			var x0 = Math.floor((bI.lonMin + 180) / 360 * n), x1 = Math.floor((bI.lonMax + 180) / 360 * n);
+			var y0 = Math.floor(merc(bI.latMax, 0)[1] * n), y1 = Math.floor(merc(bI.latMin, 0)[1] * n);
+			var nx = x1 - x0 + 1, ny = y1 - y0 + 1;
+			if (nx * ny > 64 || nx < 1 || ny < 1) { return null; }
+			var cv = document.createElement('canvas');
+			cv.width = nx * 256; cv.height = ny * 256;
+			var ictx = cv.getContext('2d');
+			/* 高程：terrarium（全球 30 m） */
+			var tn = Math.pow(2, TERRAIN_Z);
+			var tx0 = Math.floor((bI.lonMin + 180) / 360 * tn), tx1 = Math.floor((bI.lonMax + 180) / 360 * tn);
+			var ty0 = Math.floor(merc(bI.latMax, 0)[1] * tn), ty1 = Math.floor(merc(bI.latMin, 0)[1] * tn);
+			var tnx = tx1 - tx0 + 1, tny = ty1 - ty0 + 1;
+			var tcv = document.createElement('canvas');
+			tcv.width = tnx * 256; tcv.height = tny * 256;
+			var tctx = tcv.getContext('2d');
+			var jobs = [], tiles = [], imgOK = 0, terOK = 0;
+			for (var ix = 0; ix < nx; ix++) for (var iy = 0; iy < ny; iy++) {
+				(function (ix, iy) {
+					jobs.push(loadImage(groundTileURL(x0 + ix, y0 + iy, ZI, ix + iy)).then(function (im) {
+						tiles.push({ ix: ix, iy: iy, im: im, st: tileStats(im) }); imgOK++;
+					}).catch(function () {}));
+				}(ix, iy));
+			}
+			for (var tx = 0; tx < tnx; tx++) for (var ty = 0; ty < tny; ty++) {
+				(function (tx, ty) {
+					jobs.push(loadImage(terrariumURL(tx0 + tx, ty0 + ty, TERRAIN_Z, 0)).then(function (im) {
+						tctx.drawImage(im, tx * 256, ty * 256); terOK++;
+					}).catch(function () {}));
+				}(tx, ty));
+			}
+			var ter = null, tW = 0, tH = 0;
+			function terAt(lat, lon) {
+				if (!ter) { return null; }
+				var m = merc(lat, lon);
+				var px = m[0] * tn * 256 - tx0 * 256, py = m[1] * tn * 256 - ty0 * 256;
+				var xi = Math.max(0, Math.min(tW - 1, Math.round(px)));
+				var yi = Math.max(0, Math.min(tH - 1, Math.round(py)));
+				var o = (yi * tW + xi) * 4;
+				return (ter[o] * 256 + ter[o + 1] + ter[o + 2] / 256) - 32768;
+			}
+			var api = { id: key, cx: cx, cy: cy, S: S, mesh: null, base: 0, ready: false };
+			STA_GROUND[key] = api;
+
+			Promise.all(jobs).then(function () {
+				if (!imgOK) { console.info('[3d] ' + st.nameZh + ' 影像瓦片全失败，跳过'); return; }
+				var ref = null;
+				if (tiles.length) {
+					var sum = [0, 0, 0], sum2 = [0, 0, 0];
+					tiles.forEach(function (t) { for (var k = 0; k < 3; k++) { sum[k] += t.st.mean[k]; sum2[k] += t.st.sd[k]; } });
+					ref = { mean: [], sd: [] };
+					for (var j = 0; j < 3; j++) { ref.mean[j] = sum[j] / tiles.length; ref.sd[j] = sum2[j] / tiles.length; }
+				}
+				tiles.forEach(function (t) { ictx.drawImage(toneMatch(t.im, t.st, ref, 0.7), t.ix * 256, t.iy * 256); });
+				if (terOK) {
+					try { tW = tcv.width; tH = tcv.height; ter = tctx.getImageData(0, 0, tW, tH).data; }
+					catch (e) { ter = null; }
+				}
+				function hAt(E, N) {
+					var w = proj4('EPSG:32650', 'EPSG:4326', [E, N]);
+					return terAt(w[1], w[0]);
+				}
+				var geo = new P.Geo(1, 1, SEG, SEG), verts = geo.vertices || [], zs = [];
+				for (var iy2 = 0; iy2 < VN; iy2++) for (var ix2 = 0; ix2 < VN; ix2++) {
+					var vi = iy2 * VN + ix2;
+					if (!verts[vi]) { continue; }
+					var E = cx - S / 2 + S * ix2 / SEG, N2 = cy + S / 2 - S * iy2 / SEG;
+					var z = hAt(E, N2);
+					if (z == null) { z = 0; }
+					verts[vi].z = z; zs.push(z);
+				}
+				if ('verticesNeedUpdate' in geo) { geo.verticesNeedUpdate = true; }
+				if (geo.computeVertexNormals) { geo.computeVertexNormals(); }
+				var tex = new P.Tex(cv);
+				tex.needsUpdate = true;
+				if ('generateMipmaps' in tex) { tex.generateMipmaps = false; }
+				if ('minFilter' in tex) { tex.minFilter = 1006; }
+				var mat = new P.Mat({ map: tex });
+				mat.side = 2;
+				var mesh = new P.Mesh(geo, mat);
+				mesh.position.set(cx, cy, 0);
+				mesh.scale.set(S, S, 1);
+				mesh.visible = false;
+				viewer.scene.scene.add(mesh);
+				api.mesh = mesh;
+				api.base = zs.length ? Math.min.apply(null, zs) : 0;
+				/* 样方框 + 名称标签 */
+				STA_RING[key] = (st.plots || []).map(function (p) {
+					var ring = p.pts.map(function (q) {
+						var u = proj4('EPSG:4326', 'EPSG:32650', [q[1], q[0]]);
+						var z = hAt(u[0], u[1]);
+						return [u[0], u[1], (z == null ? api.base : z) + 1.5];
+					});
+					var m = ring.length, ax = 0, ay = 0, az = 0;
+					for (var i = 0; i < m; i++) { ax += ring[i][0]; ay += ring[i][1]; az += ring[i][2]; }
+					addLabel(ax / m, ay / m, az / m + 25, p.nameZh, 'log', null, p.name);
+					return { ring: ring };
+				});
+				api.ready = true;
+				if (STA_ACTIVE === key) { flyStation(key); }
+				console.info('[3d] ' + st.nameZh + ' 局部地形已建好：影像 ' + imgOK + ' 张、高程 ' + terOK + ' 张');
+			});
+			return api;
+		}
+
+		/* 切台站：只显示选中那块的局部地形，并把镜头飞过去；key 为空 = 回本站 */
+		function flyStation(key) {
+			STA_ACTIVE = key || null;
+			Object.keys(STA_GROUND).forEach(function (k) {
+				if (STA_GROUND[k].mesh) { STA_GROUND[k].mesh.visible = (k === STA_ACTIVE); }
+			});
+			var v = viewer.scene.view, P = viewer.scene.view.position;
+			if (!STA_ACTIVE) {
+				if (window.PCBOX) {
+					var c = window.PCBOX;
+					var mx = (c.min[0] + c.max[0]) / 2, my = (c.min[1] + c.max[1]) / 2;
+					P.set(mx, my - 700, 1900);
+					v.lookAt(new (P.constructor)(mx, my, 1200));
+				}
+				return;
+			}
+			var st = (typeof STATIONS !== 'undefined') ? STATIONS[STA_ACTIVE] : null;
+			if (!st) { return; }
+			var api = STA_GROUND[STA_ACTIVE] || buildStationGround(STA_ACTIVE, st);
+			if (api && api.ready) {
+				P.set(api.cx, api.cy - api.S * 0.3, api.base + 1300);
+				v.lookAt(new (P.constructor)(api.cx, api.cy, api.base));
+			}
+		}
+
+		/* 台站切换按钮条（切语言要重建，所以单独一个函数） */
+		function renderStaBar() {
+			var bar = document.getElementById('staBar');
+			if (!bar || typeof STATIONS === 'undefined') { return; }
+			bar.innerHTML = '';
+			function mk(label, key, on) {
+				var b = document.createElement('button');
+				b.className = 'sbtn' + (on ? ' on' : '');
+				b.type = 'button';
+				b.textContent = label;
+				b.addEventListener('click', function () {
+					Array.prototype.forEach.call(bar.querySelectorAll('.sbtn'), function (x) { x.classList.remove('on'); });
+					b.classList.add('on');
+					flyStation(key);
+				});
+				bar.appendChild(b);
+			}
+			mk((I18N[LANG] || {}).staDl || '东灵山（本站）', null, !STA_ACTIVE);
+			Object.keys(STATIONS).forEach(function (k) {
+				var st = STATIONS[k];
+				mk((LANG === 'zh') ? st.nameZh : st.name, k, STA_ACTIVE === k);
+			});
 		}
 
 		function findProtos() {
