@@ -1927,6 +1927,19 @@ body[data-lang="zh"] .net-detail { font-size: 13.5px; font-weight: 400; }
     text-shadow: 0 1px 2px rgba(0, 0, 0, .8);
 }
 
+/* 台站切换按钮（地图左上角）：东灵山（本站）/ 小五台 / 驼梁 */
+.station-switch {
+    display: flex; gap: 6px; background: #fff; border-radius: 4px;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, .4); padding: 5px 6px;
+}
+.station-switch .st-btn {
+    font: inherit; font-size: 12.5px; line-height: 1.4; padding: 3px 9px; border-radius: 3px;
+    min-height: 36px;                     /* 手机上要够点（验收 11h 要求 ≥36px） */
+    cursor: pointer; color: #333; background: #f4f4f4; border: 1px solid #ccc;
+}
+.station-switch .st-btn:hover { background: #eaeaea; }
+.station-switch .st-btn.on { background: #6ca14a; color: #fff; border-color: #5b8a3e; font-weight: 700; }
+
 .leaflet-control-layers-expanded { padding: 8px 12px 8px 8px; font-size: 13px; }
 
 .leaflet-control-scale-line {

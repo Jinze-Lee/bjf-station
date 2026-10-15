@@ -26,6 +26,29 @@ def check(name, ok, detail=""):
     results.append((name, ok, detail))
     print(("  PASS  " if ok else "  FAIL  ") + name + ("  | " + detail if detail else ""))
 
+def nav(page, url=None, reload=False):
+    """导航/重载。这台机器上跨境瓦片（天地图）会把 networkidle 拖到超时，
+    所以 networkidle 等不到就依次退化成 load / commit —— 只影响「等多久」，
+    后面那些断言一条都没动。"""
+    for how in ("networkidle", "load", "commit"):
+        try:
+            if reload:
+                page.reload(wait_until=how, timeout=20000)
+            else:
+                page.goto(url or URL, wait_until=how, timeout=20000)
+            return
+        except Exception:
+            continue
+
+def base_input(page, *names):
+    """底图选项按名字找（页面默认英文，中文名找不到时也得认英文名）"""
+    for n in names:
+        el = page.query_selector(".leaflet-control-layers-base >> text=" + n)
+        if el:
+            return el
+    return None
+
+
 def haversine(a, b):
     """两点距离（米）"""
     R = 6371000.0
@@ -45,7 +68,7 @@ with sync_playwright() as p:
     page.on("response", lambda r: bad_req.append((r.status, r.url))
         if r.status >= 400 and "/3d/" not in r.url else None)   # 内嵌三维 iframe 自己的无害 404（sources.json 等）不算主站失败请求
 
-    page.goto(URL, wait_until="networkidle")
+    nav(page)
     page.wait_for_timeout(3500)
 
     # 地图与图表现在是滚到跟前才加载（js/lazy-load.js）。
@@ -214,7 +237,7 @@ with sync_playwright() as p:
               full["envPts"] > 2 * 3707, "%d 点" % full["envPts"])
         # 刷新必须回到锁定状态：口令不做任何持久化。
         # 共用电脑上，「关掉页面就等于锁上」是唯一说得清的规则。
-        page.reload(wait_until="networkidle")
+        nav(page, reload=True)
         ensure_lazy()
         page.wait_for_function("window.Unlock", timeout=60000)
         page.wait_for_timeout(2500)
@@ -253,7 +276,7 @@ with sync_playwright() as p:
     # 默认语言从中文改成英文时，老访客 localStorage 里存的旧值会一直盖过新默认。
     # 存储键升了一版（bfers-lang-v2）让旧值作废一次 —— 这里守住这个行为。
     page.evaluate("localStorage.setItem('bfers-lang','zh')")     # 制造旧键残留
-    page.reload(wait_until="networkidle")
+    nav(page, reload=True)
     page.wait_for_timeout(2600)
     check("0c1. 旧版存储键的残留值不会盖过新默认",
           page.evaluate("Lang.current") == "en", page.evaluate("Lang.current"))
@@ -352,7 +375,7 @@ with sync_playwright() as p:
                               page.evaluate("SiteChart.defaultTree")))
 
     # 语言选择要能持久化
-    page.reload(wait_until="networkidle")
+    nav(page, reload=True)
     page.wait_for_timeout(3000)
     check("1-i18n-i. 语言选择跨刷新保留", page.evaluate("Lang.current") == "en")
     page.evaluate("Lang.set('zh')")
@@ -523,6 +546,16 @@ with sync_playwright() as p:
     check("3o. 样方内树数据仍在（只是不显示）",
           n_tree == page.evaluate("SURVEY.plotTrees.length") and n_tree > 0, "n=%s" % n_tree)
 
+    # 默认底图现在是天地图（WGS-84，不做偏移）；下面 3p/4a 要验的是「高德底图上必须偏移」，
+    # 所以先切到高德。默认底图本身也顺带断言一下。
+    check("3-pre. 默认底图是天地图（WGS-84，标记不做偏移）",
+          page.evaluate("!SiteMap.isGcj()"),
+          page.evaluate("(document.querySelector('.leaflet-control-layers-base input:checked')||{}).value||''"))
+    sat0 = base_input(page, "高德影像", "AMap Satellite")
+    if sat0:
+        sat0.click()
+        page.wait_for_timeout(1400)
+
     # 实测点同样要过 WGS-84 -> GCJ-02（与 4a 同理）
     sv = page.evaluate("""() => {
         const o = SiteMap.surveyMainMarkers[0];
@@ -575,7 +608,7 @@ with sync_playwright() as p:
         d2 = haversine(declared, actual2)
         check("4b. 切到 OSM 后标记回到原始 WGS-84", d2 < 30, f"偏差 {d2:.1f} m")
         # 切回高德
-        sat = page.query_selector(".leaflet-control-layers-base >> text=高德影像")
+        sat = base_input(page, "高德影像", "AMap Satellite")
         if sat:
             sat.click()
             page.wait_for_timeout(1200)
@@ -1058,7 +1091,7 @@ with sync_playwright() as p:
     # 9. 暖白主题 + 幽灵光标（2026-07-28 换配色时新增）
     # ==================================================================
     page.set_viewport_size({"width": 1440, "height": 1000})
-    page.goto(URL, wait_until="networkidle")
+    nav(page)
     page.wait_for_timeout(2000)
 
     def _rgb(s):
@@ -1147,7 +1180,7 @@ with sync_playwright() as p:
     # 数据包不能滞留在 SVG 原点。踩过的坑：用正的 begin 错开出发时间，
     # 到点之前 SMIL 让元素停在静态位置 (0,0)，开头几秒左上角有几个脏点。
     # 改成负 begin 后从第一帧起就在路径上。
-    page.reload(wait_until="networkidle")
+    nav(page, reload=True)
     page.wait_for_timeout(800)
     stranded = page.evaluate("""()=>{const s=document.getElementById('netDiagram');
         const sr=s.getBoundingClientRect();
@@ -1173,7 +1206,7 @@ with sync_playwright() as p:
     # 11. 环境条件面板（2026-08-02 新增）
     # ==================================================================
     page.set_viewport_size({"width": 1440, "height": 1100})
-    page.goto(URL, wait_until="networkidle")
+    nav(page)
     page.wait_for_timeout(2600)
 
     check("11a. 环境数据已载入",
@@ -1286,7 +1319,7 @@ with sync_playwright() as p:
 
     # 首屏就必须一致：主图的 rangeSelector 默认选「1周」，建图时自己缩到最后 7 天，
     # 而环境图是后建的、默认全区间 —— 不主动同步一次，首屏就是两段不同的时间。
-    page.goto(URL, wait_until="networkidle")
+    nav(page)
     page.wait_for_timeout(3000)
     d0 = page.evaluate("Math.abs(SiteChart.chart.xAxis[0].getExtremes().min"
                        " - EnvChart.chart().xAxis[0].getExtremes().min)")
@@ -1407,7 +1440,7 @@ with sync_playwright() as p:
           str(mc2).lower() != str(mc).lower(), str(mc2))
 
     # 选择要能记住
-    page.reload(wait_until="networkidle")
+    nav(page, reload=True)
     page.wait_for_timeout(1800)
     check("10f. 刷新后仍是浅色（选择存进了 localStorage）",
           page.evaluate("document.documentElement.getAttribute('data-theme')") == "light")
@@ -1513,7 +1546,7 @@ with sync_playwright() as p:
           not page.evaluate("document.querySelector('.video-modal').classList.contains('is-open')"))
 
     # 手动关闭气泡（点叉）：不应该顺带打开视频
-    page.reload(wait_until="networkidle")
+    nav(page, reload=True)
     page.wait_for_timeout(1500)
     page.click(".vw-close")
     page.wait_for_timeout(200)
@@ -1525,7 +1558,7 @@ with sync_playwright() as p:
     check("12m. 点气泡的关闭叉只关气泡、不打开视频", after_close_x["bubbleHidden"] and not after_close_x["modalOpen"], str(after_close_x))
 
     # 刷新后气泡要重新出现——这是跟"只在首次访问出现一次"最本质的区别
-    page.reload(wait_until="networkidle")
+    nav(page, reload=True)
     page.wait_for_timeout(1500)
     check("12n. 刷新后气泡重新出现（每次都出现，非一次性）",
           page.evaluate("!document.querySelector('.video-bubble').classList.contains('is-hidden')"))
@@ -1545,7 +1578,7 @@ with sync_playwright() as p:
     saved_pos = page.evaluate("JSON.parse(localStorage.getItem('bfers-video-widget-pos') || 'null')")
     check("12p. 拖动结果写入 localStorage", saved_pos is not None, str(saved_pos))
 
-    page.reload(wait_until="networkidle")
+    nav(page, reload=True)
     page.wait_for_timeout(1500)
     restored_pos = page.evaluate("() => { const r = document.querySelector('.video-widget').getBoundingClientRect(); return {right: innerWidth - r.right, bottom: innerHeight - r.bottom}; }")
     check("12q. 刷新后悬浮球停在上次拖到的位置",

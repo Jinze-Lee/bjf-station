@@ -138,7 +138,7 @@
                       (Math.min.apply(null, lons) + Math.max.apply(null, lons)) / 2];
 
         var map = L.map(CONTAINER, {
-            center: wgs84ToGcj02(center[0], center[1]),
+            center: [center[0], center[1]],   /* 默认底图天地图是 WGS-84，不用补正 */
             zoom: DEFAULT_ZOOM,
             maxZoom: 21,                // 见下方 maxNativeZoom 说明
             scrollWheelZoom: false      // 避免页面滚动时误缩放；点击地图后启用
@@ -165,7 +165,125 @@
             { maxNativeZoom: 19, maxZoom: 21,
               attribution: '&copy; OpenStreetMap contributors (WGS-84)' });
 
-        amapSat.addTo(map);
+        /* --- 天地图影像（与三维底图同一个源；WGS-84 天然对齐，不用 GCJ 补正） ---
+         * 天地图在这一带是「夏绿 / 冬灰」两块拼接（实测 5x5 瓦片平均色最大差 76），
+         * 直接铺会有一块颜色突兀。自定义瓦片图层：每块算 RGB 均值/标准差，按 0.7
+         * 靠向参考色调（参考 = 起手在样地一带采样 3x3 张的平均），接缝就不刺眼了
+         * —— 与三维地面同一套做法（那边实测极差 68 -> 21）。 */
+        var TDT_TK = 'faa2a38ebee2231bb08b9176019b1652';
+        function tileStatsOf(img) {
+            var S = 64, c = document.createElement('canvas');
+            c.width = S; c.height = S;
+            var g = c.getContext('2d');
+            g.drawImage(img, 0, 0, S, S);
+            var d = g.getImageData(0, 0, S, S).data, n = S * S;
+            var s = [0, 0, 0], s2 = [0, 0, 0];
+            for (var i = 0; i < d.length; i += 4) {
+                for (var k = 0; k < 3; k++) { var v = d[i + k]; s[k] += v; s2[k] += v * v; }
+            }
+            var mean = [], sd = [];
+            for (var j = 0; j < 3; j++) {
+                mean[j] = s[j] / n;
+                sd[j] = Math.sqrt(Math.max(1, s2[j] / n - mean[j] * mean[j]));
+            }
+            return { mean: mean, sd: sd };
+        }
+        function toneMatched(img, st, ref, strength) {
+            var c = document.createElement('canvas');
+            c.width = img.width; c.height = img.height;
+            var g = c.getContext('2d');
+            g.drawImage(img, 0, 0);
+            var d = g.getImageData(0, 0, c.width, c.height), px = d.data;
+            /* 只做均值偏移，而且留死区：本地区域几块本来就均匀，逐块微调反而在瓦片边上
+               留下可见的台阶；只有差得多的（另一片拼接）才拉过来。 */
+            var off = [];
+            for (var k = 0; k < 3; k++) {
+                var dm = ref.mean[k] - st.mean[k];
+                off[k] = (Math.abs(dm) < 25 ? 0 : (dm - (dm > 0 ? 25 : -25))) * strength;
+            }
+            for (var i = 0; i < px.length; i += 4) {
+                for (var j = 0; j < 3; j++) {
+                    var v = px[i + j] + off[j];
+                    px[i + j] = v < 0 ? 0 : (v > 255 ? 255 : v);
+                }
+            }
+            g.putImageData(d, 0, 0);
+            return c;
+        }
+        /* 参考色调：按层级各自算（与三维地面同一套逻辑 —— 那边平均的是同层级 64 块）。
+         * 起手用别的层级当参考会让每块的增益各不相同，反而把画面切成一块块。 */
+        var tdtRefs = {};
+        function tdtRef(z) {
+            if (!tdtRefs[z]) {
+                tdtRefs[z] = new Promise(function (res) {
+                    var p = map.project(map.getCenter(), z).divideBy(256).floor();
+                    var all = [], jobs = [], done = false;
+                    function finish() {
+                        if (done) { return; }
+                        done = true;
+                        if (!all.length) { res(null); return; }
+                        var mean = [0, 0, 0], sd = [0, 0, 0];
+                        all.forEach(function (s) {
+                            for (var k = 0; k < 3; k++) { mean[k] += s.mean[k] / all.length; sd[k] += s.sd[k] / all.length; }
+                        });
+                        res({ mean: mean, sd: sd });
+                    }
+                    /* 采样卡住（预览/跨境链路都可能）也不能拖着不铺瓦片 —— 6 秒到点就用已采到的 */
+                    setTimeout(finish, 6000);
+                    for (var i = -1; i <= 1; i++) for (var j = -1; j <= 1; j++) {
+                        (function (x, y) {
+                            jobs.push(new Promise(function (ok) {
+                                var im = new Image();
+                                im.crossOrigin = 'anonymous';
+                                im.onload = function () {
+                                    try { all.push(tileStatsOf(im)); } catch (e) {}
+                                    ok();
+                                };
+                                im.onerror = function () { ok(); };
+                                im.src = tdtTileUrl(x, y, z, x + y);
+                            }));
+                        }(p.x + i, p.y + j));
+                    }
+                    Promise.all(jobs).then(finish);
+                });
+            }
+            return tdtRefs[z];
+        }
+        function tdtTileUrl(x, y, z, s) {
+            return 'https://t' + ((s || 0) % 8) + '.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile' +
+                   '&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles' +
+                   '&TILEMATRIX=' + z + '&TILEROW=' + y + '&TILECOL=' + x + '&tk=' + TDT_TK;
+        }
+        var TdtLayer = L.TileLayer.extend({
+            createTile: function (coords, done) {
+                var size = this.getTileSize();
+                var tile = document.createElement('canvas');
+                tile.width = size.x; tile.height = size.y;
+                var img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = function () {
+                    tdtRef(Math.min(coords.z, 18)).then(function (ref) {
+                        var g = tile.getContext('2d');
+                        try {
+                            var st = tileStatsOf(img);
+                            g.drawImage(ref ? toneMatched(img, st, ref, 0.7) : img, 0, 0, tile.width, tile.height);
+                        } catch (e) { g.drawImage(img, 0, 0, tile.width, tile.height); }
+                        done(null, tile);
+                    });
+                };
+                img.onerror = function () { done(new Error('tile'), tile); };
+                img.src = this.getTileUrl(coords);
+                return tile;
+            }
+        });
+        var tdtSat = new TdtLayer(
+            'https://t{s}.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0' +
+            '&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles' +
+            '&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=' + TDT_TK,
+            { subdomains: '01234567', maxNativeZoom: 18, maxZoom: 21,
+              attribution: '&copy; 天地图 Tianditu (WGS-84)' });
+
+        tdtSat.addTo(map);           /* 默认底图：天地图（金总选的） */
 
         /* 树木标记要盖在数采标签之上，否则会被完全遮住
          * （circleMarker 默认落在 overlayPane z400，divIcon 落在 markerPane z600） */
@@ -173,7 +291,7 @@
         map.getPane('treePane').style.zIndex = 650;
 
         /* --- 图层：树木按数采分三组，数采本体单独一组 --- */
-        var useGcj = true;                 // 当前底图是否为 GCJ-02 坐标系
+        var useGcj = false;                // 当前底图是否为 GCJ-02 坐标系（默认底图是天地图，WGS-84）
         var markers = {};                  // 树号 -> marker
         var groups = {};                   // 数采 -> LayerGroup
         var loggerMarkers = [];
@@ -415,6 +533,61 @@
         nameLayer.addTo(map);
         if (typeof SITES !== 'undefined') { siteLayer.addTo(map); bigLayer.addTo(map); }
 
+        /* --- 其他台站（小五台 / 驼梁）：做法与东灵山样地一致 —— 实测点拟合的样方框 +
+               名称标注，各自一个可勾选图层；另有「台站切换」按钮直接飞过去。
+               源：js/stations.js（工具/生成台站样地.py 生成，与展板同一套几何）。 --- */
+        var stationLayers = {}, stationShapes = {};
+        if (typeof STATIONS !== 'undefined') {
+            Object.keys(STATIONS).forEach(function (k) {
+                var st = STATIONS[k];
+                var grp = L.layerGroup();
+                stationLayers[k] = grp;
+                stationShapes[k] = [];
+                (st.plots || []).forEach(function (p) {
+                    var poly = L.polygon(p.pts.map(function (q) { return place(q[0], q[1]); }), {
+                        color: st.color, weight: 2.4, opacity: 1, fillColor: st.color, fillOpacity: 0.12 });
+                    poly.bindTooltip(p.nameZh, { direction: 'top', offset: [0, -4] });
+                    poly.addTo(grp);
+                    stationShapes[k].push({ g: p, poly: poly });
+                });
+            });
+        }
+
+        /* 台站切换：点了飞到该站，并只显示该站的样方框（东灵山 = 本站，回到原来的视野） */
+        function stationName(st) { return (window.Lang && Lang.current !== 'zh') ? st.name : st.nameZh; }
+        function goStation(k) {
+            Object.keys(stationLayers).forEach(function (kk) {
+                if (kk === k) { stationLayers[kk].addTo(map); } else { map.removeLayer(stationLayers[kk]); }
+            });
+            if (!k) { fitAll(); return; }
+            var pts = [];
+            (STATIONS[k].plots || []).forEach(function (p) {
+                p.pts.forEach(function (q) { pts.push(place(q[0], q[1])); });
+            });
+            if (pts.length) { map.fitBounds(L.latLngBounds(pts), { padding: [60, 60], maxZoom: 17 }); }
+        }
+        if (typeof STATIONS !== 'undefined') {
+            var sc = L.control({ position: 'topleft' });
+            sc.onAdd = function () {
+                var div = L.DomUtil.create('div', 'station-switch');
+                function btn(label, key, on) {
+                    var b = L.DomUtil.create('button', 'st-btn' + (on ? ' on' : ''), div);
+                    b.type = 'button'; b.textContent = label;
+                    L.DomEvent.on(b, 'click', function (e) {
+                        L.DomEvent.stop(e);
+                        Array.prototype.forEach.call(div.querySelectorAll('.st-btn'), function (x) { x.classList.remove('on'); });
+                        b.classList.add('on');
+                        goStation(key);
+                    });
+                    return b;
+                }
+                btn(t('map.stationDl'), null, true);
+                Object.keys(STATIONS).forEach(function (k) { btn(stationName(STATIONS[k]), k, false); });
+                return div;
+            };
+            sc.addTo(map);
+        }
+
         /* --- 格网编号（VIT/T）：每个网格格子取中心，找最近的 RTK 实测主树命名，
                半透明写在格子中间 —— 与三维那个「格网编号」同一套做法。默认关。 --- */
         var cellNumLayer = L.layerGroup();
@@ -559,11 +732,17 @@
                 o.poly.setLatLngs(o.g.pts.map(function (q) { return place(q[0], q[1]); }));
             });
             nameMarkers.forEach(function (o) { o.m.setLatLng(place(o.lat, o.lon)); });
+            Object.keys(stationShapes).forEach(function (k) {
+                stationShapes[k].forEach(function (o) {
+                    o.poly.setLatLngs(o.g.pts.map(function (q) { return place(q[0], q[1]); }));
+                });
+            });
             map.panTo(place(center[0], center[1]));
         }
 
         map.on('baselayerchange', function (e) {
-            useGcj = (e.name !== 'OpenStreetMap');
+            /* 天地图与 OSM 是 WGS-84，高德是 GCJ-02 —— 底图换了要重新摆放所有标记 */
+            useGcj = (e.name !== t('map.tdt') && e.name !== 'OpenStreetMap');
             replaceAll();
         });
 
@@ -575,6 +754,7 @@
             if (layerControl) { map.removeControl(layerControl); }
 
             var bases = {};
+            bases[t('map.tdt')]       = tdtSat;      /* 默认底图（金总选的天地图） */
             bases[t('map.satellite')] = amapSat;
             bases[t('map.street')]    = amapStreet;
             bases[t('map.osm')]       = osm;
@@ -600,6 +780,13 @@
                 overlays['<span style="color:#3f8fd0">&#9634;</span> ' + t('map.bigLayer')] = bigLayer;
                 overlays['<span style="color:#ffd400">&#9679;</span> ' + t('map.siteLayer')] = siteLayer;
                 overlays['<span style="color:#c9c9c9">A</span> ' + t('map.nameLayer')] = nameLayer;
+            }
+            if (typeof STATIONS !== 'undefined') {
+                Object.keys(STATIONS).forEach(function (k) {
+                    var st = STATIONS[k];
+                    overlays['<span style="color:' + st.color + '">&#9634;</span> ' + stationName(st) +
+                             ' ' + t('map.stationPlots')] = stationLayers[k];
+                });
             }
             Object.keys(devLayers || {}).forEach(function (k) {
                 var st = { dendrometer: '#f0a23c', sapflow: '#3fa9f5', lai: '#b07fd8' }[k];

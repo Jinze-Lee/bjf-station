@@ -30,7 +30,13 @@ with sync_playwright() as p:
     page.on("console", lambda m: console_errors.append(m.text) if m.type == "error" else None)
     page.on("pageerror", lambda e: console_errors.append("PAGEERROR: " + str(e)))
 
-    page.goto(URL, wait_until="networkidle")
+    for _how in ("networkidle", "load", "commit"):
+        # 跨境瓦片会把 networkidle 拖到超时，等不到就退化成 load/commit（断言不变）
+        try:
+            page.goto(URL, wait_until=_how, timeout=20000)
+            break
+        except Exception:
+            continue
     page.wait_for_timeout(2500)
 
     # 图表改成滚到跟前才加载（js/lazy-load.js），这里先催熟再测。
