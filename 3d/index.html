@@ -1833,18 +1833,32 @@
 		 * 跟相机实时同步：表盘随相机转，N 始终指向真实北方向。
 		 * 场景是 Z 向上、+Y 为北，所以相机朝向在水平面的投影 atan2(f.x, f.y) 就是方位角。
 		 * 每帧只在方位变化超过 0.3° 才重画，避免无谓开销。 */
-		var CMP = { cv: null, ctx: null, last: null };
-		function compassAzimuth() {
+		var CMP = { cv: null, ctx: null, last: null, lastPitch: null };
+		/* 相机姿态：方位角（平面转）+ 俯仰角（决定罗盘被看扁多少）。
+		   罗盘按「平放在地面上的实体盘」来画：俯视是正圆，平视压成一条椭圆。 */
+		function compassPose() {
 			var cam = viewer.scene.getActiveCamera();
 			if (!cam) { return null; }
 			var m = cam.matrixWorld.elements;
-			return Math.atan2(-m[8], -m[9]) * 180 / Math.PI;    /* 0=北, 90=东 */
+			var fx = -m[8], fy = -m[9], fz = -m[10];
+			var L = Math.sqrt(fx * fx + fy * fy + fz * fz) || 1;
+			return {
+				az: Math.atan2(fx, fy) * 180 / Math.PI,                       /* 0=北, 90=东 */
+				pitch: Math.asin(Math.max(-1, Math.min(1, fz / L))) * 180 / Math.PI   /* -90=俯视, 0=平视 */
+			};
 		}
-		function drawCompass(az) {
+		function compassAzimuth() {                 /* 兼容旧调用 */
+			var p = compassPose();
+			return p ? p.az : null;
+		}
+		function drawCompass(az, pitch) {
 			var cv = CMP.cv, ctx = CMP.ctx;
 			if (!cv) { return; }
 			var W = cv.width, H = cv.height, cx = W / 2, cy = H / 2 + H * 0.06;
-			var R = W * 0.42, TILT = 0.78, THICK = H * 0.045;
+			var R = W * 0.42;
+			/* 俯仰同步：平视(0°)压到 0.22，俯视(-90°)是正圆 1.0 */
+			var TILT = 0.22 + 0.78 * Math.abs(Math.sin((pitch || 0) * Math.PI / 180));
+			var THICK = H * 0.045 * TILT;
 			ctx.clearRect(0, 0, W, H);
 			/* 盘身厚度 + 投影 */
 			ctx.beginPath();
@@ -1917,11 +1931,12 @@
 				if (!CMP.cv) { return; }
 				CMP.ctx = CMP.cv.getContext('2d');
 			}
-			var az = compassAzimuth();
-			if (az == null) { return; }
-			if (CMP.last != null && Math.abs(az - CMP.last) < 0.3) { return; }
-			CMP.last = az;
-			drawCompass(az);
+			var pose = compassPose();
+			if (!pose) { return; }
+			if (CMP.last != null && Math.abs(pose.az - CMP.last) < 0.3 &&
+			    Math.abs(pose.pitch - CMP.lastPitch) < 0.3) { return; }
+			CMP.last = pose.az; CMP.lastPitch = pose.pitch;
+			drawCompass(pose.az, pose.pitch);
 		}
 
 		(function loop() {
