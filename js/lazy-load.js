@@ -74,6 +74,7 @@
                 'js/chart-metrics.js',
                 'js/observations.js', 'js/chart.js',
                 'js/environment.js', 'js/chart-env.js',
+            'js/chart-demo.js',
                 /* 解锁模块要在两张图之后：它解开数据后要调 SiteChart.reload
                    和 EnvChart.reload，那时两个句柄必须已经存在 */
                 'js/unlock.js'

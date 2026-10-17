@@ -168,6 +168,9 @@ zh: {
     /* --- 环境条件（与树木图表共用时间轴） --- */
     'env.h4':               '环境条件',
     'env.p':                '同一时段台站气象站记录的环境要素，与上方图表<strong>共用时间轴</strong>——在任一张图上缩放或拖动，另一张会跟着走，不必手动对齐。点下面的标签可以增减曲线；默认显示<strong>光照</strong>与<strong>空气温度</strong>，它们是驱动蒸腾的直接因子，与上方液流曲线的对应关系最直观。',
+    'demo.play':            '▶ 实时演示',
+    'demo.stop':            '■ 停止演示',
+    'demo.speed':           '速度',
     'env.all':              '全选',
     'env.none':             '清空',
     'env.empty':            '尚未选择任何变量——点上方标签添加曲线。',
@@ -454,6 +457,9 @@ en: {
     /* --- Environmental conditions (shares its time axis with the tree chart) --- */
     'env.h4':               'Environmental conditions',
     'env.p':                'Conditions recorded by the station weather logger over the same period. This chart <strong>shares its time axis</strong> with the one above — zoom or pan either and the other follows, so the two never need to be lined up by hand. Use the tags below to add or remove series. <strong>Light</strong> and <strong>air temperature</strong> are shown by default: they drive transpiration directly, and their correspondence with the sap flow trace above is the easiest to read.',
+    'demo.play':            '▶ Live demo',
+    'demo.stop':            '■ Stop demo',
+    'demo.speed':           'Speed',
     'env.all':              'Select all',
     'env.none':             'Clear',
     'env.empty':            'No variables selected — pick a tag above to add a series.',

@@ -84,13 +84,14 @@
 
 		/* 右上角图层控件（常开，白底可选面板，同 2D 地图） */
 		.layers { position: relative; pointer-events: auto; }
-		.layers-panel { position: absolute; right: 0; top: 4px; z-index: 2100;
+		.layers-panel { position: absolute; right: 0; top: 40px; z-index: 2100;
 			background: #fff; color: #333; border-radius: 6px; box-shadow: 0 2px 12px rgba(0,0,0,.4);
-			padding: 10px 14px 8px; min-width: 170px;
+			padding: 10px 14px 8px; min-width: 170px; display: none;
 			max-height: calc(100vh - 132px); overflow-y: auto; }   /* 开关多了：矮窗口里滚动，别顶出屏 */
+		.layers-panel.open { display: block; }                    /* 点「图层」按钮展开 */
 		.layers-panel .lp-cap { font-size: 12px; font-weight: 700; color: #666;
 			letter-spacing: .5px; margin: 0 0 4px; }
-		.lbtn { display: none; }   /* 桌面：面板常开，用不到折叠按钮 */
+		.lbtn { display: inline-block; }   /* 「图层」按钮：所有尺寸都显示，点它折叠/展开面板 */
 		.layers-panel label { display: block; padding: 5px 4px; font-size: 14px; cursor: pointer;   /* 5px：14 行时别顶到右下角图例 */
 			user-select: none; white-space: nowrap; border-radius: 4px; }
 		.layers-panel label:hover { background: rgba(108,161,74,.14); }
@@ -293,7 +294,8 @@
 			var ch = document.getElementById('ctrlHint');
 			if (ch) ch.textContent = d.ctrlHint;
 			var lb = document.getElementById('lblLayers'); if (lb) lb.textContent = d.lLayers;
-			var bl = document.getElementById('layersBtn'); if (bl) bl.textContent = d.lLayers;
+			var bl = document.getElementById('layersBtn');
+			if (bl) { bl.textContent = d.lLayers + (document.getElementById('layersPanel').classList.contains('open') ? ' \u25be' : ' \u25b8'); }
 			lb = document.getElementById('lblDet'); if (lb) lb.textContent = d.lDet;
 			lb = document.getElementById('lblBnd'); if (lb) lb.textContent = d.lBnd;
 			lb = document.getElementById('lblPC'); if (lb) lb.textContent = d.lPC;
@@ -472,12 +474,16 @@
 			    pan = document.getElementById('layersPanel');
 			if (!box || !btn || !pan) return;
 			function narrow() { return (window.innerWidth || 1024) < 640; }
-			function setOpen(v) { pan.classList.toggle('open', v); btn.setAttribute('aria-expanded', v ? 'true' : 'false'); }
-			setOpen(!narrow());                       /* 桌面常开；窄屏默认收起 */
+			function setOpen(v) {
+				pan.classList.toggle('open', v);
+				btn.setAttribute('aria-expanded', v ? 'true' : 'false');
+				btn.textContent = ((I18N[LANG] || {}).lLayers || '图层') + (v ? ' \u25be' : ' \u25b8');
+			}
+			setOpen(!narrow());                       /* 桌面默认展开；窄屏默认收起 */
 			btn.addEventListener('click', function () { setOpen(!pan.classList.contains('open')); });
 			/* 捕获阶段：Potree 的输入处理会吞掉冒泡，挂冒泡收不到 */
 			document.addEventListener('pointerdown', function (e) {
-				if (narrow() && pan.classList.contains('open') && !box.contains(e.target)) setOpen(false);
+				if (pan.classList.contains('open') && !box.contains(e.target)) setOpen(false);
 			}, true);
 		}());
 
@@ -1852,9 +1858,7 @@
 			#legend3d { bottom: 66px; max-height: calc(100vh - 460px); overflow-y: auto; }
 		}
 		@media (max-width: 640px) {
-			.layers-panel { left: 0; right: auto; top: 44px; max-height: calc(100vh - 300px); display: none; }
-			.layers-panel.open { display: block; }         /* 窄屏默认收起，点「图层」才展开 */
-			.lbtn { display: inline-block; }
+			.layers-panel { left: 0; right: auto; top: 44px; max-height: calc(100vh - 300px); }
 			.layers-panel label { padding: 7px 4px; }      /* 手机上手指要够大 */
 			/* 手机上底部被镜头条+图例占满，提示条会压在图上；而且「右键拖动」对触屏也不适用 */
 			#ctrlHint { display: none; }
