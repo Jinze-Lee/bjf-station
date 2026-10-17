@@ -143,7 +143,17 @@
         var frame = document.getElementById('canopyFrame');
         if (frame) {
             var loadFrame = function () {
-                if (!frame.getAttribute('src')) { frame.setAttribute('src', frame.getAttribute('data-src')); }
+                if (!frame.getAttribute('src')) {
+                    frame.setAttribute('src', frame.getAttribute('data-src'));
+                    /* 别死等 iframe 的 load 事件：资源慢时它可能很久不触发，看起来就像「点了没反应」。
+                       点下去就先把占位层收起来，另加 8 秒兜底；load 事件到了仍然再兜一次。 */
+                    var ph0 = document.getElementById('canopyPlaceholder');
+                    if (ph0) { ph0.style.display = 'none'; }
+                    setTimeout(function () {
+                        var ph1 = document.getElementById('canopyPlaceholder');
+                        if (ph1) { ph1.style.display = 'none'; }
+                    }, 8000);
+                }
             };
             frame.addEventListener('load', function () {
                 var ph = document.getElementById('canopyPlaceholder');
