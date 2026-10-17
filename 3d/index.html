@@ -55,13 +55,6 @@
 		#camBar .cbtn.stop { background: rgba(90, 55, 45, .6); border-color: rgba(190, 120, 100, .4); }
 		@media (max-width: 640px) { #camBar .cbtn { padding: 5px 9px; font-size: 11.5px; } }
 
-		/* 拟真 3D 指南针（左侧中部，跟相机方位同步） */
-		#compass3d { position: fixed; left: 14px; top: 50%; transform: translateY(-50%);
-			z-index: 1900; pointer-events: none; width: 170px; height: 170px; }
-		@media (max-width: 640px) {
-			#compass3d { width: 108px; height: 108px; left: 8px; top: 40%; }
-		}
-
 		/* 台站切换按钮（左上，标题栏下面） */
 		#staBar { position: fixed; left: 12px; top: 78px; z-index: 1900; display: flex; gap: 6px; }
 		#staBar .sbtn { font: inherit; font-size: 12.5px; padding: 5px 11px; border-radius: 4px; cursor: pointer;
@@ -228,9 +221,6 @@
 	     4 km 见方的局部地形（terrarium 高程 + 天地图影像），并画上该站的样方框。 -->
 	<div id="staBar"></div>
 
-	<!-- 拟真 3D 指南针：倾斜表盘 + 金属外圈 + 红北针，跟相机方位实时同步 -->
-	<canvas id="compass3d" width="170" height="170" title="指北"></canvas>
-
 	<!-- 自动镜头：懒得自己操作就按一个，画面自己动（再点同键 / 用户一动手 = 停） -->
 	<div id="camBar">
 		<button class="cbtn" data-cam="orbit" id="camOrbit">环绕</button>
@@ -340,7 +330,7 @@
 			var html =
 				'<span><i class="mon"></i>' + (s ? '监测树' : 'Monitored') + ' <b>20</b></span><br>' +
 				'<span><i class="log"></i>' + (s ? '数采' : 'Loggers') + ' <b>3</b></span><br>' +
-				'<span><i class="det"></i>' + (s ? '单木覆盖（按物种着色）' : 'Tree cover (by species)') + ' <b>' + (DET_N || 0) + '</b></span>';
+				'<span><i class="det"></i>' + (s ? '单木覆盖（按物种着色）' : 'Tree cover (by species)') + ' <b>' + DET_N + '</b></span>';
 			var keys = Object.keys(SPECIES || {});
 			if (DET_ON && keys.length) {
 				/* 按株数排倒序，画横向条形（颜色即该树种在点云里的着色） */
@@ -1828,106 +1818,10 @@
 			});
 		}());
 
-		/* ---------------- 拟真 3D 指南针 ----------------
-		 * 倾斜的立体表盘：金属外圈 + 刻度 + 方位字母 + 红北针 + 玻璃高光。
-		 * 跟相机实时同步：表盘随相机转，N 始终指向真实北方向。
-		 * 场景是 Z 向上、+Y 为北，所以相机朝向在水平面的投影 atan2(f.x, f.y) 就是方位角。
-		 * 每帧只在方位变化超过 0.3° 才重画，避免无谓开销。 */
-		var CMP = { cv: null, ctx: null, last: null };
-		function compassAzimuth() {
-			var cam = viewer.scene.getActiveCamera();
-			if (!cam) { return null; }
-			var m = cam.matrixWorld.elements;
-			return Math.atan2(-m[8], -m[9]) * 180 / Math.PI;    /* 0=北, 90=东 */
-		}
-		function drawCompass(az) {
-			var cv = CMP.cv, ctx = CMP.ctx;
-			if (!cv) { return; }
-			var W = cv.width, H = cv.height, cx = W / 2, cy = H / 2 + H * 0.06;
-			var R = W * 0.42, TILT = 0.78, THICK = H * 0.045;
-			ctx.clearRect(0, 0, W, H);
-			/* 盘身厚度 + 投影 */
-			ctx.beginPath();
-			ctx.ellipse(cx, cy + THICK, R, R * TILT, 0, 0, Math.PI * 2);
-			var g0 = ctx.createLinearGradient(0, cy - R, 0, cy + R + THICK);
-			g0.addColorStop(0, 'rgba(74,63,46,.95)');
-			g0.addColorStop(1, 'rgba(26,22,16,.95)');
-			ctx.fillStyle = g0; ctx.fill();
-			/* 盘面：先在盘面内旋转，再按倾斜投影压扁 */
-			ctx.save();
-			ctx.translate(cx, cy);
-			ctx.scale(1, TILT);
-			ctx.rotate(-az * Math.PI / 180);
-			var gm = ctx.createLinearGradient(-R, -R, R, R);
-			gm.addColorStop(0, '#dcc98f'); gm.addColorStop(.35, '#8c7538');
-			gm.addColorStop(.55, '#f2e5b4'); gm.addColorStop(1, '#6f5a28');
-			ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fillStyle = gm; ctx.fill();
-			var gd = ctx.createRadialGradient(-R * .3, -R * .35, R * .1, 0, 0, R * .92);
-			gd.addColorStop(0, '#fcf8ec'); gd.addColorStop(1, '#dbcdac');
-			ctx.beginPath(); ctx.arc(0, 0, R * 0.86, 0, Math.PI * 2); ctx.fillStyle = gd; ctx.fill();
-			for (var d = 0; d < 360; d += 5) {
-				var a = (d - 90) * Math.PI / 180;
-				var major = (d % 30 === 0), card = (d % 90 === 0);
-				var r1 = R * 0.82, r2 = R * (card ? 0.60 : (major ? 0.68 : 0.75));
-				ctx.beginPath();
-				ctx.moveTo(Math.cos(a) * r1, Math.sin(a) * r1);
-				ctx.lineTo(Math.cos(a) * r2, Math.sin(a) * r2);
-				ctx.lineWidth = card ? 3.2 : (major ? 2.2 : 1);
-				ctx.strokeStyle = card ? '#3a3020' : 'rgba(60,50,35,.75)';
-				ctx.stroke();
-			}
-			ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-			[['N', 0, '#c0392b', 1.18], ['E', 90, '#3a3020', 1], ['S', 180, '#3a3020', 1], ['W', 270, '#3a3020', 1]]
-				.forEach(function (q) {
-					var a = (q[1] - 90) * Math.PI / 180;
-					ctx.font = 'bold ' + Math.round(R * 0.30 * q[3]) + 'px Georgia,"Times New Roman",serif';
-					ctx.fillStyle = q[2];
-					ctx.fillText(q[0], Math.cos(a) * R * 0.50, Math.sin(a) * R * 0.50);
-				});
-			function needle(len, w, col) {
-				ctx.beginPath();
-				ctx.moveTo(0, -len); ctx.lineTo(w, 0); ctx.lineTo(0, len * 0.10); ctx.lineTo(-w, 0);
-				ctx.closePath();
-				ctx.fillStyle = col; ctx.fill();
-				ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(40,32,20,.55)'; ctx.stroke();
-			}
-			needle(R * 0.68, R * 0.085, '#c0392b');
-			ctx.save(); ctx.rotate(Math.PI); needle(R * 0.68, R * 0.085, '#6b6152'); ctx.restore();
-			ctx.beginPath(); ctx.arc(0, 0, R * 0.075, 0, Math.PI * 2);
-			ctx.fillStyle = '#f2e9d2'; ctx.fill();
-			ctx.lineWidth = 1.4; ctx.strokeStyle = '#8c7538'; ctx.stroke();
-			ctx.restore();
-			/* 玻璃高光（不随盘面转） */
-			ctx.save();
-			ctx.beginPath();
-			ctx.ellipse(cx, cy, R * 0.86, R * 0.86 * TILT, 0, 0, Math.PI * 2);
-			var gh = ctx.createLinearGradient(cx - R, cy - R, cx + R * .4, cy + R * .5);
-			gh.addColorStop(0, 'rgba(255,255,255,.34)');
-			gh.addColorStop(.45, 'rgba(255,255,255,.06)');
-			gh.addColorStop(1, 'rgba(255,255,255,0)');
-			ctx.fillStyle = gh; ctx.fill();
-			ctx.restore();
-			ctx.beginPath();
-			ctx.ellipse(cx, cy, R, R * TILT, 0, 0, Math.PI * 2);
-			ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(30,26,18,.75)'; ctx.stroke();
-		}
-		function compassStep() {
-			if (!CMP.cv) {
-				CMP.cv = document.getElementById('compass3d');
-				if (!CMP.cv) { return; }
-				CMP.ctx = CMP.cv.getContext('2d');
-			}
-			var az = compassAzimuth();
-			if (az == null) { return; }
-			if (CMP.last != null && Math.abs(az - CMP.last) < 0.3) { return; }
-			CMP.last = az;
-			drawCompass(az);
-		}
-
 		(function loop() {
 			var now = performance.now();
 			if (CAM.on) camStep(now);
-			project(); drawDots(); ensureSiteZ(); ensureMicroZ(); ensureFacZ(); drawBounds(); drawCells(); compassStep();
+			project(); drawDots(); ensureSiteZ(); ensureMicroZ(); ensureFacZ(); drawBounds(); drawCells();
 			requestAnimationFrame(loop);
 		})();
 	</script>
