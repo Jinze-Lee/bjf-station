@@ -1215,7 +1215,7 @@
 		function loadImage(src, ms) {
 			/* 必须带超时：地形瓦片只要有一张挂住，Promise.all 就永远不结束，
 			   地面会一直不铺（金总遇到的「只有点云没有底图」就是这个）。 */
-			ms = ms || 12000;
+			ms = ms || 30000;
 			return new Promise(function (res, rej) {
 				var im = new Image(), done = false;
 				im.crossOrigin = 'anonymous';
