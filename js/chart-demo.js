@@ -16,7 +16,7 @@
 (function () {
     'use strict';
 
-    var SPEEDS = [0.5, 1, 2, 4];
+    var SPEEDS = [0.5, 1, 2, 4, 8, 16, 32, 64, 100];
     var speedIdx = 1;
     var raf = null, t0 = 0, span = null, running = false;
 
