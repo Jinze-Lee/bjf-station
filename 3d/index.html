@@ -744,13 +744,9 @@
 			if (SITE3 || !SITES || !window.groundZ) return;
 			function gz(E, N) { var z = window.groundZ(E, N); return isFinite(z) ? z + 1.0 : null; }
 			function ring(list) {
-				var out = [];
-				for (var i = 0; i < list.length; i++) {
-					var z = gz(list[i][0], list[i][1]);
-					if (z == null) return null;
-					out.push([list[i][0], list[i][1], z]);
-				}
-				return out;
+				if (gz(list[0][0], list[0][1]) == null) { return null; }
+				var r = densifyLine(list, 5, gz);
+				return r.length ? r : null;
 			}
 			var areas = [], points = [];
 			(SITES.areas || []).forEach(function (a) {
@@ -782,17 +778,56 @@
 			});
 		}
 
+		/* 把折线按 step 米加密，逐点取地形高程 —— 让样地框/格网贴着起伏的地表走，
+		 * 而不是几个顶点之间拉直线（原来只有 5~7 个顶点，顺着坡看就发飘、扎地）。
+		 * zFn 取不到值时退化为上一有效高程（再不行用原顶点高程），不会因为一个点失败整条不画。 */
+		function densifyLine(list, step, zFn) {
+			if (!list || list.length < 2 || !zFn) { return list; }
+			var out = [], lastZ = null;
+			function push(E, N, fallback) {
+				var z = zFn(E, N);
+				if (!isFinite(z)) { z = (lastZ != null) ? lastZ : fallback; }
+				if (!isFinite(z)) { return; }
+				lastZ = z;
+				out.push([E, N, z]);
+			}
+			for (var i = 0; i < list.length - 1; i++) {
+				var a = list[i], b = list[i + 1];
+				var dx = b[0] - a[0], dy = b[1] - a[1];
+				var n = Math.max(1, Math.ceil(Math.sqrt(dx * dx + dy * dy) / step));
+				for (var k = 0; k < n; k++) {
+					var t = k / n;
+					push(a[0] + dx * t, a[1] + dy * t, a[2]);
+				}
+			}
+			var L = list[list.length - 1];
+			push(L[0], L[1], L[2]);
+			return out;
+		}
+		/* 加密结果缓存：groundZ 会随 DEM 到位换一次（更准），换一次重算一次 */
+		var BNDS_DENSE = null, BNDS_GZ = null;
+		function bndRings(key) {
+			if (window.groundZ && window.groundZ !== BNDS_GZ && BNDS) {
+				BNDS_GZ = window.groundZ;
+				BNDS_DENSE = {
+					boundaries: (BNDS.boundaries || []).map(function (o) { return densifyLine(o.pts, 4, window.groundZ); }),
+					grid20: (BNDS.grid20 || []).map(function (o) { return densifyLine(o.pts, 8, window.groundZ); }),
+					grid40: (BNDS.grid40 || []).map(function (o) { return densifyLine(o.pts, 8, window.groundZ); })
+				};
+			}
+			if (BNDS_DENSE) { return BNDS_DENSE[key]; }
+			return (BNDS[key] || []).map(function (o) { return o.pts; });
+		}
+
 		function drawBounds() {
 			var pc = viewer.scene.pointclouds[0], cam = viewer.scene.getActiveCamera();
 			if (!pc || !cam || !BNDS) return;
 			var V = cam.matrixWorldInverse.elements, P = cam.projectionMatrix.elements;
-			if (BND_ON) {
-				(BNDS.boundaries || []).forEach(function (b) {
-					drawRing(b.pts, V, P, '#f98422', '#f98422', 2.5, 0.16, true);
+			if (BND_ON) bndRings('boundaries').forEach(function (p) {
+					drawRing(p, V, P, '#f98422', '#f98422', 2.5, 0.16, true);
 				});
-			}
-			if (G20_ON) (BNDS.grid20 || []).forEach(function (g) { drawRing(g.pts, V, P, null, 'rgba(235,235,235,.75)', 1.1, 0, true); });
-			if (G40_ON) (BNDS.grid40 || []).forEach(function (g) { drawRing(g.pts, V, P, null, 'rgba(255,210,127,.85)', 1.6, 0, true); });
+			if (G20_ON) bndRings('grid20').forEach(function (p) { drawRing(p, V, P, null, 'rgba(235,235,235,.75)', 1.1, 0, true); });
+			if (G40_ON) bndRings('grid40').forEach(function (p) { drawRing(p, V, P, null, 'rgba(255,210,127,.85)', 1.6, 0, true); });
 			if (DRAIN_ON) (BNDS.drainage || []).forEach(function (l) { drawRing(l, V, P, null, 'rgba(72,138,178,0.85)', 1.3, 0, false); });   /* 水系：灰蓝细线，不抢视线 */
 			/* 大样地 / 白桦林样地：蓝色描边，跟橙色三个样地区分开 */
 			if (BIG_ON && SITE3) {
@@ -1285,8 +1320,8 @@
 			}
 			var c = window.PCBOX;
 			var cx = (c.min[0] + c.max[0]) / 2, cy = (c.min[1] + c.max[1]) / 2;
-			var S = 3200, SEG = 160, VN = SEG + 1;          /* 地面 3.2 km、160 段（约 20 m 一格） */
-			var MAXTILE = 64;
+			var S = 4525, SEG = 224, VN = SEG + 1;          /* 地面 4.5 km（面积 2×）、224 段（约 20 m 一格） */
+			var MAXTILE = 144;   /* 4.5 km 在 z16 下约 121 张，留点余量 */
 			var dem = null;                                  /* 样地 DEM 高程栅格 */
 			var ter = null, tW = 0, tH = 0;                   /* 旧字段，保留兼容 */
 			var terGrid = null;                              /* 本地烘焙的周边高程网格 */

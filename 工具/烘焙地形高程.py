@@ -3,7 +3,7 @@
 （国内访问 s3.amazonaws.com 经常失败，之前会导致地面退化成一块平板）。
 
 输出：
-  3d/terrain.json      东灵山地面（3.2 km，161x161）
+  3d/terrain.json      东灵山地面（4.5 km，225x225）
   3d/terrain_xwt.json  小五台局部（4 km，81x81）
   3d/terrain_tl.json   驼梁局部（4 km，81x81）
 格式：{ bounds:[E0,N0,E1,N1], n, z:[按行主序，行0=北边] }
@@ -13,6 +13,7 @@
 import io
 import json
 import math
+import sys
 import time
 import urllib.request
 from pathlib import Path
@@ -28,7 +29,7 @@ op.addheaders = [("User-Agent", "Mozilla/5.0")]
 
 # 三个区域的中心（UTM50N）与半幅
 TARGETS = [
-    ("terrain.json",     365600.0, 4424400.0, 1600.0, 160),   # 东灵山地面 3.2 km
+    ("terrain.json",     365600.0, 4424400.0, 2262.5, 224),   # 东灵山地面 4.5 km（面积 2×）
     ("terrain_xwt.json", None, None, 2000.0, 80),             # 小五台（下面按站点填）
     ("terrain_tl.json",  None, None, 2000.0, 80),             # 驼梁
 ]
@@ -77,7 +78,10 @@ def fetch_terrarium(lat_min, lat_max, lon_min, lon_max):
 
 
 def main():
+    only = set(sys.argv[1:])            # 可选：只烘指定文件，如 python 工具/烘焙地形高程.py terrain.json
     for fn, cx, cy, half, n in TARGETS:
+        if only and fn not in only:
+            continue
         print("== %s  中心 %.0f,%.0f  半幅 %.0f m  %dx%d" % (fn, cx, cy, half, n + 1, n + 1))
         E0, N0, E1, N1 = cx - half, cy - half, cx + half, cy + half
         lons, lats = rio("EPSG:32650", "EPSG:4326", [E0, E1, E0, E1], [N0, N0, N1, N1])
