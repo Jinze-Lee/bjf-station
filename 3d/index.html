@@ -1063,7 +1063,13 @@
 				(data.trees || []).forEach(function (t) { if (t.id) TREE_IDS[t.id] = 1; });
 				/* RTK 实测主树/样方内树的散点已按金总要求全部移除 */
 				addDevices();
-				/* 地面的触发改到渲染循环里兜底（见 ensureGround）：不再依赖这条链的时序。 */
+				/* 等点云包围盒（PCBOX）与 DOTPTS 都就绪再铺地面。原来是 900ms 一把梭 ——
+				   点云那 9 块下得慢时 PCBOX 还没值，buildGround 会静默返回、再也不重试，
+				   地面就永远不铺了（实测偶发）。改成轮询等，最多等 30 秒。 */
+				(function waitGround(n) {
+					if (window.PCBOX && DOTPTS.length) { buildGround(); return; }
+					if (n < 60) { setTimeout(function () { waitGround(n + 1); }, 500); }
+				}(0));
 				renderLegend();
 			}).catch(function (e) { console.info('[3d] 注解加载失败：' + (e && e.message ? e.message : e)); });
 
@@ -1201,28 +1207,13 @@
 			var r = lat * Math.PI / 180;
 			return [(lon + 180) / 360, (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2];
 		}
-		/* 本地 JSON 带重试：预览服务器/弱网下偶发失败，别一次失败就放弃 */
-		function getJSON(url, tries) {
-			tries = (tries == null) ? 3 : tries;
-			return fetch(url).then(function (r) { return r.json(); }).catch(function (e) {
-				if (tries <= 1) { throw e; }
-				return new Promise(function (ok) { setTimeout(ok, 700); }).then(function () {
-					return getJSON(url, tries - 1);
-				});
-			});
-		}
-
-		function loadImage(src, ms) {
-			/* 必须带超时：地形瓦片只要有一张挂住，Promise.all 就永远不结束，
-			   地面会一直不铺（金总遇到的「只有点云没有底图」就是这个）。 */
-			ms = ms || 12000;
+		function loadImage(src) {
 			return new Promise(function (res, rej) {
-				var im = new Image(), done = false;
+				var im = new Image();
 				im.crossOrigin = 'anonymous';
-				im.onload = function () { if (!done) { done = true; res(im); } };
-				im.onerror = function () { if (!done) { done = true; rej(new Error('image error')); } };
+				im.onload = function () { res(im); };
+				im.onerror = rej;
 				im.src = src;
-				setTimeout(function () { if (!done) { done = true; rej(new Error('image timeout')); } }, ms);
 			});
 		}
 
@@ -1267,23 +1258,16 @@
 			return c;
 		}
 
-		function buildGround(tryN) {
+		function buildGround() {
 			if (GROUND || !window.PCBOX || typeof proj4 !== 'function') return;
 			var P = findProtos();
-			if (!P) {
-				/* 导航立方体/罗盘是 Potree 异步建的，早跑一步就借不到构造器 —— 轮询等它 */
-				tryN = tryN || 0;
-				if (tryN < 40) { setTimeout(function () { buildGround(tryN + 1); }, 500); }
-				else { console.info('[3d] 借不到 THREE 构造器，影像地面跳过'); }
-				return;
-			}
+			if (!P) { console.info('[3d] 借不到 THREE 构造器，影像地面跳过'); return; }
 			var c = window.PCBOX;
 			var cx = (c.min[0] + c.max[0]) / 2, cy = (c.min[1] + c.max[1]) / 2;
 			var S = 3200, SEG = 160, VN = SEG + 1;          /* 地面 3.2 km、160 段（约 20 m 一格） */
 			var MAXTILE = 64;
 			var dem = null;                                  /* 样地 DEM 高程栅格 */
-			var ter = null, tW = 0, tH = 0;                   /* 旧字段，保留兼容 */
-			var terGrid = null;                              /* 本地烘焙的周边高程网格 */
+			var ter = null, tW = 0, tH = 0;                   /* 全球高程栅格（周边地形） */
 
 			/* 地面四角（WGS-84 与 GCJ 各一份，分别给高程与影像用） */
 			var corners = [[cx - S / 2, cy - S / 2], [cx + S / 2, cy - S / 2],
@@ -1316,10 +1300,15 @@
 			cv.width = nx * 256; cv.height = ny * 256;
 			var ictx = cv.getContext('2d');
 
-			/* ---- 2) 周边高程：读本地烘焙的 3d/terrain.json ----------
-			 * 以前是运行期去取 AWS terrarium 瓦片，国内访问 s3.amazonaws.com 经常失败，
-			 * 地面会退化成一块平板（顶点全在同一高程）。现在改成预先烘焙好的本地文件。 */
-			var terGridP = getJSON('terrain.json').catch(function () { return null; });
+			/* ---- 2) 全球高程瓦片（周边地形） ---- */
+			var tn = Math.pow(2, TERRAIN_Z);
+			var tx0 = Math.floor(merc(bW.latMax, 0)[1] * 0 + (bW.lonMin + 180) / 360 * tn);
+			var tx1 = Math.floor((bW.lonMax + 180) / 360 * tn);
+			var ty0 = Math.floor(merc(bW.latMax, 0)[1] * tn), ty1 = Math.floor(merc(bW.latMin, 0)[1] * tn);
+			var tnx = tx1 - tx0 + 1, tny = ty1 - ty0 + 1;
+			var tcv = document.createElement('canvas');
+			tcv.width = tnx * 256; tcv.height = tny * 256;
+			var tctx = tcv.getContext('2d');
 
 			/* ---- 3) 载入影像瓦片 ----
 			 * 天地图在这一带是「夏绿 / 冬灰」两块拼接（实测 5x5 瓦片平均色最大差 76），
@@ -1335,11 +1324,18 @@
 					}).catch(function () {}));
 				}(ix, iy));
 			}
+			if (tnx * tny <= 16) {
+				for (var tx = 0; tx < tnx; tx++) for (var ty = 0; ty < tny; ty++) {
+					(function (tx, ty) {
+						jobs.push(loadImage(terrariumURL(tx0 + tx, ty0 + ty, TERRAIN_Z, 0)).then(function (im) {
+							tctx.drawImage(im, tx * 256, ty * 256); terOK++;
+						}).catch(function () {}));
+					}(tx, ty));
+				}
+			}
 
-			Promise.all(jobs.concat([terGridP])).then(function (res) {
-				terGrid = res[res.length - 1] || null;
+			Promise.all(jobs).then(function () {
 				if (!imgOK) { console.info('[3d] 影像瓦片全失败，地面跳过'); return; }
-				if (!terGrid) { console.info('[3d] 本地高程网格取不到，先不铺地面（避免垫一块平板）'); return; }
 				/* 拼图：逐块把色调靠向「全体瓦片的平均值」——
 				   样地那张恰好落在冬灰那半，拿它当基准会把整片压暗。 */
 				var ref = null;
@@ -1355,7 +1351,12 @@
 					var src = (GROUND_SRC === 'tianditu' && ref) ? toneMatch(t.im, t.st, ref, 0.7) : t.im;
 					ictx.drawImage(src, t.ix * 256, t.iy * 256);
 				});
-
+				if (terOK) {
+					try {
+						tW = tcv.width; tH = tcv.height;
+						ter = tctx.getImageData(0, 0, tW, tH).data;
+					} catch (e) { ter = null; }
+				}
 				/* 样地 DEM */
 				/* 这个 fetch 有时会一直挂着不返回（预览服务器被 Potree 的 worker/节点请求挤住），
 				   一挂地面就永远不铺 —— 加 8 秒超时、失败重试两次；全失败就当没有 DEM
@@ -1382,18 +1383,15 @@
 				});
 			});
 
-			/* 周边高程：从烘焙网格双线性取值（terGrid 由 terrain.json 提供） */
+			/* 全球高程瓦片 -> 米（terrarium 编码：(R*256+G+B/256)-32768） */
 			function terHeight(lat, lon) {
-				if (!terGrid || !terGrid.z) { return null; }
-				var b = terGrid.bounds, n = terGrid.n;
-				var p = proj4('EPSG:4326', 'EPSG:32650', [lon, lat]);
-				var E = Math.max(b[0], Math.min(b[2], p[0]));    /* 越界夹到边缘，别让顶点掉到 0 */
-				var N = Math.max(b[1], Math.min(b[3], p[1]));
-				var fx = (E - b[0]) / (b[2] - b[0]) * n, fy = (b[3] - N) / (b[3] - b[1]) * n;
-				var i = Math.min(n - 1, Math.max(0, Math.floor(fx))), j = Math.min(n - 1, Math.max(0, Math.floor(fy)));
-				var u = fx - i, v = fy - j, z = terGrid.z;
-				return (z[j * (n + 1) + i] * (1 - u) + z[j * (n + 1) + i + 1] * u) * (1 - v) +
-				       (z[(j + 1) * (n + 1) + i] * (1 - u) + z[(j + 1) * (n + 1) + i + 1] * u) * v;
+				if (!ter) return null;
+				var m = merc(lat, lon);
+				var px = m[0] * tn * 256 - tx0 * 256, py = m[1] * tn * 256 - ty0 * 256;
+				var xi = Math.max(0, Math.min(tW - 1, Math.round(px)));
+				var yi = Math.max(0, Math.min(tH - 1, Math.round(py)));
+				var o = (yi * tW + xi) * 4;
+				return (ter[o] * 256 + ter[o + 1] + ter[o + 2] / 256) - 32768;
 			}
 
 			function demHeight(E, N) {                        /* 双线性取样地 DEM；界外返回 null */
@@ -1409,6 +1407,7 @@
 			}
 
 			function makeMesh() {
+				if (GROUND) { viewer.scene.scene.remove(GROUND); GROUND = null; }   /* 重铺（DEM 到位后）：先把旧网格撤掉 */
 				/* 基准对齐：样地中心处 DEM 与全球高程的差值 */
 				var off = 0;
 				var dC = demHeight(cx, cy), tC = terHeight(wgs[0][0], wgs[0][1]);
@@ -1466,10 +1465,8 @@
 				mesh.scale.set(S, S, 1);
 				mesh.visible = GROUND_ON;
 				viewer.scene.scene.add(mesh);
-				var old2 = GROUND;                       /* 先建好新的，再撤旧的：中间不留空窗 */
 				GROUND = mesh;
-				if (old2 && old2 !== mesh) { viewer.scene.scene.remove(old2); }
-				console.info('[3d] 地形地面已铺好：影像 ' + imgOK + ' 张、高程网格 ' + (terGrid ? '本地' : '无') + '、基准差 ' +
+				console.info('[3d] 地形地面已铺好：影像 ' + imgOK + ' 张、高程瓦片 ' + terOK + ' 张、基准差 ' +
 				             Math.round(off) + ' m');
 			}
 		}
@@ -1507,10 +1504,14 @@
 			var cv = document.createElement('canvas');
 			cv.width = nx * 256; cv.height = ny * 256;
 			var ictx = cv.getContext('2d');
-			/* 高程：读预先烘焙的本地网格（小五台 terrain_xwt.json / 驼梁 terrain_tl.json），
-			   不再运行期取 AWS terrarium —— 国内取不到会让地形拍成一块平板。 */
-			var terFile = (key === 'xiaowutai') ? 'terrain_xwt.json' : 'terrain_tl.json';
-			var terGridP = getJSON(terFile).catch(function () { return null; });
+			/* 高程：terrarium（全球 30 m） */
+			var tn = Math.pow(2, TERRAIN_Z);
+			var tx0 = Math.floor((bI.lonMin + 180) / 360 * tn), tx1 = Math.floor((bI.lonMax + 180) / 360 * tn);
+			var ty0 = Math.floor(merc(bI.latMax, 0)[1] * tn), ty1 = Math.floor(merc(bI.latMin, 0)[1] * tn);
+			var tnx = tx1 - tx0 + 1, tny = ty1 - ty0 + 1;
+			var tcv = document.createElement('canvas');
+			tcv.width = tnx * 256; tcv.height = tny * 256;
+			var tctx = tcv.getContext('2d');
 			var jobs = [], tiles = [], imgOK = 0, terOK = 0;
 			for (var ix = 0; ix < nx; ix++) for (var iy = 0; iy < ny; iy++) {
 				(function (ix, iy) {
@@ -1519,26 +1520,28 @@
 					}).catch(function () {}));
 				}(ix, iy));
 			}
-			var terGrid = null;
+			for (var tx = 0; tx < tnx; tx++) for (var ty = 0; ty < tny; ty++) {
+				(function (tx, ty) {
+					jobs.push(loadImage(terrariumURL(tx0 + tx, ty0 + ty, TERRAIN_Z, 0)).then(function (im) {
+						tctx.drawImage(im, tx * 256, ty * 256); terOK++;
+					}).catch(function () {}));
+				}(tx, ty));
+			}
+			var ter = null, tW = 0, tH = 0;
 			function terAt(lat, lon) {
-				if (!terGrid || !terGrid.z) { return null; }
-				var b = terGrid.bounds, nn = terGrid.n;
-				var q = proj4('EPSG:4326', 'EPSG:32650', [lon, lat]);
-				var E = Math.max(b[0], Math.min(b[2], q[0]));
-				var N = Math.max(b[1], Math.min(b[3], q[1]));
-				var fx = (E - b[0]) / (b[2] - b[0]) * nn, fy = (b[3] - N) / (b[3] - b[1]) * nn;
-				var i = Math.min(nn - 1, Math.max(0, Math.floor(fx))), j = Math.min(nn - 1, Math.max(0, Math.floor(fy)));
-				var u = fx - i, v = fy - j, z = terGrid.z;
-				return (z[j * (nn + 1) + i] * (1 - u) + z[j * (nn + 1) + i + 1] * u) * (1 - v) +
-				       (z[(j + 1) * (nn + 1) + i] * (1 - u) + z[(j + 1) * (nn + 1) + i + 1] * u) * v;
+				if (!ter) { return null; }
+				var m = merc(lat, lon);
+				var px = m[0] * tn * 256 - tx0 * 256, py = m[1] * tn * 256 - ty0 * 256;
+				var xi = Math.max(0, Math.min(tW - 1, Math.round(px)));
+				var yi = Math.max(0, Math.min(tH - 1, Math.round(py)));
+				var o = (yi * tW + xi) * 4;
+				return (ter[o] * 256 + ter[o + 1] + ter[o + 2] / 256) - 32768;
 			}
 			var api = { id: key, cx: cx, cy: cy, S: S, mesh: null, base: 0, ready: false };
 			STA_GROUND[key] = api;
 
-			Promise.all(jobs.concat([terGridP])).then(function (res) {
-				terGrid = res[res.length - 1] || null;
+			Promise.all(jobs).then(function () {
 				if (!imgOK) { console.info('[3d] ' + st.nameZh + ' 影像瓦片全失败，跳过'); return; }
-				if (!terGrid) { console.info('[3d] ' + st.nameZh + ' 本地高程网格取不到，跳过'); return; }
 				var ref = null;
 				if (tiles.length) {
 					var sum = [0, 0, 0], sum2 = [0, 0, 0];
@@ -1547,7 +1550,10 @@
 					for (var j = 0; j < 3; j++) { ref.mean[j] = sum[j] / tiles.length; ref.sd[j] = sum2[j] / tiles.length; }
 				}
 				tiles.forEach(function (t) { ictx.drawImage(toneMatch(t.im, t.st, ref, 0.7), t.ix * 256, t.iy * 256); });
-
+				if (terOK) {
+					try { tW = tcv.width; tH = tcv.height; ter = tctx.getImageData(0, 0, tW, tH).data; }
+					catch (e) { ter = null; }
+				}
 				function hAt(E, N) {
 					var w = proj4('EPSG:32650', 'EPSG:4326', [E, N]);
 					return terAt(w[1], w[0]);
@@ -1590,7 +1596,7 @@
 				});
 				api.ready = true;
 				if (STA_ACTIVE === key) { flyStation(key); }
-				console.info('[3d] ' + st.nameZh + ' 局部地形已建好：影像 ' + imgOK + ' 张、高程网格 ' + (terGrid ? '本地' : '无'));
+				console.info('[3d] ' + st.nameZh + ' 局部地形已建好：影像 ' + imgOK + ' 张、高程 ' + terOK + ' 张');
 			});
 			return api;
 		}
@@ -1933,20 +1939,10 @@
 			drawCompass(pose.az, pose.pitch);
 		}
 
-		/* 地面触发兜底：渲染循环里检查一次条件，满足就铺（buildGround 内部自带重试）。
-		   只尝试一次，避免每帧重复发起。 */
-		var GROUND_TRY = 0;
-		function ensureGround() {
-			if (GROUND || GROUND_TRY > 0) { return; }
-			if (!window.PCBOX || !DOTPTS.length) { return; }
-			GROUND_TRY++;
-			buildGround();
-		}
-
 		(function loop() {
 			var now = performance.now();
 			if (CAM.on) camStep(now);
-			ensureGround(); project(); drawDots(); ensureSiteZ(); ensureMicroZ(); ensureFacZ(); drawBounds(); drawCells(); compassStep();
+			project(); drawDots(); ensureSiteZ(); ensureMicroZ(); ensureFacZ(); drawBounds(); drawCells(); compassStep();
 			requestAnimationFrame(loop);
 		})();
 	</script>
