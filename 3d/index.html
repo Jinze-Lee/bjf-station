@@ -114,10 +114,12 @@
 
 		/* 右上角图层控件（常开，白底可选面板，同 2D 地图） */
 		.layers { position: relative; pointer-events: auto; }
-		.layers-panel { position: absolute; right: 0; top: 40px; z-index: 2100;
+		/* 面板固定在视口最右上角（原来挂在「图层」按钮下面，压住画面）。
+		   position:fixed 后不再受顶栏换行影响，窄屏也不用再往左挪。 */
+		.layers-panel { position: fixed; right: 12px; top: 62px; z-index: 2100;
 			background: #fff; color: #333; border-radius: 6px; box-shadow: 0 2px 12px rgba(0,0,0,.4);
-			padding: 10px 14px 8px; min-width: 170px; display: none;
-			max-height: calc(100vh - 132px); overflow-y: auto; }   /* 开关多了：矮窗口里滚动，别顶出屏 */
+			padding: 10px 14px 8px; min-width: 170px; max-width: calc(100vw - 24px); display: none;
+			max-height: calc(100vh - 84px); overflow-y: auto; }   /* 开关多了：矮窗口里滚动，别顶出屏 */
 		.layers-panel.open { display: block; }                    /* 点「图层」按钮展开 */
 		.layers-panel .lp-cap { display: flex; align-items: center; justify-content: space-between; gap: 10px;
 			font-size: 12px; font-weight: 700; color: #666;
@@ -2182,7 +2184,7 @@
 			else {
 				pan.style.transform = 'scale(' + LP_SCALE + ')';
 				/* 放大后可视高度也变大，滚动区按比例收，否则会顶出屏幕 */
-				pan.style.maxHeight = Math.round((innerHeight - 132) / LP_SCALE) + 'px';
+				pan.style.maxHeight = Math.round((innerHeight - 84) / LP_SCALE) + 'px';
 			}
 			var b = document.getElementById('lpZoom');
 			if (b) { b.textContent = Math.round(LP_SCALE * 100) + '%'; }
@@ -2436,7 +2438,8 @@
 			#legend3d { bottom: 66px; max-height: calc(100vh - 460px); overflow-y: auto; }
 		}
 		@media (max-width: 640px) {
-			.layers-panel { left: 0; right: auto; top: 44px; max-height: calc(100vh - 300px); }
+			/* 面板已固定在视口右上角，不再需要往左挪；只收窄高度 */
+			.layers-panel { max-height: calc(100vh - 220px); }
 			.layers-panel label { padding: 7px 4px; }      /* 手机上手指要够大 */
 			/* 手机上底部被镜头条+图例占满，提示条会压在图上；而且「右键拖动」对触屏也不适用 */
 			#ctrlHint { display: none; }
