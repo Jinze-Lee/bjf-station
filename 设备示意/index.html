@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>设备布设与数据传输示意图 · 北京森林生态系统研究站</title>
+<style>
+  :root {
+    --ink:      #22322a;
+    --ink-soft: #5d7268;
+    --ground:   #d5e2d8;
+    --bus:      #2a7fb8;
+    --bg:       #f7faf7;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.6 "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1680px; margin: 0 auto; padding: 26px 26px 40px; }
+
+  header h1 { margin: 0 0 6px; font-size: 25px; letter-spacing: .5px; }
+  header p  { margin: 0; color: var(--ink-soft); font-size: 14px; }
+  header .en { color: #93a79b; font-size: 12.5px; }
+
+  /* 舞台：内部按 1800×800 的比例摆，随宽度等比缩放；窄屏横向滚动不压扁 */
+  .stage-wrap { overflow-x: auto; overflow-y: hidden; }
+  .stage {
+    position: relative;
+    width: 100%;
+    min-width: 1200px;
+    aspect-ratio: 1800 / 800;
+    margin: 12px 0 0;
+  }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  /* 地面线 */
+  .stage .ground {
+    position: absolute; left: 2%; width: 88%;
+    bottom: 12.5%; height: 0;
+    border-top: 1.5px solid var(--ground);
+  }
+
+  /* 实拍设备（抠过主体） */
+  .ph {
+    position: absolute; bottom: 12.5%;
+    width: auto; height: auto;
+    /* 白色柔光让实拍设备从点云里“跳”出来，再加一点落地阴影 */
+    filter: drop-shadow(0 0 16px rgba(255, 255, 255, .95))
+            drop-shadow(0 8px 12px rgba(30, 60, 42, .18));
+  }
+  .ph.trunk   { left: 3.3%;  height: 37.5%; }
+  .ph.met     { left: 21%;   height: 27.5%; }
+  .ph.tripod  { left: 35.5%; height: 27.5%; }
+  .ph.cabinet { left: 65.5%; height: 35%; }
+
+  /* 设备三角标 */
+  .mark { position: absolute; transform: translateX(-50%); text-align: center; white-space: nowrap; }
+  .mark .tri {
+    width: 18px; height: 16px; margin: 0 auto 2px;
+    background: #2f7a4f;
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+    filter: drop-shadow(0 2px 3px rgba(30, 60, 42, .25));
+  }
+  /* 标签压在白底上，压在点云上也看得清 */
+  .mark .txt {
+    display: inline-block; padding: 2px 9px; border-radius: 9px;
+    background: rgba(255, 255, 255, .88);
+    border: 1px solid #e2ece5;
+    box-shadow: 0 1px 4px rgba(30, 60, 42, .07);
+  }
+  .mark .nm { font-size: 13.5px; font-weight: 600; }
+  .mark .sub { font-size: 11.5px; color: #8ea296; }
+
+  /* 链路说明气泡 */
+  .pill {
+    position: absolute; transform: translate(-50%, -50%);
+    padding: 3px 10px; border-radius: 999px;
+    background: #fff; border: 1px solid #d7e6f2;
+    color: #22628f; font-size: 12.5px; white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(42, 127, 184, .10);
+  }
+
+  /* 电脑 */
+  .pc { position: absolute; left: 88.6%; bottom: 5.5%; width: 11.4%; }
+  .pc svg { width: 100%; height: auto; display: block; }
+
+  @media (max-width: 1349px) {
+    .mark .sub { display: none; }
+  }
+  @media (max-width: 900px) {
+    .page { padding: 16px 12px 26px; }
+    header h1 { font-size: 19px; }
+    .mark .nm { font-size: 11px; }
+    .pill { font-size: 11px; padding: 2px 7px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <h1>设备布设与数据传输</h1>
+    <p>样地设备采集 → 采集箱汇总 → 4G 组网上传 → 云端 → 网页实时曲线<span class="en">　Field sensors → Data logger → 4G network → Cloud → Live web charts</span></p>
+  </header>
+
+  <div class="stage-wrap">
+  <div class="stage" id="stage">
+    <!-- 点云树 + 数据总线（最底层） -->
+    <canvas id="dots"></canvas>
+    <div class="ground"></div>
+
+    <img class="ph trunk"   src="img/trunk.webp"   alt="树干径向生长仪与液流传感器" />
+    <img class="ph met"     src="img/met.webp"     alt="微气象站" />
+    <img class="ph tripod"  src="img/tripod.webp"  alt="三脚架数据采集箱" />
+    <img class="ph cabinet" src="img/cabinet.webp" alt="数据采集箱内部模块" />
+
+    <!-- 设备三角标 -->
+    <div class="mark" style="left: 8%; top: 40%;">
+      <div class="tri"></div>
+      <div class="txt"><div class="nm">径向生长仪 / 液流</div><div class="sub">每 30 分钟</div></div>
+    </div>
+    <div class="mark" style="left: 24.2%; top: 56%;">
+      <div class="tri"></div>
+      <div class="txt"><div class="nm">微气象站</div><div class="sub">环境要素</div></div>
+    </div>
+    <div class="mark" style="left: 36.9%; top: 56%;">
+      <div class="tri"></div>
+      <div class="txt"><div class="nm">采集箱</div><div class="sub">现场记录</div></div>
+    </div>
+    <div class="mark" style="left: 74%; top: 42%;">
+      <div class="tri"></div>
+      <div class="txt"><div class="nm">数据采集箱</div><div class="sub">组网 · 数采 · 太阳能 · 4G</div></div>
+    </div>
+
+    <div class="pill" style="left: 45%; top: 93.5%;">数据汇入采集箱</div>
+    <div class="pill" style="left: 87%; top: 76%;">4G 上传</div>
+
+    <!-- 电脑 -->
+    <div class="pc">
+      <svg viewBox="0 0 220 300" aria-label="电脑与实时曲线">
+        <!-- 云端 -->
+        <path d="M78 30h56a13 13 0 0 0 0-26 17 17 0 0 0-32-5 14 14 0 0 0-24 31z"
+              fill="#eaf3f9" stroke="#8fbcd8" stroke-width="2"/>
+        <text x="106" y="46" text-anchor="middle" font-size="13" fill="#7fa3b8">云端</text>
+        <!-- 显示器 -->
+        <rect x="16" y="62" width="188" height="132" rx="9" fill="#2b3630"/>
+        <rect x="25" y="71" width="170" height="114" rx="4" fill="#f6faf6"/>
+        <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <polyline stroke="#2f7a4f" stroke-width="2.4"
+            points="33,166 55,156 77,146 99,133 121,120 143,104 165,88 187,74" />
+          <polyline stroke="#2a7fb8" stroke-width="2.4" stroke-dasharray="4 3"
+            points="33,120 55,128 77,110 99,118 121,98 143,106 165,86 187,92" />
+        </g>
+        <line x1="31" y1="180" x2="189" y2="180" stroke="#e2ece4" stroke-width="1.4" />
+        <!-- 支架 -->
+        <rect x="98" y="194" width="24" height="26" fill="#2b3630" />
+        <rect x="72" y="220" width="76" height="8" rx="4" fill="#2b3630" />
+        <!-- 键盘 -->
+        <rect x="26" y="240" width="152" height="44" rx="7" fill="#eef3ee" stroke="#cfdcd2" stroke-width="1.6" />
+        <g stroke="#cfdcd2" stroke-width="1.4">
+          <line x1="38" y1="252" x2="166" y2="252" />
+          <line x1="38" y1="264" x2="166" y2="264" />
+          <line x1="86" y1="264" x2="86" y2="276" />
+          <line x1="118" y1="264" x2="118" y2="276" />
+        </g>
+        <!-- 鼠标 -->
+        <rect x="188" y="250" width="20" height="30" rx="10" fill="#eef3ee" stroke="#cfdcd2" stroke-width="1.6" />
+        <!-- 桌面线 -->
+        <line x1="10" y1="290" x2="214" y2="290" stroke="#dbe7dd" stroke-width="2" />
+      </svg>
+    </div>
+  </div>
+  </div>
+
+  <footer style="margin-top:16px;padding-top:12px;border-top:1px solid #e3ece5;color:#8ea296;font-size:12.5px;">
+    点云树按网站三维点云的样式绘制（真彩色、细点）；实拍设备照片抠出主体后嵌入。
+  </footer>
+
+</div>
+
+<script>
+/* ==========================================================================
+   设备示意页 v2：点云树 + 三角标 + 数据总线 + 电脑
+   --------------------------------------------------------------------------
+   · 点云树：递归生成枝干骨架，枝干上撒“木质”点、枝头椭球里撒“叶片”点，
+     颜色用真彩色（棕灰 + 绿），与网站三维点云一致（1~2px 细点）。
+   · 每棵树单独画到离屏画布，逐帧只做一次 drawImage + 轻微摆动，不重算点。
+   · 蓝点沿数据总线由左向右流动，汇入采集箱后继续流向电脑。
+   · 全部按 1800×800 逻辑坐标绘制，画布随舞台等比缩放。
+   ========================================================================== */
+(function () {
+  'use strict';
+
+  var W = 1800, H = 800;
+  var GROUND = 700;                    /* 地面线 */
+  var BUS = 748;                       /* 数据总线 */
+  var CAB_L = 1179, CAB_R = 1571;      /* 采集箱照片左右边界（逻辑坐标） */
+
+  var stage = document.getElementById('stage');
+  var cv = document.getElementById('dots');
+  var ctx = cv.getContext('2d');
+
+  function seeded(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  /* ---------- 一棵点云树：返回离屏画布 + 落点 ---------- */
+  function makeTree(h, seed) {
+    var rnd = seeded(seed);
+    var pts = [];                      /* [x, y, r, style]  y 向上为负 */
+    var wood = [], tips = [];
+
+    (function br(x, y, ang, len, w, d) {
+      var x2 = x + Math.cos(ang) * len, y2 = y + Math.sin(ang) * len;
+      wood.push([x, y, x2, y2, w]);
+      if (d <= 0 || len < h * 0.03) { tips.push([x2, y2, w]); return; }
+      var n = rnd() < 0.32 ? 3 : 2;
+      for (var i = 0; i < n; i++) {
+        br(x2, y2,
+          ang + (i - (n - 1) / 2) * (0.58 + rnd() * 0.34) + (rnd() - 0.5) * 0.22,
+          len * (0.71 + rnd() * 0.09), w * 0.66, d - 1);
+      }
+    })(0, 0, -Math.PI / 2 + (rnd() - 0.5) * 0.1, h * 0.30, h * 0.035, 6);
+
+    /* 枝干：沿线段撒木质点 */
+    wood.forEach(function (s) {
+      var L = Math.hypot(s[2] - s[0], s[3] - s[1]);
+      var n = Math.max(2, Math.round(L / 2.2));
+      for (var i = 0; i <= n; i++) {
+        var t = i / n, x = s[0] + (s[2] - s[0]) * t, y = s[1] + (s[3] - s[1]) * t;
+        var w = Math.max(0.6, s[4] * (1 - t * 0.35));
+        var k = Math.max(1, Math.round(w * 1.5));
+        for (var j = 0; j < k; j++) {
+          var a = rnd() * 6.2832, r = Math.pow(rnd(), 0.5) * w;
+          pts.push([x + Math.cos(a) * r, y + Math.sin(a) * r, 0.8 + rnd() * 0.7, 0]);
+        }
+      }
+    });
+
+    /* 枝头：椭球里撒叶片点 */
+    var spread = h * 0.075;
+    tips.forEach(function (p) {
+      for (var i = 0; i < 42; i++) {
+        var a = rnd() * 6.2832, u = rnd() * 2 - 1, rr = Math.pow(rnd(), 0.45);
+        var s = Math.sqrt(1 - u * u) * rr * spread;
+        pts.push([p[0] + Math.cos(a) * s, p[1] + Math.sin(a) * s * 0.8 + u * spread * 0.55,
+                  0.8 + rnd() * 0.8, 1]);
+      }
+    });
+
+    /* 颜色：木质棕灰 / 叶片绿，随高度轻微提亮 */
+    var ys = pts.map(function (p) { return p[1]; });
+    var yMin = Math.min.apply(null, ys), yMax = Math.max.apply(null, ys);
+    var xs = pts.map(function (p) { return p[0]; });
+    var xMin = Math.min.apply(null, xs), xMax = Math.max.apply(null, xs);
+    var pad = 3, dpr = Math.min(2, window.devicePixelRatio || 1);
+    var cw = Math.ceil(xMax - xMin + pad * 2), ch = Math.ceil(yMax - yMin + pad * 2);
+    var off = document.createElement('canvas');
+    off.width = Math.ceil(cw * dpr); off.height = Math.ceil(ch * dpr);
+    var oc = off.getContext('2d');
+    oc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    pts.forEach(function (p) {
+      var t = (p[1] - yMax) / (yMin - yMax || 1);          /* 0=底 1=顶 */
+      var col;
+      if (p[3] === 0) {
+        col = 'rgb(' + (104 + t * 34 | 0) + ',' + (88 + t * 30 | 0) + ',' + (72 + t * 26 | 0) + ')';
+      } else {
+        col = 'rgb(' + (46 + t * 58 + rnd() * 22 | 0) + ',' + (92 + t * 52 + rnd() * 26 | 0) + ',' + (50 + t * 44 | 0) + ')';
+      }
+      oc.fillStyle = col;
+      oc.beginPath();
+      oc.arc(p[0] - xMin + pad, p[1] - yMin + pad, p[2], 0, 6.2832);
+      oc.fill();
+    });
+
+    return { canvas: off, ox: xMin - pad, oy: yMin - pad, w: cw, h: ch };
+  }
+
+  /* ---------- 树的位置（逻辑坐标，x 为树心；base 默认在地面） ---------- */
+  var TREES = [
+    { x: 140,  h: 430, s: 11 }, { x: 300, h: 545, s: 22 }, { x: 470, h: 360, s: 33 },
+    { x: 640,  h: 470, s: 44 }, { x: 820, h: 380, s: 55 }, { x: 990, h: 505, s: 66 },
+    { x: 1150, h: 330, s: 77 }, { x: 1300, h: 425, s: 88 }, { x: 1450, h: 350, s: 99 },
+    /* 液流那棵：树根藏在照片后面，树冠从照片上沿“长”出来 */
+    { x: 121,  h: 320, s: 7, base: 452 }
+  ].map(function (t) {
+    var m = makeTree(t.h, t.s);
+    m.x = t.x; m.base = t.base || GROUND;
+    return m;
+  });
+
+  /* ---------- 数据总线 ---------- */
+  var BUSPATH = [[62, BUS], [CAB_L - 40, BUS]];
+  var OUTPATH = [[CAB_R + 8, 640], [CAB_R + 52, 590], [1618, 560]];
+  /* 设备到总线的支线（x 用照片中心） */
+  var DROPS = [121, 435, 664];
+
+  /* ---------- 绘制 ---------- */
+  var scale = 1, dpr = Math.min(2, window.devicePixelRatio || 1);
+  var t0 = performance.now();
+
+  function resize() {
+    var w = stage.clientWidth || 1;
+    scale = w / W;
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(w * (H / W) * dpr);
+  }
+
+  function frame(now) {
+    var el = (now - t0) / 1000;
+
+    ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    /* 点云树：逐棵淡入 + 轻微摆动 */
+    TREES.forEach(function (m, i) {
+      var fade = Math.min(1, Math.max(0, (el - i * 0.09) / 0.9));
+      if (fade <= 0) { return; }
+      var sway = Math.sin(el * 0.5 + i * 1.3) * 0.008;
+      ctx.save();
+      ctx.globalAlpha = fade;
+      ctx.translate(m.x, m.base);
+      ctx.rotate(sway);
+      ctx.drawImage(m.canvas, m.ox, m.oy, m.w, m.h);
+      ctx.restore();
+    });
+    ctx.globalAlpha = 1;
+
+    /* 数据总线 */
+    ctx.strokeStyle = 'rgba(42,127,184,.35)';
+    ctx.lineWidth = 1.6;
+    ctx.setLineDash([7, 5]);
+    ctx.beginPath();
+    ctx.moveTo(BUSPATH[0][0], BUS); ctx.lineTo(BUSPATH[1][0], BUS);
+    DROPS.forEach(function (x) {
+      ctx.moveTo(x, GROUND); ctx.lineTo(x, BUS);
+    });
+    ctx.moveTo(OUTPATH[0][0], OUTPATH[0][1]);
+    for (var i = 1; i < OUTPATH.length; i++) { ctx.lineTo(OUTPATH[i][0], OUTPATH[i][1]); }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    /* 流动蓝点 */
+    var RUNS = [
+      { p: [[62, BUS], [CAB_L - 40, BUS]], n: 26, sp: 0.055 },
+      { p: OUTPATH, n: 5, sp: 0.16 }
+    ];
+    RUNS.forEach(function (run, ri) {
+      var segs = [], total = 0;
+      for (var j = 1; j < run.p.length; j++) {
+        var L = Math.hypot(run.p[j][0] - run.p[j - 1][0], run.p[j][1] - run.p[j - 1][1]);
+        segs.push(L); total += L;
+      }
+      for (var k = 0; k < run.n; k++) {
+        var d = ((el * run.sp + k / run.n + ri * 0.37) % 1) * total;
+        var acc = 0, sg = 0;
+        while (sg < segs.length - 1 && acc + segs[sg] < d) { acc += segs[sg]; sg++; }
+        var u = segs[sg] ? (d - acc) / segs[sg] : 0;
+        var x = run.p[sg][0] + (run.p[sg + 1][0] - run.p[sg][0]) * u;
+        var y = run.p[sg][1] + (run.p[sg + 1][1] - run.p[sg][1]) * u;
+        ctx.globalAlpha = 0.3 + 0.7 * Math.sin(u * Math.PI);
+        ctx.fillStyle = '#2a7fb8';
+        ctx.beginPath(); ctx.arc(x, y, 3, 0, 6.2832); ctx.fill();
+      }
+    });
+    ctx.globalAlpha = 1;
+
+    requestAnimationFrame(frame);
+  }
+
+  resize();
+  window.addEventListener('resize', resize);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

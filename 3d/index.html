@@ -63,6 +63,12 @@
 		#camBar .cbtn.rec.on { background: #cf4034; color: #fff; border-color: #ff9d8d; font-weight: 700; }
 
 		/* 一键隐藏所有界面：只留右上角一个恢复按钮 */
+		/* 鼠标处的三维坐标读数（左下角，指到哪读到哪） */
+		#coordBox { position: fixed; left: 12px; bottom: 14px; z-index: 1900; display: none;
+			font-size: 12px; padding: 5px 10px; border-radius: 4px; letter-spacing: .3px;
+			color: #e7e3d8; background: rgba(20, 24, 15, .84); border: 1px solid rgba(160, 180, 120, .35); }
+		#coordBox b { color: #9ed06a; font-weight: 600; }
+		body.ui-off #coordBox { display: none !important; }
 		body.ui-off #topbar, body.ui-off #ctrlHint, body.ui-off #staBar, body.ui-off #camBar,
 		body.ui-off #legend3d, body.ui-off #labels, body.ui-off #dots, body.ui-off #tip,
 		body.ui-off #treeCard { display: none !important; }
@@ -263,6 +269,8 @@
 	<div id="ctrlHint"></div>
 	<!-- 一键隐藏界面后，屏幕上只留这一个恢复按钮 -->
 	<button class="btn" id="uiRestore" title="显示所有界面 (H)">显示界面</button>
+	<!-- 鼠标处的三维坐标：指到哪读到哪，方便把坐标报给开发者做轨迹 -->
+	<div id="coordBox"></div>
 
 	<!-- 台站切换：与二维地图同一套（东灵山本站 / 小五台 / 驼梁）。切到别的站会现建一块
 	     4 km 见方的局部地形（terrarium 高程 + 天地图影像），并画上该站的样方框。 -->
@@ -275,6 +283,8 @@
 		<button class="cbtn" data-cam="flyover" id="camFly">低空巡航</button>
 		<button class="cbtn" data-cam="dolly" id="camDolly">推拉</button>
 		<button class="cbtn" data-cam="rise" id="camRise">升空俯瞰</button>
+		<button class="cbtn" id="camKFAdd" title="把当前机位记成一个关键帧">＋机位</button>
+		<button class="cbtn" id="camKFPlay" title="播放关键帧轨迹">▶ 关键帧</button>
 		<button class="cbtn rec" id="camRec">● 录制轨迹</button>
 		<span class="cspeed" id="camSpdWrap" title="无级变速"><input type="range" id="camSpdIn" min="0.2" max="8" step="0.1" value="1"><b id="camSpdVal">1×</b></span>
 		<button class="cbtn active" id="camLoop">循环</button>
@@ -322,6 +332,7 @@
 			      camOrbit: '环绕', camFly: '低空巡航', camDolly: '推拉', camRise: '升空俯瞰', camStop: '■ 停',
 			      camSpeed: '速度', camLoop: '循环', lGround: '影像地面',
 			      camRec: '● 录制轨迹', camRecStop: '■ 结束录制', camMy: '我的轨迹',
+			      camKFAdd: '＋机位', camKFPlay: '▶ 关键帧', camKF: '关键帧轨迹',
 			      uiHide: '隐藏界面', uiShow: '显示界面',
 			      ctrlHint: '左键拖动旋转 · 中键拖动平移 · 滚轮缩放',
 			      staDl: '东灵山（本站）',
@@ -338,6 +349,7 @@
 			      camOrbit: 'Orbit', camFly: 'Low flyover', camDolly: 'Dolly', camRise: 'Rise & overlook', camStop: '■ Stop',
 			      camSpeed: 'Speed', camLoop: 'Loop', lGround: 'Imagery ground',
 			      camRec: '● Record path', camRecStop: '■ Stop', camMy: 'My path',
+			      camKFAdd: '＋View', camKFPlay: '▶ Keyframes', camKF: 'Keyframe path',
 			      uiHide: 'Hide UI', uiShow: 'Show UI',
 			      ctrlHint: 'Drag to rotate · Middle-drag to pan · Scroll to zoom',
 			      staDl: 'Mt. Dongling (main)',
@@ -382,6 +394,8 @@
 			cb = document.getElementById('uiBtn'); if (cb) { cb.textContent = d.uiHide || '隐藏界面'; }
 			cb = document.getElementById('uiRestore'); if (cb) { cb.textContent = d.uiShow || '显示界面'; }
 			cb = document.getElementById('camMy'); if (cb) { cb.textContent = d.camMy || '我的轨迹'; }
+			cb = document.getElementById('camKFAdd'); if (cb) { cb.textContent = d.camKFAdd || '＋机位'; }
+			cb = document.getElementById('camKFPlay'); if (cb) { cb.textContent = d.camKFPlay || '▶ 关键帧'; }
 			if (typeof recPaint === 'function') { recPaint(); }
 			cb = document.getElementById('camLoop'); if (cb) cb.textContent = d.camLoop;
 			cb = document.getElementById('lblGround'); if (cb) cb.textContent = d.lGround;
@@ -1402,14 +1416,6 @@
 			}
 			return 'https://webst0' + ((i % 4) + 1) + '.is.autonavi.com/appmaptile?style=6&x=' + x + '&y=' + y + '&z=' + z;
 		}
-		/* 影像瓦片：失败就隔一会儿重试（代理/弱网下零星失败很常见，一次失败就留块空洞） */
-		function loadTile(x, y, z, i, tries) {
-			return loadImage(groundTileURL(x, y, z, i), 12000).catch(function (e) {
-				if (tries <= 0) { throw e; }
-				return new Promise(function (ok) { setTimeout(ok, 400); })
-					.then(function () { return loadTile(x, y, z, i + 1, tries - 1); });
-			});
-		}
 		function terrariumURL(x, y, z, i) {
 			return 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/' + z + '/' + x + '/' + y + '.png';
 		}
@@ -1547,7 +1553,7 @@
 			var imgOK = 0, terOK = 0;
 			for (var ix = 0; ix < nx; ix++) for (var iy = 0; iy < ny; iy++) {
 				(function (ix, iy) {
-						jobs.push(loadTile(x0 + ix, y0 + iy, GZ, ix + iy, 2).then(function (im) {
+						jobs.push(loadImage(groundTileURL(x0 + ix, y0 + iy, GZ, ix + iy), 15000).then(function (im) {
 						tiles.push({ ix: ix, iy: iy, im: im, st: tileStats(im) });
 						imgOK++;
 					}).catch(function () {}));
@@ -1923,7 +1929,25 @@
 			function L(i) { return a[i] + (b[i] - a[i]) * u; }
 			return { p: [L(1), L(2), L(3)], t: [L(4), L(5), L(6)] };
 		}
+		/* 关键帧轨迹：位置与注视点都走 Catmull-Rom，段与段之间不会硬拐弯 */
+		function kfPose(T) {
+			var K = KF;
+			if (!K || K.length < 2) { return null; }
+			var u = T * (K.length - 1);
+			var i = Math.min(K.length - 2, Math.floor(u)), f = u - i;
+			var ps = K.map(function (k) { return k.p; }), ts = K.map(function (k) { return k.t; });
+			function cr(arr, j, c) {
+				var a = arr[Math.max(0, j - 1)][c], b = arr[j][c],
+				    cc = arr[Math.min(arr.length - 1, j + 1)][c], dd = arr[Math.min(arr.length - 1, j + 2)][c];
+				var f2 = f * f, f3 = f2 * f;
+				return 0.5 * (2 * b + (-a + cc) * f + (2 * a - 5 * b + 4 * cc - dd) * f2 +
+					(-a + 3 * b - 3 * cc + dd) * f3);
+			}
+			return { p: [cr(ps, i, 0), cr(ps, i, 1), cr(ps, i, 2)],
+			         t: [cr(ts, i, 0), cr(ts, i, 1), cr(ts, i, 2)] };
+		}
 		function camPose(name, T) {
+			if (name === 'kf') { return kfPose(T); }
 			if (name === 'mytour') { return recPose(T); }
 			var r = camRef();
 			if (!r) return null;
@@ -1955,7 +1979,12 @@
 		}
 
 		var CAM_BASE = ['orbit', 'flyover', 'dolly', 'rise'];
-		function camOrder() { return REC.dur ? CAM_BASE.concat(['mytour']) : CAM_BASE; }
+		function camOrder() {
+			var o = CAM_BASE.slice();
+			if (KF.length > 1) { o.push('kf'); }
+			if (REC.dur) { o.push('mytour'); }
+			return o;
+		}
 		var CAM_TRANS = 1500;                      /* 换轨迹时的平滑过渡时长（ms） */
 		var CAM_BLEND = null;                      /* {p0,t0,p1,t1,start} */
 		function camPoseNow(view) {
@@ -2016,6 +2045,10 @@
 			if (name === 'mytour') {
 				if (!REC.dur) { return; }
 				CAM_DUR.mytour = Math.max(3000, REC.dur);   /* 自己录的按真实时长放 */
+			}
+			if (name === 'kf') {
+				if (KF.length < 2) { return; }
+				CAM_DUR.kf = Math.max(4000, (KF.length - 1) * 7000);   /* 每段约 7 秒 */
 			}
 			var view = viewer.scene.view;
 			var from = camPoseNow(view);
@@ -2171,6 +2204,126 @@
 			addEventListener('resize', applyLpScale);
 		}());
 
+		/* ---------------- 鼠标处的三维坐标 ----------------
+		 * 从相机往鼠标方向打一条射线，沿射线找与地表（window.groundZ）的交点。
+		 * 没有全局 THREE，就用相机矩阵的基向量自己算方向，再二分收敛。 */
+		function pickGround(cx2, cy2) {
+			var cam = viewer.scene.getActiveCamera();
+			if (!cam || !window.groundZ) { return null; }
+			var me = cam.matrixWorld.elements;
+			var px = me[12], py = me[13], pz = me[14];
+			var rx = me[0], ry = me[1], rz = me[2];                 /* 右 */
+			var ux = me[4], uy = me[5], uz = me[6];                 /* 上 */
+			var fx = -me[8], fy = -me[9], fz = -me[10];             /* 前（相机看向 -Z） */
+			var ndcX = (cx2 / innerWidth) * 2 - 1, ndcY = 1 - (cy2 / innerHeight) * 2;
+			var th = Math.tan((cam.fov || 60) * Math.PI / 360), asp = innerWidth / innerHeight;
+			var dx = fx + rx * ndcX * th * asp + ux * ndcY * th;
+			var dy = fy + ry * ndcX * th * asp + uy * ndcY * th;
+			var dz = fz + rz * ndcX * th * asp + uz * ndcY * th;
+			var dl = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+			dx /= dl; dy /= dl; dz /= dl;
+			function at(t) {
+				var x = px + dx * t, y = py + dy * t, z = pz + dz * t;
+				var g = window.groundZ(x, y);
+				return { x: x, y: y, z: z, g: isFinite(g) ? g : null };
+			}
+			/* 先粗扫找穿越点（相机在地面之上，往下打一定会穿过） */
+			var prev = null, hit = null, t;
+			for (t = 1; t < 20000; t *= 1.06) {
+				var cur = at(t);
+				if (cur.g == null) { prev = cur; continue; }
+				if (cur.z <= cur.g) { hit = [prev || cur, cur]; break; }
+				prev = cur;
+			}
+			if (!hit) { return null; }
+			/* 二分细化 */
+			var a = hit[0], b = hit[1];
+			for (var k = 0; k < 18; k++) {
+				var m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2 };
+				var g = window.groundZ(m.x, m.y);
+				if (isFinite(g) && m.z > g) { a = m; } else { b = m; }
+			}
+			var gz = window.groundZ(b.x, b.y);
+			return { E: b.x, N: b.y, Z: isFinite(gz) ? gz : b.z };
+		}
+		(function bindCoord() {
+			var box = document.getElementById('coordBox');
+			if (!box) { return; }
+			var el = document.getElementById('potree_render_area');
+			el.addEventListener('mousemove', function (ev) {
+				if (document.body.classList.contains('ui-off')) { box.style.display = 'none'; return; }
+				var hit = pickGround(ev.clientX, ev.clientY);
+				if (!hit) { box.style.display = 'none'; return; }
+				var zh = (typeof LANG === 'undefined' || LANG === 'zh');
+				box.innerHTML = 'E <b>' + Math.round(hit.E) + '</b>　N <b>' + Math.round(hit.N) + '</b>　' +
+					(zh ? '高程' : 'elev') + ' <b>' + Math.round(hit.Z) + '</b> m';
+				box.style.display = 'block';
+			});
+			el.addEventListener('mouseleave', function () { box.style.display = 'none'; });
+		}());
+
+		/* ---------------- 关键帧机位 ----------------
+		 * 手动录屏太糙。这里换个思路：你把画面调好看，点「＋机位」记一个点；
+		 * 记几个之后「▶ 关键帧」就能平滑播一遍，并且像环绕/巡航那样并列在镜头条上。
+		 * 点「复制」可以把这些机位（含坐标）拷出来发给开发者，用来定制轨迹。 */
+		var KF = [];
+		var KF_KEY = 'bfers-3d-keyframes';
+		function kfSave() {
+			try { localStorage.setItem(KF_KEY, JSON.stringify(KF)); } catch (e) {}
+		}
+		function kfPaint() {
+			var b = document.getElementById('camKFPlay');
+			if (b) {
+				b.textContent = ((typeof I18N !== 'undefined' && I18N[LANG] && I18N[LANG].camKFPlay) || '▶ 关键帧') +
+					(KF.length ? ' ' + KF.length : '');
+				b.classList.toggle('active', CAM.on && CAM.name === 'kf');
+			}
+			var a = document.getElementById('camKFAdd');
+			if (a) { a.classList.toggle('active', KF.length > 0); }
+		}
+		function kfAdd() {
+			if (!window.PCBOX) { return; }
+			var v = viewer.scene.view, p = v.position, t = v.getPivot();
+			KF.push({ p: [p.x, p.y, p.z], t: [t.x, t.y, t.z] });
+			kfSave(); kfPaint();
+			console.info('[3d] 记下第 ' + KF.length + ' 个机位：相机 ' +
+				[p.x, p.y, p.z].map(Math.round).join(',') + ' → 注视 ' + [t.x, t.y, t.z].map(Math.round).join(','));
+		}
+		(function initKF() {
+			try {
+				var d = JSON.parse(localStorage.getItem(KF_KEY) || 'null');
+				if (d && d.length && d[0] && d[0].p && d[0].t) { KF = d; }
+			} catch (e) {}
+			kfPaint();
+			var a = document.getElementById('camKFAdd');
+			if (a) {
+				a.title = '把当前机位记成一个关键帧（右键 / 长按 = 清空全部）';
+				a.addEventListener('click', kfAdd);
+				a.addEventListener('contextmenu', function (ev) {
+					ev.preventDefault();
+					KF = []; kfSave(); kfPaint();
+					if (CAM.on && CAM.name === 'kf') { camStopNow(); }
+					console.info('[3d] 关键帧已清空');
+				});
+			}
+			var pl = document.getElementById('camKFPlay');
+			if (pl) {
+				pl.title = '播放关键帧轨迹（再按停止）；Shift+点 = 复制机位坐标';
+				pl.addEventListener('click', function (ev) {
+					if (ev.shiftKey) {
+						var txt = KF.map(function (k, i) {
+							return '机位' + (i + 1) + '：相机 ' + k.p.map(Math.round).join(', ') +
+								'  注视 ' + k.t.map(Math.round).join(', ');
+						}).join('\n');
+						try { navigator.clipboard.writeText(txt); console.info('[3d] 已复制：\n' + txt); } catch (e) {}
+						return;
+					}
+					if (KF.length < 2) { console.info('[3d] 至少记 2 个机位才能播'); return; }
+					if (CAM.on && CAM.name === 'kf') { camStopNow(); } else { camStart('kf'); }
+				});
+			}
+		}());
+
 		/* ---------------- 录制自己的轨迹 ----------------
 		 * 按「录制轨迹」开始 → 用鼠标 / WASD 走一遍 → 再按一次结束；
 		 * 这条轨迹就变成与「环绕 / 低空巡航 / 推拉 / 升空俯瞰」并列的一条，可随时重放。
@@ -2219,6 +2372,7 @@
 		}
 		function recStart() {
 			camStopNow();
+			if (typeof KF !== 'undefined') { kfPaint(); }
 			REC.on = true; REC.t0 = performance.now(); REC.last = 0; REC.samples = [];
 			recPaint();
 		}
