@@ -59,6 +59,7 @@
 			border-radius: 14px; background: rgba(58, 72, 40, .5); border: 1px solid rgba(160, 180, 120, .35); }
 		#camBar .cspeed input[type=range] { width: 76px; height: 4px; accent-color: #9ed06a; cursor: pointer; }
 		#camBar .cspeed b { font-size: 12px; color: #d7d2c6; min-width: 32px; text-align: right; }
+		#camBar .cbtn.kfclear { background: rgba(70, 60, 45, .55); border-color: rgba(200, 170, 120, .45); }
 		#camBar .cbtn.rec { background: rgba(120, 45, 40, .55); border-color: rgba(215, 120, 100, .45); }
 		#camBar .cbtn.rec.on { background: #cf4034; color: #fff; border-color: #ff9d8d; font-weight: 700; }
 
@@ -287,6 +288,7 @@
 		<button class="cbtn" data-cam="rise" id="camRise">升空俯瞰</button>
 		<button class="cbtn" id="camKFAdd" title="把当前机位记成一个关键帧">＋机位</button>
 		<button class="cbtn" id="camKFPlay" title="播放关键帧轨迹">▶ 关键帧</button>
+		<button class="cbtn kfclear" id="camKFClear" style="display:none" title="关闭并清空关键帧轨迹">✕ 机位</button>
 		<button class="cbtn rec" id="camRec">● 录制轨迹</button>
 		<span class="cspeed" id="camSpdWrap" title="无级变速"><input type="range" id="camSpdIn" min="0.2" max="8" step="0.1" value="1"><b id="camSpdVal">1×</b></span>
 		<button class="cbtn active" id="camLoop">循环</button>
@@ -334,7 +336,7 @@
 			      camOrbit: '环绕', camFly: '低空巡航', camDolly: '推拉', camRise: '升空俯瞰', camStop: '■ 停',
 			      camSpeed: '速度', camLoop: '循环', lGround: '影像地面',
 			      camRec: '● 录制轨迹', camRecStop: '■ 结束录制', camMy: '我的轨迹',
-			      camKFAdd: '＋机位', camKFPlay: '▶ 关键帧', camKF: '关键帧轨迹',
+			      camKFAdd: '＋机位', camKFPlay: '▶ 关键帧', camKFClear: '✕ 机位', camKF: '关键帧轨迹',
 			      uiHide: '隐藏界面', uiShow: '显示界面',
 			      ctrlHint: '左键拖动旋转 · 中键拖动平移 · 滚轮缩放',
 			      staDl: '东灵山（本站）',
@@ -351,7 +353,7 @@
 			      camOrbit: 'Orbit', camFly: 'Low flyover', camDolly: 'Dolly', camRise: 'Rise & overlook', camStop: '■ Stop',
 			      camSpeed: 'Speed', camLoop: 'Loop', lGround: 'Imagery ground',
 			      camRec: '● Record path', camRecStop: '■ Stop', camMy: 'My path',
-			      camKFAdd: '＋View', camKFPlay: '▶ Keyframes', camKF: 'Keyframe path',
+			      camKFAdd: '＋View', camKFPlay: '▶ Keyframes', camKFClear: '✕ Views', camKF: 'Keyframe path',
 			      uiHide: 'Hide UI', uiShow: 'Show UI',
 			      ctrlHint: 'Drag to rotate · Middle-drag to pan · Scroll to zoom',
 			      staDl: 'Mt. Dongling (main)',
@@ -398,6 +400,7 @@
 			cb = document.getElementById('camMy'); if (cb) { cb.textContent = d.camMy || '我的轨迹'; }
 			cb = document.getElementById('camKFAdd'); if (cb) { cb.textContent = d.camKFAdd || '＋机位'; }
 			cb = document.getElementById('camKFPlay'); if (cb) { cb.textContent = d.camKFPlay || '▶ 关键帧'; }
+			cb = document.getElementById('camKFClear'); if (cb) { cb.textContent = d.camKFClear || '✕ 机位'; }
 			if (typeof recPaint === 'function') { recPaint(); }
 			cb = document.getElementById('camLoop'); if (cb) cb.textContent = d.camLoop;
 			cb = document.getElementById('lblGround'); if (cb) cb.textContent = d.lGround;
@@ -2282,6 +2285,16 @@
 			}
 			var a = document.getElementById('camKFAdd');
 			if (a) { a.classList.toggle('active', KF.length > 0); }
+			var c = document.getElementById('camKFClear');
+			if (c) { c.style.display = KF.length ? '' : 'none'; }   /* 没有机位就不显示 */
+		}
+		/* 关闭关键帧：停播 + 清空 + 从镜头轮播里摘掉 */
+		function kfClear() {
+			KF = [];
+			if (CAM.on && CAM.name === 'kf') { camStopNow(); }
+			try { localStorage.removeItem(KF_KEY); } catch (e) {}
+			kfPaint();
+			console.info('[3d] 关键帧已关闭并清空');
 		}
 		function kfAdd() {
 			if (!window.PCBOX) { return; }
@@ -2301,13 +2314,10 @@
 			if (a) {
 				a.title = '把当前机位记成一个关键帧（右键 / 长按 = 清空全部）';
 				a.addEventListener('click', kfAdd);
-				a.addEventListener('contextmenu', function (ev) {
-					ev.preventDefault();
-					KF = []; kfSave(); kfPaint();
-					if (CAM.on && CAM.name === 'kf') { camStopNow(); }
-					console.info('[3d] 关键帧已清空');
-				});
+				a.addEventListener('contextmenu', function (ev) { ev.preventDefault(); kfClear(); });
 			}
+			var cl = document.getElementById('camKFClear');
+			if (cl) { cl.addEventListener('click', kfClear); }
 			var pl = document.getElementById('camKFPlay');
 			if (pl) {
 				pl.title = '播放关键帧轨迹（再按停止）；Shift+点 = 复制机位坐标';
