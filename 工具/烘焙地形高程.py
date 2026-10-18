@@ -29,7 +29,7 @@ op.addheaders = [("User-Agent", "Mozilla/5.0")]
 
 # 三个区域的中心（UTM50N）与半幅
 TARGETS = [
-    ("terrain.json",     365600.0, 4424400.0, 2262.5, 224),   # 东灵山地面 4.5 km（面积 2×）
+    ("terrain.json",     365600.0, 4424400.0, 2262.5, 224),   # 东灵山地面 4.5 km（清晰度优先）
     ("terrain_xwt.json", None, None, 2000.0, 80),             # 小五台（下面按站点填）
     ("terrain_tl.json",  None, None, 2000.0, 80),             # 驼梁
 ]

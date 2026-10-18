@@ -54,6 +54,30 @@
 		#camBar .cbtn.active { background: #6ca14a; color: #14170f; border-color: #9ed06a; font-weight: 700; }
 		#camBar .cbtn.stop { background: rgba(90, 55, 45, .6); border-color: rgba(190, 120, 100, .4); }
 		@media (max-width: 640px) { #camBar .cbtn { padding: 5px 9px; font-size: 11.5px; } }
+		/* 无级变速：滑块（原来是 0.5/1/2 三档按钮） */
+		#camBar .cspeed { flex: none; display: flex; align-items: center; gap: 6px; padding: 0 9px 0 7px;
+			border-radius: 14px; background: rgba(58, 72, 40, .5); border: 1px solid rgba(160, 180, 120, .35); }
+		#camBar .cspeed input[type=range] { width: 76px; height: 4px; accent-color: #9ed06a; cursor: pointer; }
+		#camBar .cspeed b { font-size: 12px; color: #d7d2c6; min-width: 32px; text-align: right; }
+		#camBar .cbtn.rec { background: rgba(120, 45, 40, .55); border-color: rgba(215, 120, 100, .45); }
+		#camBar .cbtn.rec.on { background: #cf4034; color: #fff; border-color: #ff9d8d; font-weight: 700; }
+
+		/* 一键隐藏所有界面：只留右上角一个恢复按钮 */
+		body.ui-off #topbar, body.ui-off #ctrlHint, body.ui-off #staBar, body.ui-off #camBar,
+		body.ui-off #legend3d, body.ui-off #labels, body.ui-off #dots, body.ui-off #tip,
+		body.ui-off #treeCard { display: none !important; }
+		#uiRestore { display: none; position: fixed; top: 10px; right: 10px; z-index: 3100;
+			font: inherit; font-size: 12.5px; padding: 6px 12px; border-radius: 4px; cursor: pointer;
+			color: #e7e3d8; background: rgba(38, 42, 30, .72); border: 1px solid rgba(160, 180, 120, .35); }
+		#uiRestore:hover { background: rgba(58, 72, 40, .9); color: #fff; }
+		body.ui-off #uiRestore { display: inline-block; }
+
+		/* 图层面板缩放：锚在右上角，放大后不跑偏 */
+		.layers-panel { transform-origin: top right; }
+		.layers-panel .lpzoom { flex: none; font: inherit; font-size: 11px; line-height: 1;
+			padding: 2px 6px; margin-left: 6px; cursor: pointer; border-radius: 3px;
+			color: #444; background: #eef0ea; border: 1px solid #c9cfc0; }
+		.layers-panel .lpzoom:hover { background: #d8e4c8; }
 
 		/* 台站切换按钮（左上，标题栏下面） */
 		#staBar { position: fixed; left: 12px; top: 78px; z-index: 1900; display: flex; gap: 6px; }
@@ -89,7 +113,8 @@
 			padding: 10px 14px 8px; min-width: 170px; display: none;
 			max-height: calc(100vh - 132px); overflow-y: auto; }   /* 开关多了：矮窗口里滚动，别顶出屏 */
 		.layers-panel.open { display: block; }                    /* 点「图层」按钮展开 */
-		.layers-panel .lp-cap { font-size: 12px; font-weight: 700; color: #666;
+		.layers-panel .lp-cap { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+			font-size: 12px; font-weight: 700; color: #666;
 			letter-spacing: .5px; margin: 0 0 4px; }
 		.lbtn { display: inline-block; }   /* 「图层」按钮：所有尺寸都显示，点它折叠/展开面板 */
 		.layers-panel label { display: block; padding: 5px 4px; font-size: 14px; cursor: pointer;   /* 5px：14 行时别顶到右下角图例 */
@@ -100,17 +125,35 @@
 
 		/* 三维场景里的浮动标签 */
 		#labels { position: fixed; inset: 0; z-index: 1500; pointer-events: none; overflow: hidden; }
+		/* 标签底色 = 对应散点的颜色（--lbl-bg 由脚本按图层设，见 applyLblColor）。
+		   亮底自动配深色字，保证读得清；鼠标悬停仍然变绿。 */
 		.lbl { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; cursor: pointer;
-			white-space: nowrap; font-size: 11px; color: #fff; padding: 2px 6px; border-radius: 10px;
-			background: rgba(28,33,22,.78); border: 1px solid rgba(160,180,120,.5);
+			white-space: nowrap; font-size: 11px; padding: 2px 7px; border-radius: 10px;
+			color: var(--lbl-fg, #fff);
+			background: var(--lbl-bg, rgba(28,33,22,.78));
+			border: 1px solid var(--lbl-bd, rgba(160,180,120,.5));
 			box-shadow: 0 1px 4px rgba(0,0,0,.5); }
-		.lbl.tree { background: rgba(40,74,40,.86); }
-		.lbl.log { background: rgba(122,66,28,.9); font-weight: 700; }
+		.lbl.tree { background: var(--lbl-bg, rgba(40,74,40,.86)); }
+		.lbl.log { background: var(--lbl-bg, rgba(122,66,28,.9)); font-weight: 700; }
 		.lbl:hover { background: #6ca14a; border-color: #fff; }
 		.lbl.hidden { display: none; }
 		#tip { position: fixed; z-index: 1600; pointer-events: none; max-width: 240px; display: none;
 			background: rgba(20,24,15,.95); color: #ddd7cd; border: 1px solid rgba(160,180,120,.4);
 			border-radius: 6px; padding: 7px 10px; font-size: 12px; line-height: 1.5; }
+
+		/* 点单木浮出的树种动图：动图本身抠过背景，所以**不加任何底衬/边框**，
+		   直接叠在三维场景上（透明处透出场景），旁边写中文名与拉丁名。
+		   pointer-events:none —— 点画面任意处即可收起，不挡操作。 */
+		#treeCard { position: fixed; z-index: 2050; display: none; align-items: center; gap: 16px;
+			pointer-events: none; }
+		#treeCard.open { display: flex; }
+		#treeCard .tc-imgwrap { position: relative; overflow: hidden; flex: none; }
+		#treeCard .tc-imgwrap img { position: absolute; max-width: none; }
+		#treeCard .tc-names { flex: none; max-width: 300px;
+			text-shadow: 0 1px 5px rgba(0,0,0,.95), 0 0 14px rgba(0,0,0,.75); }
+		#treeCard .tc-name { display: block; font-size: 27px; font-weight: 700; color: #fff; line-height: 1.15; }
+		#treeCard .tc-latin { display: block; font-size: 13px; font-style: italic; color: #dfe8cd; margin-top: 3px; }
+		#treeCard .tc-note { display: block; font-size: 12.5px; color: #e6cf8f; margin-top: 7px; }
 
 		/* 实测点（主树/样方内树）画布圆点 */
 		#dots { position: fixed; inset: 0; z-index: 1400; pointer-events: none; }
@@ -192,7 +235,7 @@
 			<!-- 窄屏折叠按钮：桌面端隐藏（面板常开），手机上跟二维地图一样默认收起来 -->
 			<button class="btn lbtn" id="layersBtn" aria-expanded="false">图层</button>
 			<div class="layers-panel open" id="layersPanel">
-				<div class="lp-cap" id="lblLayers">图层</div>
+				<div class="lp-cap"><span id="lblLayers">图层</span><button type="button" class="lpzoom" id="lpZoom" title="图层面板大小">100%</button></div>
 				<label><input type="checkbox" id="chkPC" checked> <span id="lblPC">点云</span></label>
 				<label><input type="checkbox" id="chkDet" checked> <span id="lblDet">单木覆盖</span></label>
 				<label><input type="checkbox" id="chkBnd" checked> <span id="lblBnd">样地边界</span></label>
@@ -213,10 +256,13 @@
 				<label><input type="checkbox" id="chkGround" checked> <span id="lblGround">影像地面</span></label>
 			</div>
 		</div>
+		<button class="btn" id="uiBtn" title="隐藏所有界面 (H)">隐藏界面</button>
 		<button class="btn" id="langBtn">EN</button>
 		<a class="btn" href="../index.html" id="backBtn">← 返回网站</a>
 	</div>
 	<div id="ctrlHint"></div>
+	<!-- 一键隐藏界面后，屏幕上只留这一个恢复按钮 -->
+	<button class="btn" id="uiRestore" title="显示所有界面 (H)">显示界面</button>
 
 	<!-- 台站切换：与二维地图同一套（东灵山本站 / 小五台 / 驼梁）。切到别的站会现建一块
 	     4 km 见方的局部地形（terrarium 高程 + 天地图影像），并画上该站的样方框。 -->
@@ -229,7 +275,8 @@
 		<button class="cbtn" data-cam="flyover" id="camFly">低空巡航</button>
 		<button class="cbtn" data-cam="dolly" id="camDolly">推拉</button>
 		<button class="cbtn" data-cam="rise" id="camRise">升空俯瞰</button>
-		<button class="cbtn" id="camSpeed">速度 1×</button>
+		<button class="cbtn rec" id="camRec">● 录制轨迹</button>
+		<span class="cspeed" id="camSpdWrap" title="无级变速"><input type="range" id="camSpdIn" min="0.2" max="8" step="0.1" value="1"><b id="camSpdVal">1×</b></span>
 		<button class="cbtn active" id="camLoop">循环</button>
 		<button class="cbtn stop" id="camStop" title="停止">■ 停</button>
 	</div>
@@ -244,6 +291,15 @@
 
 	<div id="labels"></div>
 	<div id="tip"></div>
+		<!-- 点单木浮出的树种动图（透明底，直接叠在场景上；内容由 showTreeCard 填） -->
+		<div id="treeCard">
+			<div class="tc-imgwrap" id="tcWrap"><img class="tc-img" id="tcImg" alt=""></div>
+			<div class="tc-names">
+				<span class="tc-name" id="tcName"></span>
+				<span class="tc-latin" id="tcLatin"></span>
+				<span class="tc-note" id="tcNote"></span>
+			</div>
+		</div>
 	<canvas id="dots"></canvas>
 	<div id="legend3d"></div>
 
@@ -265,6 +321,8 @@
 			      lSap: '液流', lDen: '径向生长', lLai: 'LAI',
 			      camOrbit: '环绕', camFly: '低空巡航', camDolly: '推拉', camRise: '升空俯瞰', camStop: '■ 停',
 			      camSpeed: '速度', camLoop: '循环', lGround: '影像地面',
+			      camRec: '● 录制轨迹', camRecStop: '■ 结束录制', camMy: '我的轨迹',
+			      uiHide: '隐藏界面', uiShow: '显示界面',
 			      ctrlHint: '左键拖动旋转 · 中键拖动平移 · 滚轮缩放',
 			      staDl: '东灵山（本站）',
 			      loadCloud: '正在加载三维点云…', loadRender: '正在渲染首屏…' },
@@ -279,6 +337,8 @@
 			      lSap: 'Sap flow', lDen: 'Dendrometer', lLai: 'LAI',
 			      camOrbit: 'Orbit', camFly: 'Low flyover', camDolly: 'Dolly', camRise: 'Rise & overlook', camStop: '■ Stop',
 			      camSpeed: 'Speed', camLoop: 'Loop', lGround: 'Imagery ground',
+			      camRec: '● Record path', camRecStop: '■ Stop', camMy: 'My path',
+			      uiHide: 'Hide UI', uiShow: 'Show UI',
 			      ctrlHint: 'Drag to rotate · Middle-drag to pan · Scroll to zoom',
 			      staDl: 'Mt. Dongling (main)',
 			      loadCloud: 'Loading 3D point cloud…', loadRender: 'Rendering first view…' }
@@ -317,8 +377,12 @@
 			cb = document.getElementById('camDolly'); if (cb) cb.textContent = d.camDolly;
 			cb = document.getElementById('camRise'); if (cb) cb.textContent = d.camRise;
 			cb = document.getElementById('camStop'); if (cb) cb.textContent = d.camStop;
-			cb = document.getElementById('camSpeed');
-			if (cb) cb.textContent = d.camSpeed + ' ' + (typeof camSpeedNow === 'function' ? camSpeedNow() : 1) + '×';
+			cb = document.getElementById('camSpdVal');
+			if (cb) { cb.textContent = (typeof camSpeedNow === 'function' ? camSpeedNow() : 1) + '×'; }
+			cb = document.getElementById('uiBtn'); if (cb) { cb.textContent = d.uiHide || '隐藏界面'; }
+			cb = document.getElementById('uiRestore'); if (cb) { cb.textContent = d.uiShow || '显示界面'; }
+			cb = document.getElementById('camMy'); if (cb) { cb.textContent = d.camMy || '我的轨迹'; }
+			if (typeof recPaint === 'function') { recPaint(); }
 			cb = document.getElementById('camLoop'); if (cb) cb.textContent = d.camLoop;
 			cb = document.getElementById('lblGround'); if (cb) cb.textContent = d.lGround;
 			/* 三维场景里的名字标签跟着语言换（首屏调用时 NAME_LABELS 还没建，得兜一下） */
@@ -509,9 +573,23 @@
 			m[3]*v[0]+m[7]*v[1]+m[11]*v[2]+m[15]*v[3]]; }
 
 		var LABELS = [], tip = null, NAME_LABELS = [];   /* NAME_LABELS：切语言要跟着改文字的名字标签 */
-		function addLabel(x, y, z, text, cls, info, textEn) {
+		/* 标签底色/文字色按散点颜色设：亮色底配深色字，深色底配白字 */
+		function applyLblColor(el, color) {
+			if (!color) { return; }
+			el.style.setProperty('--lbl-bg', color);
+			el.style.setProperty('--lbl-bd', color);
+			var m = /^#?([0-9a-f]{6})$/i.exec(color), light = false;
+			if (m) {
+				var v = parseInt(m[1], 16);
+				var lum = 0.299 * ((v >> 16) & 255) + 0.587 * ((v >> 8) & 255) + 0.114 * (v & 255);
+				light = lum >= 128;   /* 感知亮度过半就用深字：青/绿/橙/黄这类亮底都适用 */
+			}
+			el.style.setProperty('--lbl-fg', light ? '#14170f' : '#fff');
+		}
+		function addLabel(x, y, z, text, cls, info, textEn, color) {
 			var el = document.createElement('div');
 			el.className = 'lbl ' + cls; el.textContent = text;
+			applyLblColor(el, color);
 			el.addEventListener('mousemove', function (ev) { if (info) { showTip(ev, info); } });
 			el.addEventListener('mouseleave', hideTip);
 			document.getElementById('labels').appendChild(el);
@@ -622,9 +700,11 @@
 					DOTSCREEN.push({ x: sx, y: sy, kind: 'det', sp: p.sp });
 					continue;
 				}
+				var lcol = '#d3a970';                      /* 该点的标签底色 */
 				if (p.kind === 'main') {
-					var es = d2 > 400 * 400 ? 13 : (d2 > 150 * 150 ? 16 : 20);
-					dctx.font = es + 'px "Segoe UI Emoji","Noto Color Emoji",serif';
+					/* 实测主树：固定大小（原来随距离缩到 13px，远看就没了） */
+					lcol = '#8fb4d6';
+					dctx.font = '19px "Segoe UI Emoji","Noto Color Emoji",serif';
 					dctx.textAlign = 'center'; dctx.textBaseline = 'middle';
 					dctx.fillText('\uD83C\uDF33', sx, sy);
 				} else if (p.kind && p.kind.indexOf('dev-') === 0) {
@@ -633,7 +713,10 @@
 					if (p.kind === 'dev-sap' && !SAP_ON) continue;
 					if (p.kind === 'dev-den' && !DEN_ON) continue;
 					if (p.kind === 'dev-lai' && !LAI_ON) continue;
+					/* 液流 / 径向生长 / LAI：颜色 + 形状都区分，固定大小（原来随距离缩到 3px） */
 					var dc = p.kind === 'dev-sap' ? '#3fa9f5' : (p.kind === 'dev-den' ? '#f0a23c' : '#b07fd8');
+					var dsh = p.kind === 'dev-sap' ? 'circle' : (p.kind === 'dev-den' ? 'square' : 'hex');
+					lcol = dc;
 					var HGT = 6;                                     /* 杆高 m */
 					var top = m4apply(P, m4apply(V, [p.E, p.N, p.Z + HGT, 1]));
 					if (top[3] > 0) {
@@ -643,35 +726,16 @@
 						dctx.globalAlpha = 1;
 						sx = tx; sy = ty;
 					}
-					var rr = d2 > 400 * 400 ? 3.2 : (d2 > 150 * 150 ? 4.2 : 5.6);
-					dctx.fillStyle = dc;
-					dctx.strokeStyle = 'rgba(10,13,8,.85)';
-					dctx.lineWidth = 1.4;
-					dctx.beginPath();
-					if (p.kind === 'dev-sap') {                       /* 液流：圆 */
-						dctx.arc(sx, sy, rr, 0, 6.2832);
-					} else if (p.kind === 'dev-den') {                /* 径向生长：方 */
-						dctx.rect(sx - rr, sy - rr, rr * 2, rr * 2);
-					} else {                                          /* LAI：三角 */
-						dctx.moveTo(sx, sy - rr);
-						dctx.lineTo(sx + rr, sy + rr * 0.85);
-						dctx.lineTo(sx - rr, sy + rr * 0.85);
-						dctx.closePath();
-					}
-					dctx.fill(); dctx.stroke();
+					drawShape(sx, sy, dsh, dc);
 					DOTSCREEN.push({ x: sx, y: sy, name: p.name, kind: p.kind, tree: TREE_IDS[p.name] ? p.name : null });
-					if (d2 < LABEL_DIST * LABEL_DIST) texts.push({ sx: sx, sy: sy, d2: d2, name: p.name });
+					if (d2 < LABEL_DIST * LABEL_DIST) texts.push({ sx: sx, sy: sy, d2: d2, name: p.name, col: lcol });
 					continue;
 				} else {
-					var r = d2 > 400 * 400 ? 1.7 : (d2 > 150 * 150 ? 2.2 : 3.2);
-					dctx.globalAlpha = 0.9;
-					dctx.fillStyle = '#d3a970';
-					dctx.beginPath(); dctx.arc(sx, sy, r, 0, 6.2832); dctx.fill();
-					dctx.lineWidth = 1; dctx.strokeStyle = 'rgba(10,13,8,.9)'; dctx.stroke();
-					dctx.globalAlpha = 1;
+					/* 样方内树（RTK 实测）：固定大小的圆点（原来只有 1.7~3.2px） */
+					drawShape(sx, sy, 'circle', '#d3a970', 8);
 				}
 				DOTSCREEN.push({ x: sx, y: sy, name: p.name, kind: p.kind });
-				if (d2 < LABEL_DIST * LABEL_DIST) texts.push({ sx: sx, sy: sy, d2: d2, name: p.name });
+				if (d2 < LABEL_DIST * LABEL_DIST) texts.push({ sx: sx, sy: sy, d2: d2, name: p.name, col: lcol });
 			}
 
 			// 放大后显示名称（近的优先，重叠的跳过）
@@ -689,9 +753,12 @@
 							Math.abs(y - placed[j].y) < (h + placed[j].h) / 2) { ok = false; break; }
 					}
 					if (!ok) continue;
-					dctx.fillStyle = 'rgba(20,24,15,.78)';
+					dctx.fillStyle = t.col || 'rgba(20,24,15,.78)';
 					dctx.fillRect(x - 4, y - h / 2, w, h);
-					dctx.fillStyle = '#e7e3d8';
+					dctx.strokeStyle = 'rgba(10,13,8,.55)'; dctx.lineWidth = 1;
+					dctx.strokeRect(x - 4, y - h / 2, w, h);
+					dctx.fillStyle = t.col ? fgOn(t.col) : '#e7e3d8';
+					dctx.font = 'bold 12px Raleway,"Microsoft YaHei",sans-serif';
 					dctx.fillText(t.name, x, y);
 					placed.push({ x: x, y: y, w: w, h: h });
 				}
@@ -704,6 +771,51 @@
 			if (clip[3] <= 0.0001) return null;
 			return [(clip[0] / clip[3] * 0.5 + 0.5) * innerWidth,
 			        (-clip[1] / clip[3] * 0.5 + 0.5) * innerHeight];
+		}
+		/* 所有观测点统一画法（金总：散点都要像微气候那样显眼）：
+		   固定大小 + 深色描边，**不随距离缩小**；不同类型用不同形状和颜色区分。
+		   形状：菱形 / 五角星 / 正方形 / 三角形 / 圆形 / 六边形。 */
+		var PT_SIZE = 10;                                  /* 外接尺寸（像素） */
+		function drawShape(x, y, shape, color, size) {
+			var s = size || PT_SIZE, h = s / 2, i, rr, a;
+			dctx.save();
+			dctx.translate(x, y);
+			dctx.fillStyle = color; dctx.strokeStyle = '#14170f'; dctx.lineWidth = 1.8;
+			dctx.beginPath();
+			if (shape === 'star') {
+				for (i = 0; i < 10; i++) {
+					rr = (i % 2 === 0) ? h : h * 0.45;
+					a = -Math.PI / 2 + i * Math.PI / 5;
+					if (i === 0) { dctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+					else { dctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+				}
+				dctx.closePath();
+			} else if (shape === 'diamond') {
+				dctx.moveTo(0, -h); dctx.lineTo(h, 0); dctx.lineTo(0, h); dctx.lineTo(-h, 0); dctx.closePath();
+			} else if (shape === 'square') {
+				dctx.rect(-h, -h, s, s);
+			} else if (shape === 'triangle') {
+				dctx.moveTo(0, -h); dctx.lineTo(h, h * 0.85); dctx.lineTo(-h, h * 0.85); dctx.closePath();
+			} else if (shape === 'hex') {
+				for (i = 0; i < 6; i++) {
+					a = -Math.PI / 2 + i * Math.PI / 3;
+					if (i === 0) { dctx.moveTo(Math.cos(a) * h, Math.sin(a) * h); }
+					else { dctx.lineTo(Math.cos(a) * h, Math.sin(a) * h); }
+				}
+				dctx.closePath();
+			} else {
+				dctx.arc(0, 0, h, 0, 6.2832);
+			}
+			dctx.fill(); dctx.stroke();
+			dctx.restore();
+		}
+		/* 标签底色用对应散点的颜色；亮色底自动配深字 */
+		function fgOn(bg) {
+			var m = /^#?([0-9a-f]{6})$/i.exec(bg || '');
+			if (!m) { return '#fff'; }
+			var v = parseInt(m[1], 16);
+			var lum = 0.299 * ((v >> 16) & 255) + 0.587 * ((v >> 8) & 255) + 0.114 * (v & 255);
+			return lum >= 128 ? '#14170f' : '#fff';
 		}
 		function drawCrown(ring, V, P, color) {
 			if (!ring || ring.length < 3) return;
@@ -764,13 +876,13 @@
 			areas.forEach(function (a) {
 				var n = a.ring.length, ax = 0, ay = 0, az = 0;
 				for (var i = 0; i < n; i++) { ax += a.ring[i][0]; ay += a.ring[i][1]; az += a.ring[i][2]; }
-				var L = addLabel(ax / n, ay / n, az / n + 25, a.nameZh, 'log', null, a.name);
+				var L = addLabel(ax / n, ay / n, az / n + 25, a.nameZh, 'log', null, a.name, '#3f8fd0');
 				L.el.addEventListener('mousemove', function (ev) {
 					showTip(ev, '<b>' + L.el.textContent + '</b>');
 				});
 			});
 			points.forEach(function (p) {
-				var L = addLabel(p.E, p.N, p.Z + 25, p.nameZh, 'log', null, p.name);
+				var L = addLabel(p.E, p.N, p.Z + 25, p.nameZh, 'log', null, p.name, '#ffd400');
 				L.el.addEventListener('mousemove', function (ev) {
 					showTip(ev, '<b>' + L.el.textContent + '</b>' +
 						(p.alt != null ? '<br>' + p.alt + ' m' : ''));
@@ -833,47 +945,19 @@
 			if (BIG_ON && SITE3) {
 				SITE3.areas.forEach(function (a) { drawRing(a.ring, V, P, '#3f8fd0', '#3f8fd0', 2.4, 0.14, true); });
 			}
-			/* 生活区 / 林场：地面上的黄点 */
-			if (SITE_ON && SITE3) {
-				SITE3.points.forEach(function (p) {
-					var s = projXYZ(V, P, p.E, p.N, p.Z);
-					if (!s) return;
-					dctx.beginPath();
-					dctx.arc(s[0], s[1], 5.5, 0, Math.PI * 2);
-					dctx.fillStyle = '#ffd400'; dctx.globalAlpha = 1; dctx.fill();
-					dctx.lineWidth = 2; dctx.strokeStyle = '#20242a'; dctx.stroke();
-				});
-			}
-			/* 监测设施点：五角星（温室气体=绿、土壤呼吸=淡蓝），配色沿用展板 */
+			/* 生活区 / 林场：只留标签，不画点（金总要求） */
+			/* 监测设施点：温室气体=五角星(绿)、土壤呼吸=三角形(淡蓝) —— 与微气候同大小，形状区分 */
 			if (FAC_ON && FAC3) {
 				FAC3.forEach(function (p) {
 					var s2 = projXYZ(V, P, p.E, p.N, p.Z);
-					if (!s2) { return; }
-					var col = (p.name.indexOf('温室') >= 0) ? '#00e000' : '#bed2ff';
-					dctx.save();
-					dctx.translate(s2[0], s2[1]);
-					dctx.beginPath();
-					for (var i = 0; i < 10; i++) {
-						var rr = (i % 2 === 0) ? 9 : 4, a2 = -Math.PI / 2 + i * Math.PI / 5;
-						var px2 = Math.cos(a2) * rr, py2 = Math.sin(a2) * rr;
-						if (i === 0) { dctx.moveTo(px2, py2); } else { dctx.lineTo(px2, py2); }
-					}
-					dctx.closePath();
-					dctx.fillStyle = col; dctx.globalAlpha = 1; dctx.fill();
-					dctx.lineWidth = 1.6; dctx.strokeStyle = '#111'; dctx.stroke();
-					dctx.restore();
+					if (s2) { drawShape(s2[0], s2[1], p.shape || 'triangle', p.col || '#bed2ff'); }
 				});
 			}
 			/* 微气候观测点：青色菱形（高程按地形取，见 ensureMicroZ） */
 			if (MICRO_ON && MICRO3) {
 				MICRO3.forEach(function (p) {
 					var s = projXYZ(V, P, p.E, p.N, p.Z);
-					if (!s) { return; }
-					dctx.save();
-					dctx.translate(s[0], s[1]); dctx.rotate(Math.PI / 4);
-					dctx.fillStyle = '#00d1d1'; dctx.strokeStyle = '#1a1a1a'; dctx.lineWidth = 1.6;
-					dctx.fillRect(-4, -4, 8, 8); dctx.strokeRect(-4, -4, 8, 8);
-					dctx.restore();
+					if (s) { drawShape(s[0], s[1], 'diamond', p.col || '#00d1d1'); }
 				});
 			}
 			/* 其他台站（小五台 / 驼梁）的样方框：切过去才画 */
@@ -957,10 +1041,11 @@
 			}
 			if (best) {
 				tip = tip || document.getElementById('tip');
-				canvasEl2.style.cursor = best.tree ? 'pointer' : '';
+				canvasEl2.style.cursor = (best.tree || best.kind === 'det') ? 'pointer' : '';
 				if (best.kind === 'det') {
 					tip.innerHTML = '<b>' + ((SPECIES[best.sp] && SPECIES[best.sp].zh) || '') + '</b><br>' +
-						(LANG === 'zh' ? '单木识别' : 'Detected tree');
+						(LANG === 'zh' ? '单木识别' : 'Detected tree') +
+						'<br><span style="opacity:.8">' + (LANG === 'zh' ? '点击查看该树种' : 'Click to see this species') + '</span>';
 				} else if (best.kind && best.kind.indexOf('dev-') === 0) {
 					var dn = best.kind === 'dev-sap' ? (LANG === 'zh' ? '液流' : 'Sap flow')
 					       : (best.kind === 'dev-den' ? (LANG === 'zh' ? '径向生长仪' : 'Dendrometer')
@@ -976,6 +1061,84 @@
 				tip.style.left = Math.min(ev.clientX + 12, innerWidth - 250) + 'px';
 				tip.style.top = (ev.clientY + 12) + 'px';
 			} else { hideTip(); canvasEl2.style.cursor = ''; }
+		});
+
+		/* 点单木（单木识别树冠）→ 弹出该树种的旋转动图。
+		   动图放在 3d/trees/，只有部分树种有；没有的就只报名字并说明。
+		   拉丁名与二维树数据（js/trees.js）保持一致。 */
+		var TREE_GIF = {
+			'油松': 'yousong', '胡桃楸': 'hutaqiu', '落叶松': 'luoyesong',
+			'五角枫': 'wujiaofeng', '山杨': 'shanyang', '黄檗': 'huangbo', '蒙古栎': 'mengguli'
+		};
+		var TREE_LATIN = {
+			'油松': 'Pinus tabuliformis', '胡桃楸': 'Juglans mandshurica',
+			'落叶松': 'Larix gmelinii var. principis-rupprechtii', '五角枫': 'Acer pictum subsp. mono',
+			'山杨': 'Populus davidiana', '黄檗': 'Phellodendron amurense', '蒙古栎': 'Quercus mongolica'
+		};
+		/* 每张动图里「树」的包围盒 [x, y, w, h]，画幅统一 1138x640。
+		   动图四周是大片透明边距，裁掉它，树才能真正占满、放大后看得到细节。 */
+		var TREE_BOX = {
+			yousong: [443, 11, 252, 611], hutaqiu: [282, 11, 575, 542],
+			luoyesong: [463, 11, 212, 610], wujiaofeng: [359, 11, 420, 554],
+			shanyang: [438, 11, 261, 613], huangbo: [354, 11, 430, 589],
+			mengguli: [351, 11, 436, 562]
+		};
+		var TC = null;
+		function treeCard() {
+			if (!TC) {
+				TC = {
+					box: document.getElementById('treeCard'), name: document.getElementById('tcName'),
+					latin: document.getElementById('tcLatin'), img: document.getElementById('tcImg'),
+					wrap: document.getElementById('tcWrap'), note: document.getElementById('tcNote')
+				};
+			}
+			return TC;
+		}
+		function hideTreeCard() {
+			var e = treeCard();
+			if (e.box) { e.box.classList.remove('open'); }
+		}
+		function showTreeCard(spId, ev) {
+			var e = treeCard();
+			if (!e.box) { return; }
+			var sp = SPECIES[spId] || {}, zh = sp.zh || '';
+			var key = TREE_GIF[zh];
+			e.name.textContent = zh;
+			e.latin.textContent = TREE_LATIN[zh] || '';
+			e.note.textContent = '';
+			if (key) {
+				var b = TREE_BOX[key] || [0, 0, 1138, 640];
+				var pad = 1.04;                       /* 留一点余量，别把转到边上的枝梢切掉 */
+				var bw = b[2] * pad, bh = b[3] * pad;
+				var ox = b[0] - b[2] * (pad - 1) / 2, oy = b[1] - b[3] * (pad - 1) / 2;
+				var TH = Math.max(240, Math.min(470, Math.round(innerHeight * 0.5)));   /* 树高：半屏左右 */
+				var sc = TH / bh;
+				var url = 'trees/' + key + '.gif';
+				/* 同一树种就别重设 src —— 会从头播、还可能重新下载几 MB */
+				if (e.img.getAttribute('src') !== url) { e.img.setAttribute('src', url); }
+				e.img.style.width = Math.round(1138 * sc) + 'px';
+				e.img.style.left = Math.round(-ox * sc) + 'px';
+				e.img.style.top = Math.round(-oy * sc) + 'px';
+				e.wrap.style.display = 'block';
+				e.wrap.style.width = Math.round(bw * sc) + 'px';
+				e.wrap.style.height = Math.round(bh * sc) + 'px';
+			} else {
+				e.wrap.style.display = 'none';
+				e.note.textContent = (LANG === 'zh' ? '（暂无该树种动图）' : '(no GIF yet)');
+			}
+			e.box.classList.add('open');
+			/* 让「树」大致落在鼠标处，整块再夹进视口 */
+			var w = e.box.offsetWidth, h = e.box.offsetHeight, tw = e.wrap.offsetWidth || 0;
+			var x = ev.clientX - tw / 2, y = ev.clientY - h / 2;
+			x = Math.min(Math.max(8, x), Math.max(8, innerWidth - w - 8));
+			y = Math.min(Math.max(8, y), Math.max(8, innerHeight - h - 8));
+			e.box.style.left = Math.round(x) + 'px';
+			e.box.style.top = Math.round(y) + 'px';
+		}
+		document.addEventListener('keydown', function (ev) {
+			if (ev.key !== 'Escape') { return; }
+			if (document.body.classList.contains('ui-off')) { document.body.classList.remove('ui-off'); return; }
+			hideTreeCard();
 		});
 
 		/* 点击液流点（名字即监测树号）→ 跳到主页该树的数据。
@@ -996,6 +1159,8 @@
 				var dd = (s.x - ev.clientX) * (s.x - ev.clientX) + (s.y - ev.clientY) * (s.y - ev.clientY);
 				if (dd < bd) { bd = dd; best = s; }
 			}
+			if (best && best.kind === 'det') { showTreeCard(best.sp, ev); return; }
+			hideTreeCard();
 			if (best && best.tree) { jumpToTree(best.tree); }
 		});
 
@@ -1095,7 +1260,7 @@
 					var nm = (p.nameZh === '气象站下方样地') ? '油松样地' : p.nameZh;
 					addLabel(p.E, p.N, p.Z + 30, nm, 'log',
 						'<b>' + nm + '</b><br>' + (LANG === 'zh' ? '样点数采' : 'Plot logger'),
-						PLOT_EN[nm] || nm);
+						PLOT_EN[nm] || nm, '#f98422');
 				});
 				/* 103 棵 RTK 实测主树的 E/N（VIT16/T189…）—— 给「格网编号」找最近的点用 */
 				MAINT = (data.maintrees || []).filter(function (m) { return m.E != null && m.N != null; })
@@ -1159,10 +1324,12 @@
 			(FACD.points || []).forEach(function (p) {
 				var z = window.groundZ(p.E, p.N);
 				if (!isFinite(z)) { return; }
-				FAC3.push({ name: p.name, nameEn: p.nameEn, E: p.E, N: p.N, Z: z + 1.5 });
+					var isGHG = p.name.indexOf('温室') >= 0;
+					FAC3.push({ name: p.name, nameEn: p.nameEn, E: p.E, N: p.N, Z: z + 1.5,
+						col: isGHG ? '#00e000' : '#bed2ff', shape: isGHG ? 'star' : 'triangle' });
 			});
 			FAC3.forEach(function (p) {
-				addLabel(p.E, p.N, p.Z + 34, p.name, 'log', null, p.nameEn || p.name);
+				addLabel(p.E, p.N, p.Z + 34, p.name, 'log', null, p.nameEn || p.name, p.col);
 			});
 		}
 
@@ -1173,10 +1340,10 @@
 			(MICRO.points || []).forEach(function (p) {
 				var z = window.groundZ(p.E, p.N);
 				if (!isFinite(z)) { return; }
-				MICRO3.push({ name: p.name, nameEn: p.nameEn, E: p.E, N: p.N, Z: z + 1.5 });
+				MICRO3.push({ name: p.name, nameEn: p.nameEn, E: p.E, N: p.N, Z: z + 1.5, col: '#00d1d1' });
 			});
 			MICRO3.forEach(function (p) {
-				addLabel(p.E, p.N, p.Z + 22, p.name, 'log', null, p.nameEn || p.name);
+				addLabel(p.E, p.N, p.Z + 22, p.name, 'log', null, p.nameEn || p.name, p.col);
 			});
 		}
 
@@ -1234,6 +1401,14 @@
 					'&TILEMATRIX=' + z + '&TILEROW=' + y + '&TILECOL=' + x + '&tk=' + TIANDITU_TK;
 			}
 			return 'https://webst0' + ((i % 4) + 1) + '.is.autonavi.com/appmaptile?style=6&x=' + x + '&y=' + y + '&z=' + z;
+		}
+		/* 影像瓦片：失败就隔一会儿重试（代理/弱网下零星失败很常见，一次失败就留块空洞） */
+		function loadTile(x, y, z, i, tries) {
+			return loadImage(groundTileURL(x, y, z, i), 12000).catch(function (e) {
+				if (tries <= 0) { throw e; }
+				return new Promise(function (ok) { setTimeout(ok, 400); })
+					.then(function () { return loadTile(x, y, z, i + 1, tries - 1); });
+			});
 		}
 		function terrariumURL(x, y, z, i) {
 			return 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/' + z + '/' + x + '/' + y + '.png';
@@ -1320,7 +1495,9 @@
 			}
 			var c = window.PCBOX;
 			var cx = (c.min[0] + c.max[0]) / 2, cy = (c.min[1] + c.max[1]) / 2;
-			var S = 4525, SEG = 224, VN = SEG + 1;          /* 地面 4.5 km（面积 2×）、224 段（约 20 m 一格） */
+			var S = 4525, SEG = 224, VN = SEG + 1;
+			var GZ = 16;   /* 影像瓦片层级：16 → 约 1.8 m/px（金总要的清晰度）；15 更远但明显糊 */			/* 地面 4.5 km（面积 20.5 km²）、224 段（约 20 m 一格）。
+			   金总要求：清晰度优先 —— 再大就得降瓦片层级，底图会糊，所以维持 4.5 km。 */
 			var MAXTILE = 144;   /* 4.5 km 在 z16 下约 121 张，留点余量 */
 			var dem = null;                                  /* 样地 DEM 高程栅格 */
 			var ter = null, tW = 0, tH = 0;                   /* 旧字段，保留兼容 */
@@ -1348,7 +1525,7 @@
 			var bI = bbox(imgLL), bW = bbox(wgs);
 
 			/* ---- 1) 影像瓦片拼图（天地图 / 高德） ---- */
-			var n = Math.pow(2, 16);
+			var n = Math.pow(2, GZ);
 			var x0 = Math.floor((bI.lonMin + 180) / 360 * n), x1 = Math.floor((bI.lonMax + 180) / 360 * n);
 			var y0 = Math.floor(merc(bI.latMax, 0)[1] * n), y1 = Math.floor(merc(bI.latMin, 0)[1] * n);
 			var nx = x1 - x0 + 1, ny = y1 - y0 + 1;
@@ -1370,7 +1547,7 @@
 			var imgOK = 0, terOK = 0;
 			for (var ix = 0; ix < nx; ix++) for (var iy = 0; iy < ny; iy++) {
 				(function (ix, iy) {
-					jobs.push(loadImage(groundTileURL(x0 + ix, y0 + iy, 16, ix + iy)).then(function (im) {
+						jobs.push(loadTile(x0 + ix, y0 + iy, GZ, ix + iy, 2).then(function (im) {
 						tiles.push({ ix: ix, iy: iy, im: im, st: tileStats(im) });
 						imgOK++;
 					}).catch(function () {}));
@@ -1707,12 +1884,16 @@
 		 * 轨迹只用「相机位置 + 注视点」两个量描述，不依赖全局 THREE。 */
 		var CAM = { on: false, name: null, t0: 0 };
 		var CAM_DUR = { orbit: 60000, flyover: 45000, dolly: 50000, rise: 50000 };
-		var CAM_SPEEDS = [0.5, 1, 2], camSpeedIdx = 1, CAM_LOOP = true;
-		/* 注意：函数不能叫 camSpeed —— 按钮 id="camSpeed" 会生成同名全局变量，撞名会让脚本早退 */
-		var camSpeedNow = function () { return CAM_SPEEDS[camSpeedIdx]; };
+		/* 无级变速：0.2×~8×，拖滑块即时生效（原来是 0.5/1/2 三档按钮） */
+		var CAM_SPEED = 1, CAM_LOOP = true;
+		/* 注意：函数不能叫 camSpeed —— 老按钮 id="camSpeed" 会生成同名全局变量，撞名会让脚本早退 */
+		var camSpeedNow = function () { return CAM_SPEED; };
 		var budgetWant = 400000;
 		function applyBudget() {
-			viewer.setPointBudget(CAM.on ? Math.min(700000, budgetWant) : budgetWant);
+			/* 自动镜头期间压低预算换流畅；但「我的轨迹」回放例外 —— 那是用户自己
+			   走出来的镜头，要按实时把点云铺满，不能糊着回放。 */
+			var cap = CAM.on && CAM.name !== 'mytour';
+			viewer.setPointBudget(cap ? Math.min(700000, budgetWant) : budgetWant);
 		}
 		var ease = function (x) { return x * x * (3 - 2 * x); };        /* smoothstep */
 		var tri = function (t) { return 1 - Math.abs(2 * t - 1); };     /* 往返 0→1→0 */
@@ -1730,7 +1911,20 @@
 			return { cx: cx, cy: cy, R: R, zc: zc };
 		}
 
+		/* 回放自己录的轨迹：按时间在样本间线性插值 */
+		function recPose(T) {
+			var S = REC.samples;
+			if (!S || S.length < 2 || !REC.dur) { return null; }
+			var ms = T * REC.dur;
+			var lo = 0, hi = S.length - 1;
+			while (lo < hi - 1) { var mid = (lo + hi) >> 1; if (S[mid][0] <= ms) { lo = mid; } else { hi = mid; } }
+			var a = S[lo], b = S[hi], span = (b[0] - a[0]) || 1;
+			var u = Math.max(0, Math.min(1, (ms - a[0]) / span));
+			function L(i) { return a[i] + (b[i] - a[i]) * u; }
+			return { p: [L(1), L(2), L(3)], t: [L(4), L(5), L(6)] };
+		}
 		function camPose(name, T) {
+			if (name === 'mytour') { return recPose(T); }
 			var r = camRef();
 			if (!r) return null;
 			var cx = r.cx, cy = r.cy, R = r.R, zc = r.zc, a, d, h;
@@ -1760,7 +1954,8 @@
 			return { p: [cx + Math.cos(a) * d, cy + Math.sin(a) * d, zc + h], t: [cx, cy, zc] };
 		}
 
-		var CAM_ORDER = ['orbit', 'flyover', 'dolly', 'rise'];
+		var CAM_BASE = ['orbit', 'flyover', 'dolly', 'rise'];
+		function camOrder() { return REC.dur ? CAM_BASE.concat(['mytour']) : CAM_BASE; }
 		var CAM_TRANS = 1500;                      /* 换轨迹时的平滑过渡时长（ms） */
 		var CAM_BLEND = null;                      /* {p0,t0,p1,t1,start} */
 		function camPoseNow(view) {
@@ -1796,8 +1991,9 @@
 				if (!CAM_LOOP) { camStopNow(); return; }         /* 不连播：播完一遍就停 */
 				/* 连播：换到下一条轨迹，并做平滑过渡（不是硬切） */
 				var from = camPoseNow(view);
-				var i = CAM_ORDER.indexOf(CAM.name);
-				CAM.name = CAM_ORDER[(i + 1) % CAM_ORDER.length];
+				var ord = camOrder();
+				var i = ord.indexOf(CAM.name);
+				CAM.name = ord[(i + 1) % ord.length];
 				var to = camPose(CAM.name, 0);
 				if (to) { CAM_BLEND = { p0: from.p, t0: from.t, p1: to.p, t1: to.t, start: now }; }
 				CAM.t0 = now; el = 0;
@@ -1817,6 +2013,10 @@
 		}
 		function camStart(name) {
 			if (!window.PCBOX) { return; }              /* 点云还没就绪 */
+			if (name === 'mytour') {
+				if (!REC.dur) { return; }
+				CAM_DUR.mytour = Math.max(3000, REC.dur);   /* 自己录的按真实时长放 */
+			}
 			var view = viewer.scene.view;
 			var from = camPoseNow(view);
 			CAM.on = true; CAM.name = name; CAM.t0 = performance.now();
@@ -1841,12 +2041,19 @@
 			}
 			var st = document.getElementById('camStop');
 			if (st) st.addEventListener('click', camStopNow);
-			/* 速度：点一下在 0.5× / 1× / 2× 之间循环 */
-			var sp = document.getElementById('camSpeed');
-			if (sp) sp.addEventListener('click', function () {
-				camSpeedIdx = (camSpeedIdx + 1) % CAM_SPEEDS.length;
-				sp.textContent = ((I18N[LANG] || {}).camSpeed || '速度') + ' ' + camSpeedNow() + '×';
-			});
+			/* 速度：无级滑块 0.2×~8× */
+			var sp = document.getElementById('camSpdIn'), spv = document.getElementById('camSpdVal');
+			function paintSpeed() {
+				if (spv) { spv.textContent = (Math.round(CAM_SPEED * 10) / 10) + '×'; }
+			}
+			if (sp) {
+				sp.value = CAM_SPEED;
+				sp.addEventListener('input', function () {
+					CAM_SPEED = Math.max(0.2, Math.min(8, parseFloat(sp.value) || 1));
+					paintSpeed();
+				});
+			}
+			paintSpeed();
 			/* 循环：开 = 四条轨迹依次连播；关 = 播完当前这条就停 */
 			var lp = document.getElementById('camLoop');
 			if (lp) {
@@ -1864,6 +2071,186 @@
 		}());
 
 
+		/* ---------------- 键盘飞行 ----------------
+		 * W/S 前后、A/D 左右 —— **只在水平面内走**（沿相机朝向在地面的投影，
+		 * 不跟着俯仰抬头/低头）；空格或 E 上升、Q 下降；Shift 加速。
+		 * 注视点跟着一起平移，所以只移动、不扭头。
+		 * 速度随「相机到注视点」的距离自适应 —— 贴近地面慢、高空快，再乘无级变速档。 */
+		var FLY = { f: 0, b: 0, l: 0, r: 0, up: 0, dn: 0, boost: 0, on: false, last: 0 };
+		function flyStep(now) {
+			if (!FLY.on) { return; }
+			var dt = Math.min(0.1, (now - (FLY.last || now)) / 1000);
+			FLY.last = now;
+			var f = FLY.f - FLY.b, r = FLY.r - FLY.l, u = FLY.up - FLY.dn;
+			if (!f && !r && !u) { FLY.on = false; return; }
+			var view = viewer.scene.view;
+			var p = view.position, t = view.getPivot();
+			var d3x = t.x - p.x, d3y = t.y - p.y, d3z = t.z - p.z;
+			var dist = Math.sqrt(d3x * d3x + d3y * d3y + d3z * d3z) || 1;   /* 速度按 3D 距离自适应 */
+			var fl = Math.sqrt(d3x * d3x + d3y * d3y) || 1;
+			var fx = d3x / fl, fy = d3y / fl;                /* 前进方向只取水平分量 */
+			var rx = fy, ry = -fx;                           /* 右向 = 前向 × 天(0,0,1) */
+			var k = Math.max(8, Math.min(250, dist * 0.9)) * camSpeedNow() * (FLY.boost ? 3 : 1) * dt;
+			var dx = (fx * f + rx * r) * k, dy = (fy * f + ry * r) * k, dz = u * k;
+			view.position.set(p.x + dx, p.y + dy, p.z + dz);
+			var tv = view.position.clone(); tv.set(t.x + dx, t.y + dy, t.z + dz);
+			view.lookAt(tv);
+		}
+		(function bindFly() {
+			function typing(el) { return el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName); }
+			function set(ev, down) {
+				if (typing(ev.target)) { return; }
+				var k = ev.key, kl = k.toLowerCase(), hit = true;
+				if (kl === 'w') { FLY.f = down ? 1 : 0; }
+				else if (kl === 's') { FLY.b = down ? 1 : 0; }
+				else if (kl === 'a') { FLY.l = down ? 1 : 0; }
+				else if (kl === 'd') { FLY.r = down ? 1 : 0; }
+				else if (k === 'Shift') { FLY.boost = down ? 1 : 0; }              /* Shift：加速 */
+				else if (k === ' ' || k === 'Spacebar' || kl === 'e') { FLY.up = down ? 1 : 0; if (down && k === ' ') { ev.preventDefault(); } }
+				else if (kl === 'q' || k === 'Control') { FLY.dn = down ? 1 : 0; }
+				else { hit = false; }
+				if (!hit) { return; }
+				if (down) { FLY.on = true; camStopNow(); }
+				else if (!FLY.f && !FLY.b && !FLY.l && !FLY.r && !FLY.up && !FLY.dn) { FLY.on = false; }
+			}
+			document.addEventListener('keydown', function (ev) { set(ev, true); });
+			document.addEventListener('keyup', function (ev) { set(ev, false); });
+			addEventListener('blur', function () {
+				FLY.f = FLY.b = FLY.l = FLY.r = FLY.up = FLY.dn = FLY.boost = 0; FLY.on = false;
+			});
+		}());
+
+		/* ---------------- 一键隐藏所有界面（H / Esc 恢复） ---------------- */
+		(function bindUI() {
+			/* 隐藏前记住图层面板是开着还是关着 —— 恢复时照原样还原。
+			   （点面板以外会自动收起面板，不记的话「隐藏一次」就等于把面板关掉了） */
+			var panelWasOpen = false;
+			function toggle() {
+				var pan = document.getElementById('layersPanel');
+				var off = document.body.classList.toggle('ui-off');
+				if (off) { panelWasOpen = !!(pan && pan.classList.contains('open')); }
+				else if (panelWasOpen && pan) { pan.classList.add('open'); }
+			}
+			var b = document.getElementById('uiBtn'), r = document.getElementById('uiRestore');
+			if (b) { b.addEventListener('click', toggle); }
+			if (r) { r.addEventListener('click', toggle); }
+			document.addEventListener('keydown', function (ev) {
+				if (ev.target && /^(INPUT|SELECT|TEXTAREA)$/.test(ev.target.tagName)) { return; }
+				if (ev.key === 'h' || ev.key === 'H') { toggle(); }
+			});
+		}());
+
+		/* ---------------- 图层面板大小：100% → 115% → 130% → 150% ---------------- */
+		var LP_STEPS = [1, 0.75, 0.5, 0.1], LP_SCALE = 1;   /* 100% → 75% → 50% → 10% */
+		function applyLpScale() {
+			var pan = document.getElementById('layersPanel');
+			if (!pan) { return; }
+			if (LP_SCALE === 1) { pan.style.transform = ''; pan.style.maxHeight = ''; }
+			else {
+				pan.style.transform = 'scale(' + LP_SCALE + ')';
+				/* 放大后可视高度也变大，滚动区按比例收，否则会顶出屏幕 */
+				pan.style.maxHeight = Math.round((innerHeight - 132) / LP_SCALE) + 'px';
+			}
+			var b = document.getElementById('lpZoom');
+			if (b) { b.textContent = Math.round(LP_SCALE * 100) + '%'; }
+		}
+		(function bindLpZoom() {
+			try {
+				var v = parseFloat(localStorage.getItem('bfers-3d-lpscale'));
+				if (v && LP_STEPS.indexOf(v) >= 0) { LP_SCALE = v; }
+			} catch (e) {}
+			applyLpScale();
+			var b = document.getElementById('lpZoom');
+			if (b) {
+				b.addEventListener('click', function () {
+					LP_SCALE = LP_STEPS[(LP_STEPS.indexOf(LP_SCALE) + 1) % LP_STEPS.length];
+					applyLpScale();
+					try { localStorage.setItem('bfers-3d-lpscale', String(LP_SCALE)); } catch (e) {}
+				});
+			}
+			addEventListener('resize', applyLpScale);
+		}());
+
+		/* ---------------- 录制自己的轨迹 ----------------
+		 * 按「录制轨迹」开始 → 用鼠标 / WASD 走一遍 → 再按一次结束；
+		 * 这条轨迹就变成与「环绕 / 低空巡航 / 推拉 / 升空俯瞰」并列的一条，可随时重放。
+		 * 存在本地存储里，刷新页面还在。 */
+		var REC = { on: false, t0: 0, last: 0, samples: [], dur: 0, sta: null };
+		var REC_KEY = 'bfers-3d-mytour', REC_GAP = 60, REC_MAX = 180000;
+
+		function recPaint() {
+			var b = document.getElementById('camRec');
+			if (!b || !REC) { return; }
+			var d = (typeof I18N !== 'undefined' && I18N[LANG]) || {};
+			if (REC.on) {
+				b.textContent = (d.camRecStop || '■ 结束录制') + ' ' +
+					((performance.now() - REC.t0) / 1000).toFixed(0) + 's';
+				b.classList.add('on');
+			} else {
+				b.textContent = d.camRec || '● 录制轨迹';
+				b.classList.remove('on');
+			}
+		}
+		function recBtn(has) {
+			var bar = document.getElementById('camBar'), old = document.getElementById('camMy');
+			if (!has) { if (old && old.parentNode) { old.parentNode.removeChild(old); } return; }
+			if (old || !bar) { return; }
+			var d = (typeof I18N !== 'undefined' && I18N[LANG]) || {};
+			var b = document.createElement('button');
+			b.className = 'cbtn'; b.id = 'camMy'; b.type = 'button';
+			b.setAttribute('data-cam', 'mytour');
+			b.textContent = d.camMy || '我的轨迹';
+			b.title = '重放自己录的轨迹（再按停止）';
+			b.addEventListener('click', function () {
+				if (CAM.on && CAM.name === 'mytour') { camStopNow(); } else { camStart('mytour'); }
+			});
+			var rec = document.getElementById('camRec');
+			bar.insertBefore(b, rec || null);
+		}
+		function recStep(now) {
+			if (!REC.on) { return; }
+			if (now - REC.last < REC_GAP) { return; }
+			REC.last = now;
+			var view = viewer.scene.view, p = view.position, t = view.getPivot();
+			function r2(v) { return Math.round(v * 100) / 100; }
+			REC.samples.push([Math.round(now - REC.t0), r2(p.x), r2(p.y), r2(p.z), r2(t.x), r2(t.y), r2(t.z)]);
+			if (now - REC.t0 >= REC_MAX) { recStop(); return; }
+			recPaint();
+		}
+		function recStart() {
+			camStopNow();
+			REC.on = true; REC.t0 = performance.now(); REC.last = 0; REC.samples = [];
+			recPaint();
+		}
+		function recStop() {
+			REC.on = false;
+			var n = REC.samples.length, dur = n ? REC.samples[n - 1][0] : 0;
+			if (n < 3 || dur < 1200) {                      /* 太短：多半是误按（门槛放低，慢机器上帧率低也能录） */
+				REC.samples = []; REC.dur = 0; REC.sta = null;
+				try { localStorage.removeItem(REC_KEY); } catch (e) {}
+				recPaint(); recBtn(false);
+				console.info('[3d] 轨迹太短（不足 1.5 秒），已丢弃');
+				return;
+			}
+			REC.dur = dur; REC.sta = STA_ACTIVE || null;
+			try {
+				localStorage.setItem(REC_KEY, JSON.stringify({ dur: REC.dur, sta: REC.sta, samples: REC.samples }));
+			} catch (e) { console.info('[3d] 轨迹存不下（本地存储已满？）'); }
+			recPaint(); recBtn(true);
+		}
+		(function initRec() {
+			try {
+				var d = JSON.parse(localStorage.getItem(REC_KEY) || 'null');
+				if (d && d.samples && d.samples.length > 1 && d.dur > 0) {
+					REC.samples = d.samples; REC.dur = d.dur; REC.sta = d.sta || null;
+				}
+			} catch (e) {}
+			recBtn(!!REC.dur);
+			recPaint();
+			var b = document.getElementById('camRec');
+			if (b) { b.addEventListener('click', function () { if (REC.on) { recStop(); } else { recStart(); } }); }
+		}());
+
 		/* 地面触发兜底：渲染循环里检查一次条件，满足就铺（buildGround 内部自带重试）。
 		   只尝试一次，避免每帧重复发起。 */
 		var GROUND_TRY = 0;
@@ -1877,6 +2264,8 @@
 		(function loop() {
 			var now = performance.now();
 			if (CAM.on) camStep(now);
+			flyStep(now);
+			recStep(now);
 			ensureGround(); project(); drawDots(); ensureSiteZ(); ensureMicroZ(); ensureFacZ(); drawBounds(); drawCells();
 			requestAnimationFrame(loop);
 		})();
