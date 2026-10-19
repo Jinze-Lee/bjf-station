@@ -168,11 +168,18 @@
 		/* 标签底色 = 对应散点的颜色（--lbl-bg 由脚本按图层设，见 applyLblColor）。
 		   亮底自动配深色字，保证读得清；鼠标悬停仍然变绿。 */
 		.lbl { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; cursor: pointer;
-			white-space: nowrap; font-size: 11px; padding: 2px 7px; border-radius: 10px;
+			white-space: normal; max-width: 250px; text-align: center; line-height: 1.35;
+			font-size: 11px; padding: 2px 7px; border-radius: 10px;
 			color: var(--lbl-fg, #fff);
 			background: var(--lbl-bg, rgba(28,33,22,.78));
 			border: 1px solid var(--lbl-bd, rgba(160,180,120,.5));
 			box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+		/* 定位站（全称）专属：旗帜形标签，底部一个小尖角指向位置 */
+		.lbl.station { border-radius: 6px; padding: 3px 9px 4px; font-weight: 700; }
+		.lbl.station::after { content: ''; position: absolute; left: 50%; bottom: -6px;
+			transform: translateX(-50%); width: 0; height: 0;
+			border-left: 6px solid transparent; border-right: 6px solid transparent;
+			border-top: 7px solid var(--lbl-bd, #8e1247); }
 		.lbl.tree { background: var(--lbl-bg, rgba(40,74,40,.86)); }
 		.lbl.log { background: var(--lbl-bg, rgba(122,66,28,.9)); font-weight: 700; }
 		.lbl:hover { background: #6ca14a; border-color: #fff; }
@@ -1116,7 +1123,9 @@
 				});
 			});
 			points.forEach(function (p) {
-				var L = addLabel(p.E, p.N, p.Z + 25, p.nameZh, 'log', null, p.name, '#ffd400');
+				var isSta = (p.id === 'station');
+				var L = addLabel(p.E, p.N, p.Z + 25, p.nameZh, isSta ? 'log station' : 'log',
+					null, p.name, isSta ? '#c2255c' : '#ffd400');
 				L.group = 'site';
 				L.el.addEventListener('mousemove', function (ev) {
 					showTip(ev, '<b>' + L.el.textContent + '</b>' +
