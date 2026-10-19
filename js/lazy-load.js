@@ -146,7 +146,9 @@
         if (frame) {
             var loadFrame = function () {
                 if (!frame.getAttribute('src')) {
-                    frame.setAttribute('src', frame.getAttribute('data-src'));
+                    /* 加版本戳：iframe 里的 HTML 也会被浏览器缓存，改了看不到（实测踩到过） */
+                    var ds = frame.getAttribute('data-src') || '';
+                    frame.setAttribute('src', ds + (ds.indexOf('?') >= 0 ? '&' : '?') + 'v=20261019e');
                     /* 别死等 iframe 的 load 事件：资源慢时它可能很久不触发，看起来就像「点了没反应」。
                        点下去就先把占位层收起来，另加 8 秒兜底；load 事件到了仍然再兜一次。 */
                     var ph0 = document.getElementById('canopyPlaceholder');
