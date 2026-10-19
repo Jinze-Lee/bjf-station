@@ -97,28 +97,38 @@
     transform: translateX(-50%);
     filter: drop-shadow(0 3px 5px rgba(24, 52, 36, .28));
   }
-  .gt-tag {
+  /* 塔顶 GT200 的放大子图（右侧特写） */
+  .gt-inset {
     position: absolute;
-    z-index: 3;
-    left: 80%;
-    top: 14.8%;
-    transform: translateX(-50%);
-    text-align: center;
-    white-space: nowrap;
-    font-size: 11.5px;
-    font-weight: 600;
-    color: #1d4a33;
-    background: rgba(244, 248, 243, .92);
-    border: 1px solid rgba(47, 122, 79, .22);
-    border-radius: 6px;
-    padding: 2px 7px;
-    line-height: 1.3;
-    box-shadow: 0 2px 6px rgba(24, 52, 36, .12);
+    z-index: 6;
+    left: 84.2%;
+    top: 4.2%;
+    width: 14.2%;
+    background: rgba(250, 253, 249, .96);
+    border: 1px solid rgba(47, 122, 79, .28);
+    border-radius: 10px;
+    padding: 6px 6px 0;
+    box-shadow: 0 10px 24px rgba(24, 52, 36, .16);
   }
-  .gt-tag small {
+  .gt-inset img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 5px;
+  }
+  .gt-inset .cap {
+    padding: 5px 2px 6px;
+    text-align: center;
+    line-height: 1.3;
+  }
+  .gt-inset .cap b {
+    display: block;
+    font-size: 12px;
+    color: #1d4a33;
+  }
+  .gt-inset .cap span {
     display: block;
     font-size: 11px;
-    font-weight: 500;
     color: #4f685a;
   }
 
@@ -311,7 +321,11 @@
       <canvas id="fgTreeCanvas" aria-hidden="true"></canvas>
       <!-- 远景铁塔顶上的 GT200 网关主站（无线汇聚点） -->
       <img class="gt200" src="img/gt200.webp" alt="GT200 网关主站" />
-      <div class="gt-tag">GT200 网关主站<small>无线数据汇聚</small></div>
+      <!-- 塔顶网关放大子图 -->
+      <div class="gt-inset">
+        <img src="img/gt200.webp" alt="GT200 网关主站放大特写" />
+        <div class="cap"><b>GT200 网关主站</b><span>塔顶放大 · 无线数据先汇于此</span></div>
+      </div>
       <!-- 层 4：近景仪器 -->
       <div id="fgPhotoLayer"></div>
       <!-- 层 5：无线 WiFi 波纹与有线数据流动 -->
