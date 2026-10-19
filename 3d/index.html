@@ -1242,7 +1242,7 @@
 			areas.forEach(function (a) {
 				var n = a.ring.length, ax = 0, ay = 0, az = 0;
 				for (var i = 0; i < n; i++) { ax += a.ring[i][0]; ay += a.ring[i][1]; az += a.ring[i][2]; }
-				var L = addLabel(ax / n, ay / n, az / n + 25, a.nameZh, 'log', null, a.name, '#ff2d55');
+				var L = addLabel(ax / n, ay / n, az / n + 25, a.nameZh, 'log', null, a.name, '#4a9ec4');
 				L.group = 'big';
 				L.el.addEventListener('mousemove', function (ev) {
 					showTip(ev, '<b>' + L.el.textContent + '</b>');
@@ -1318,18 +1318,24 @@
 			cx /= n; cy /= n;
 			var w = maxx - minx, h = maxy - miny;
 			if (w < 12 || h < 8) { return; }                 /* 太远就不画，免得糊成一片 */
-			/* 小样地（几十米见方）字号再放大一档，金总要求 1.5~2.5 倍 */
+			/* 小样地（综合林/落叶松/油松/白桦林）统一用同一个字号 —— 综合林地更大，
+			   按比例算会明显比另外两个大，金总要求"一样大"。 */
 			var spanPx = Math.max(w, h);
-			var sc2 = (scale || 1) * (spanPx < 260 ? 2.0 : 1.0);
-			var fs = Math.min(w / Math.max(3, name.length * 0.95), h * 0.62);
-			fs = Math.max(11, Math.min(110, fs)) * sc2;
-			fs = Math.min(200, fs);
+			var small = spanPx < 260;
+			var sc2 = 1;
+			var fs;
+			if (small) {
+				fs = 24;                                    /* 小样地：固定字号，三个一样大 */
+			} else {
+				fs = Math.min(w / Math.max(3, name.length * 0.95), h * 0.62);
+				fs = Math.max(11, Math.min(110, fs));
+			}
 			dctx.save();
 			dctx.globalAlpha = 0.46;                 /* 原来 0.20 太透，看不清 */
 			dctx.font = '700 ' + fs.toFixed(0) + 'px Raleway,"Microsoft YaHei",sans-serif';
 			dctx.textAlign = 'center'; dctx.textBaseline = 'middle';
 			dctx.lineWidth = Math.max(1.4, fs * 0.035);
-			dctx.strokeStyle = '#ff2d55';            /* 红色描边：透底上更抓眼 */
+			dctx.strokeStyle = '#2f7fa6';                 /* 柔和的深蓝描边，透底上够清楚又不刺眼 */
 			dctx.strokeText(name, cx, cy);
 			dctx.fillStyle = color;
 			dctx.fillText(name, cx, cy);
@@ -1341,9 +1347,9 @@
 			if (!pc || !cam || !BNDS) return;
 			var V = cam.matrixWorldInverse.elements, P = cam.projectionMatrix.elements;
 			if (BND_ON) bndRings('boundaries').forEach(function (p, bi) {
-					drawRing(p, V, P, '#f98422', '#ff2d55', 3.6, 0.26, true);
+					drawRing(p, V, P, '#7fc4e8', '#4a9ec4', 3.2, 0.20, true);
 					var nm = (BNDS.boundaries[bi] && BNDS.boundaries[bi].name) || '';
-					if (nm) { drawPlotText(p, V, P, nm + '样地', '#ff2d55'); }
+					if (nm) { drawPlotText(p, V, P, nm + '样地', '#eaf6ff'); }
 				});
 			if (G20_ON) bndRings('grid20').forEach(function (p) { drawRing(p, V, P, null, 'rgba(235,235,235,.75)', 1.1, 0, true); });
 			if (G40_ON) bndRings('grid40').forEach(function (p) { drawRing(p, V, P, null, 'rgba(255,210,127,.85)', 1.6, 0, true); });
@@ -1351,8 +1357,8 @@
 			/* 大样地 / 白桦林样地：与落叶松/油松等样地同色（金总要求统一为橙） */
 			if (BIG_ON && SITE3) {
 				SITE3.areas.forEach(function (a) {
-					drawRing(a.ring, V, P, '#f98422', '#ff2d55', 3.6, 0.26, true);
-					drawPlotText(a.ring, V, P, a.nameZh, '#ff2d55');
+					drawRing(a.ring, V, P, '#7fc4e8', '#4a9ec4', 3.2, 0.20, true);
+					drawPlotText(a.ring, V, P, a.nameZh, '#eaf6ff');
 				});
 			}
 			/* 生活区 / 林场：只留标签，不画点（金总要求） */
@@ -1678,7 +1684,7 @@
 					var nm = (p.nameZh === '气象站下方样地') ? '油松样地' : p.nameZh;
 					addLabel(p.E, p.N, p.Z + 30, nm, 'log',
 						'<b>' + nm + '</b><br>' + (LANG === 'zh' ? '样点数采' : 'Plot logger'),
-						PLOT_EN[nm] || nm, '#ff2d55').group = 'plot';
+						PLOT_EN[nm] || nm, '#4a9ec4').group = 'plot';
 				});
 				/* 103 棵 RTK 实测主树的 E/N（VIT16/T189…）—— 给「格网编号」找最近的点用 */
 				MAINT = (data.maintrees || []).filter(function (m) { return m.E != null && m.N != null; })

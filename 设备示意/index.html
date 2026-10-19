@@ -101,33 +101,25 @@
   .species {
     position: absolute;
     z-index: 6;
-    transform: translateX(-50%);
-    text-align: center;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
     white-space: nowrap;
-    line-height: 1.25;
+    line-height: 1.15;
     pointer-events: none;
-  }
-  .species::before {
-    content: '';
-    display: block;
-    width: 1px;
-    height: 9px;
-    margin: 0 auto 2px;
-    background: rgba(47, 122, 79, .55);
+    padding: 4px 3px;
+    background: linear-gradient(180deg, rgba(250,253,249,.0), rgba(250,253,249,.82) 12%, rgba(250,253,249,.82) 88%, rgba(250,253,249,0));
   }
   .species b {
-    display: block;
     font-size: 11.5px;
     font-weight: 700;
     color: #24452f;
-    text-shadow: 0 0 4px #f4f8f3, 0 0 8px #f4f8f3, 0 0 12px #f4f8f3;
+    letter-spacing: .04em;
   }
   .species i {
-    display: block;
     font-size: 11px;
     font-style: italic;
     color: #4c6a58;
-    text-shadow: 0 0 4px #f4f8f3, 0 0 8px #f4f8f3, 0 0 12px #f4f8f3;
+    margin-block-start: 4px;
   }
 
   /* 塔顶 GT200 的放大子图（右侧特写） */
@@ -200,79 +192,64 @@
   .plate .sub.wifi-tag { color: #146e64; }
   .plate .sub.wire-tag { color: #1f6599; }
 
-  /* 右侧电脑（显示器 + 支架 + 底座 + 键盘，屏幕内实时滚动曲线） */
-  .computer {
+  /* 右侧平板（屏幕 + 磁吸键盘，无底座托盘） */
+  .tablet {
     position: absolute;
     z-index: 6;
-    left: 91.2%;
-    top: 44.5%;
-    width: 14.2%;
+    left: 90.8%;
+    top: 42%;
+    width: 15.4%;
     transform: translateX(-50%);
     display: flex;
     flex-direction: column;
     align-items: center;
   }
-  .monitor {
+  .tablet-screen {
     width: 100%;
-    padding: 9px 9px 13px;
-    border-radius: 10px;
-    background: linear-gradient(160deg, #344039, #18201b 74%);
+    padding: 8px 8px 10px;
+    border-radius: 12px;
+    background: linear-gradient(160deg, #37433c, #151c18 76%);
     box-shadow: 0 16px 32px rgba(20, 44, 30, .24), inset 0 1px 0 rgba(255, 255, 255, .16);
   }
   .screen {
     background: #fbfdfb;
     border-radius: 4px;
     overflow: hidden;
-    aspect-ratio: 16 / 10.6;
+    aspect-ratio: 4 / 3;
     display: flex;
     flex-direction: column;
   }
-  .screen-bar {
-    min-height: 24px;
+  .pad-bar {
+    min-height: 20px;
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 3px 8px;
+    padding: 3px 7px;
     background: #e9f2ea;
     border-bottom: 1px solid #d8e5da;
   }
-  .screen-bar i {
+  .pad-bar i {
     width: 4px; height: 4px; border-radius: 50%;
     background: #8fa998;
   }
-  .screen-bar .url {
+  .pad-bar span {
     margin-left: 3px;
-    font-size: 11px;
-    color: #496354;
+    font-size: 9.5px;
+    color: #46604f;
   }
-  .screen-bar .live-pill {
+  .pad-bar em {
     margin-left: auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 11px;
-    font-weight: 600;
+    font-style: normal;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
     color: #1f6b45;
   }
-  .screen-bar .live-pill b {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: #289e5a;
-    display: inline-block;
-  }
-  .screen-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    padding: 5px 8px 1px;
-  }
-  .screen-title {
-    font-size: 11.5px;
+  .pad-head {
+    padding: 4px 8px 0;
+    font-size: 11px;
     font-weight: 700;
     color: #1f3f2d;
-  }
-  .screen-sub {
-    font-size: 11px;
-    color: #4d6758;
   }
   .screen-chart {
     width: 100%;
@@ -280,35 +257,47 @@
     display: block;
     margin-top: 1px;
   }
-  .screen-legend {
-    display: flex;
-    gap: 10px;
-    padding: 2px 8px 4px;
-    font-size: 11px;
-    color: #496354;
+  .pad-foot {
+    padding: 3px 8px 4px;
+    font-size: 10.5px;
+    color: #46604f;
     border-top: 1px solid #edf3ee;
+    display: flex;
+    align-items: center;
+    gap: 5px;
   }
-  .screen-legend span { display: inline-flex; align-items: center; gap: 4px; }
-  .screen-legend i { width: 8px; height: 2.5px; border-radius: 1px; display: inline-block; }
-  .monitor-neck {
-    width: 9%;
-    height: 14px;
-    background: linear-gradient(180deg, #26312b, #434f47);
+  .pad-foot b {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #289e5a;
+    display: inline-block;
   }
-  .monitor-foot {
-    width: 38%;
-    height: 6px;
-    border-radius: 3px;
-    background: #354039;
+  /* 磁吸键盘（平板下沿） */
+  .tablet-keyboard {
+    width: 94%;
+    height: 30px;
+    margin-top: -1px;
+    border-radius: 0 0 7px 7px;
+    background: linear-gradient(180deg, #edf3ee, #dbe6dd);
+    border: 1px solid #c3d2c6;
+    border-top: none;
+    box-shadow: 0 9px 16px rgba(20, 44, 30, .16);
+    position: relative;
   }
-  .monitor-keyboard {
-    width: 78%;
-    height: 12px;
-    margin-top: 3px;
-    border-radius: 3px;
-    background: #eef4ef;
-    border: 1px solid #c5d4c8;
-    box-shadow: inset 0 2px 0 #dce7de, 0 4px 8px rgba(24, 52, 36, .10);
+  .tablet-keyboard::before {
+    content: '';
+    position: absolute;
+    left: 6%; right: 6%; top: 7px;
+    height: 1px;
+    background: #c6d4c9;
+    box-shadow: 0 7px 0 #c6d4c9, 0 14px 0 #c6d4c9;
+  }
+  .tablet-keyboard::after {
+    content: '';
+    position: absolute;
+    left: 30%; right: 30%; bottom: 4px;
+    height: 3px;
+    border-radius: 2px;
+    background: #c6d4c9;
   }
 
   footer {
@@ -365,37 +354,23 @@
       <canvas id="fxCanvas" aria-hidden="true"></canvas>
       <!-- 层 6：随景深错落的名称牌 -->
       <div id="labelLayer"></div>
-
-      <!-- 最右侧：电脑屏幕实时动态曲线 -->
-      <div class="computer" aria-label="电脑屏幕实时观测曲线">
-        <div class="monitor">
+      <!-- 最右侧：平板 + 键盘，屏幕内 30 路数据实时刷新 -->
+      <div class="tablet" aria-label="平板屏幕上的实时数据">
+        <div class="tablet-screen">
           <div class="screen">
-            <div class="screen-bar">
+            <div class="pad-bar">
               <i></i><i></i><i></i>
-              <span class="url">bjf-station / live</span>
-              <span class="live-pill"><b></b>LIVE</span>
+              <span>bjf-station / live</span>
+              <em>LIVE</em>
             </div>
-            <div class="screen-head">
-              <span class="screen-title">森林站 · 实时数据</span>
-              <span class="screen-sub">30 min 同步</span>
-            </div>
-            <svg class="screen-chart" viewBox="0 0 240 92" preserveAspectRatio="none" aria-hidden="true">
-              <path d="M0 74H240M0 48H240M0 22H240" fill="none" stroke="#e6efe8" stroke-width="1" />
-              <path id="areaA" fill="rgba(40, 120, 79, 0.10)" stroke="none" />
-              <path id="liveA" fill="none" stroke="#28784f" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" />
-              <path id="liveB" fill="none" stroke="#2478b4" stroke-width="2.1" stroke-dasharray="4 2.5" stroke-linejoin="round" stroke-linecap="round" />
-              <circle id="dotA" r="3.2" fill="#28784f" />
-              <circle id="dotB" r="3.0" fill="#2478b4" />
+            <div class="pad-head">森林站 · 实时数据</div>
+            <svg class="screen-chart" id="liveChart" viewBox="0 0 240 92" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0 74H240M0 48H240M0 22H240" fill="none" stroke="#e6efe8" stroke-width="0.8" />
             </svg>
-            <div class="screen-legend">
-              <span><i style="background:#28784f"></i>树干液流</span>
-              <span><i style="background:#2478b4"></i>径向生长</span>
-            </div>
+            <div class="pad-foot"><b></b>数据实时接收</div>
           </div>
         </div>
-        <div class="monitor-neck" aria-hidden="true"></div>
-        <div class="monitor-foot" aria-hidden="true"></div>
-        <div class="monitor-keyboard" aria-hidden="true"></div>
+        <div class="tablet-keyboard" aria-hidden="true"></div>
       </div>
     </section>
   </div>
@@ -916,6 +891,25 @@
   var scale = 1, dpr = Math.min(2, window.devicePixelRatio || 1);
   var t0 = performance.now();
 
+  /* 树种铭牌：每树种选一棵最显眼的树，把中文名 + 拉丁名放在树桩旁 */
+  function addSpeciesLabels() {
+    var reps = {};
+    if (!reps[HERO_TREE.sprite]) { reps[HERO_TREE.sprite] = HERO_TREE; }
+    FG_TREES.forEach(function (m) { if (!reps[m.sprite]) { reps[m.sprite] = m; } });
+    BACK_TREES.forEach(function (m) { if (!reps[m.sprite]) { reps[m.sprite] = m; } });
+
+    Object.keys(reps).forEach(function (k) {
+      var m = reps[k], sp = SPECIES[k];
+      if (!sp) { return; }
+      var el = document.createElement('div');
+      el.className = 'species';
+      el.style.left = ((m.x + 16) / W * 100).toFixed(3) + '%';
+      el.style.top = ((m.base - 118) / H * 100).toFixed(3) + '%';
+      el.innerHTML = '<b>' + sp.cn + '</b><i>' + sp.la + '</i>';
+      labelLayer.appendChild(el);
+    });
+  }
+
   function resize() {
     var w = stage.clientWidth || 1;
     scale = w / W;
@@ -1291,32 +1285,53 @@
   }
 
   /* ========================================================================
-     6. 电脑屏幕内的平滑实时滚动曲线
+     6. 平板屏幕：约 30 路观测数据实时刷新（不同颜色、实线/虚线、折线与曲线混排）
      ======================================================================== */
-  var pathA = document.getElementById('liveA');
-  var areaA = document.getElementById('areaA');
-  var pathB = document.getElementById('liveB');
-  var dotA  = document.getElementById('dotA');
-  var dotB  = document.getElementById('dotB');
+  var chartSvg = document.getElementById('liveChart');
   var liveTicks = 0;
-
-  function updateLiveChart(el) {
-    var N = 54;
-    var dA = '', dB = '', lastYa = 45, lastYb = 50;
-    for (var i = 0; i < N; i++) {
-      var x = (i / (N - 1)) * 234;
-      var phase = el * 1.65 + i * 0.22;
-      var ya = 46 + Math.sin(phase) * 16 + Math.sin(phase * 2.3) * 5.5;
-      var yb = 52 + Math.cos(phase * 0.85 + 0.8) * 14 + Math.sin(phase * 1.9) * 4.5;
-      dA += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + ya.toFixed(1);
-      dB += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + yb.toFixed(1);
-      if (i === N - 1) { lastYa = ya; lastYb = yb; }
+  var SERIES = [];
+  (function buildSeries() {
+    var ns = 'http://www.w3.org/2000/svg';
+    var palette = ['#28784f', '#2478b4', '#c07a2a', '#875fa6', '#b8524c',
+                   '#37907f', '#6f8236', '#b2643a', '#4a6c9a', '#96618a'];
+    for (var i = 0; i < 30; i++) {
+      var p = document.createElementNS(ns, 'path');
+      var strong = (i % 7 === 0);
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke', palette[i % palette.length]);
+      p.setAttribute('stroke-width', strong ? '1.45' : '0.75');
+      p.setAttribute('stroke-opacity', strong ? '0.88' : '0.40');
+      p.setAttribute('stroke-linejoin', 'round');
+      p.setAttribute('stroke-linecap', 'round');
+      if (i % 3 === 1) { p.setAttribute('stroke-dasharray', '4 2.6'); }
+      else if (i % 3 === 2) { p.setAttribute('stroke-dasharray', '1.2 2.6'); }
+      chartSvg.appendChild(p);
+      SERIES.push({
+        el: p,
+        base: 10 + (i % 6) * 12.6,
+        amp: 2.4 + (i % 5) * 2.1,
+        f1: 0.052 + (i % 7) * 0.007,
+        f2: 0.125 + (i % 5) * 0.009,
+        ph: i * 0.61,
+        n: (i % 4 === 0) ? 9 : 38
+      });
     }
-    pathA.setAttribute('d', dA);
-    areaA.setAttribute('d', dA + ' L234 88 L0 88 Z');
-    pathB.setAttribute('d', dB);
-    dotA.setAttribute('cx', '234'); dotA.setAttribute('cy', lastYa.toFixed(1));
-    dotB.setAttribute('cx', '234'); dotB.setAttribute('cy', lastYb.toFixed(1));
+  })();
+
+  var lastChart = 0;
+  function updateLiveChart(t) {
+    for (var i = 0; i < SERIES.length; i++) {
+      var s = SERIES[i], d = '';
+      for (var k = 0; k < s.n; k++) {
+        var u = k / (s.n - 1);
+        var y = s.base
+          + Math.sin(t * s.f1 * 6 + s.ph + u * 5.2) * s.amp
+          + Math.sin(t * s.f2 * 6 + s.ph * 1.7 + u * 2.1) * s.amp * 0.45;
+        y = Math.max(3, Math.min(89, y));
+        d += (k === 0 ? 'M' : 'L') + (u * 240).toFixed(1) + ' ' + y.toFixed(1);
+      }
+      s.el.setAttribute('d', d);
+    }
     liveTicks++;
   }
 
@@ -1338,7 +1353,7 @@
     drawBackLayer(el);
     drawFgTreeLayer(el);
     drawFxLayer(el);
-    updateLiveChart(el);
+    if (now - lastChart > 150) { updateLiveChart(el); lastChart = now; }
     window.SceneV6.liveChartTicks = liveTicks;
     requestAnimationFrame(tick);
   }

@@ -101,33 +101,25 @@
   .species {
     position: absolute;
     z-index: 6;
-    transform: translateX(-50%);
-    text-align: center;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
     white-space: nowrap;
-    line-height: 1.25;
+    line-height: 1.15;
     pointer-events: none;
-  }
-  .species::before {
-    content: '';
-    display: block;
-    width: 1px;
-    height: 9px;
-    margin: 0 auto 2px;
-    background: rgba(47, 122, 79, .55);
+    padding: 4px 3px;
+    background: linear-gradient(180deg, rgba(250,253,249,.0), rgba(250,253,249,.82) 12%, rgba(250,253,249,.82) 88%, rgba(250,253,249,0));
   }
   .species b {
-    display: block;
     font-size: 11.5px;
     font-weight: 700;
     color: #24452f;
-    text-shadow: 0 0 4px #f4f8f3, 0 0 8px #f4f8f3, 0 0 12px #f4f8f3;
+    letter-spacing: .04em;
   }
   .species i {
-    display: block;
     font-size: 11px;
     font-style: italic;
     color: #4c6a58;
-    text-shadow: 0 0 4px #f4f8f3, 0 0 8px #f4f8f3, 0 0 12px #f4f8f3;
+    margin-block-start: 4px;
   }
 
   /* 塔顶 GT200 的放大子图（右侧特写） */
@@ -915,6 +907,25 @@
      ======================================================================== */
   var scale = 1, dpr = Math.min(2, window.devicePixelRatio || 1);
   var t0 = performance.now();
+
+  /* 树种铭牌：每树种选一棵最显眼的树，把中文名 + 拉丁名放在树桩旁 */
+  function addSpeciesLabels() {
+    var reps = {};
+    if (!reps[HERO_TREE.sprite]) { reps[HERO_TREE.sprite] = HERO_TREE; }
+    FG_TREES.forEach(function (m) { if (!reps[m.sprite]) { reps[m.sprite] = m; } });
+    BACK_TREES.forEach(function (m) { if (!reps[m.sprite]) { reps[m.sprite] = m; } });
+
+    Object.keys(reps).forEach(function (k) {
+      var m = reps[k], sp = SPECIES[k];
+      if (!sp) { return; }
+      var el = document.createElement('div');
+      el.className = 'species';
+      el.style.left = ((m.x + 16) / W * 100).toFixed(3) + '%';
+      el.style.top = ((m.base - 118) / H * 100).toFixed(3) + '%';
+      el.innerHTML = '<b>' + sp.cn + '</b><i>' + sp.la + '</i>';
+      labelLayer.appendChild(el);
+    });
+  }
 
   function resize() {
     var w = stage.clientWidth || 1;
