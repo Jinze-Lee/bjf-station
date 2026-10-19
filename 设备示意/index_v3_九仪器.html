@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>观测设备与数据传输示意图 · 北京森林生态系统研究站</title>
+<style>
+  :root {
+    --ink:      #22322a;
+    --ink-soft: #5d7268;
+    --ground:   #d5e2d8;
+    --bus:      #2a7fb8;
+    --bg:       #f7faf7;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.6 "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1720px; margin: 0 auto; padding: 24px 24px 36px; }
+
+  header h1 { margin: 0 0 6px; font-size: 24px; letter-spacing: .5px; }
+  header p  { margin: 0; color: var(--ink-soft); font-size: 13.5px; }
+  header .en { color: #93a79b; font-size: 12px; }
+
+  /* 舞台：内部按 2000×900 的比例摆，随宽度等比缩放；窄屏横向滚动不压扁 */
+  .stage-wrap { overflow-x: auto; overflow-y: hidden; }
+  .stage {
+    position: relative;
+    width: 100%;
+    min-width: 1240px;
+    aspect-ratio: 2000 / 900;
+    margin: 10px 0 0;
+  }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  /* 地面线 */
+  .stage .ground {
+    position: absolute; left: 2.5%; width: 84%;
+    bottom: 17.8%; height: 0;
+    border-top: 1.5px solid var(--ground);
+  }
+
+  /* 9 台仪器：立在“地面”上，居中定位 */
+  .dev {
+    position: absolute; bottom: 17.8%;
+    transform: translateX(-50%);
+    margin: 0;
+    filter: drop-shadow(0 6px 10px rgba(30, 60, 42, .14));
+  }
+  .dev img { display: block; width: auto; }
+
+  /* 名称牌（三角标 + 名称），统一排在设备下面一行 */
+  .plate {
+    position: absolute; top: 83.4%;
+    transform: translateX(-50%);
+    text-align: center; white-space: nowrap;
+  }
+  .plate .tri {
+    width: 13px; height: 11px; margin: 0 auto 3px;
+    background: #2f7a4f;
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  }
+  .plate .nm {
+    display: inline-block; padding: 1px 8px; border-radius: 8px;
+    background: rgba(255, 255, 255, .9);
+    border: 1px solid #e2ece5;
+    font-size: 12.5px; font-weight: 600;
+    box-shadow: 0 1px 4px rgba(30, 60, 42, .07);
+  }
+  /* 采集箱名称较长，折两行，免得跟旁边挤在一起 */
+  .plate.wide { white-space: normal; width: 190px; }
+  .plate.wide .nm { padding: 2px 9px; }
+
+  /* 采集箱 / 电脑 */
+  .ph.cabinet {
+    position: absolute; left: 68%; bottom: 17.8%; height: 23%;
+    width: auto;
+    filter: drop-shadow(0 0 14px rgba(255, 255, 255, .9))
+            drop-shadow(0 6px 12px rgba(30, 60, 42, .18));
+  }
+  .pc { position: absolute; left: 86.5%; bottom: 17.8%; width: 10%; }
+  .pc svg { width: 100%; height: auto; display: block; }
+
+  /* 链路说明气泡 */
+  .pill {
+    position: absolute; transform: translate(-50%, -50%);
+    padding: 3px 10px; border-radius: 999px;
+    background: #fff; border: 1px solid #d7e6f2;
+    color: #22628f; font-size: 12.5px; white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(42, 127, 184, .10);
+  }
+
+  @media (max-width: 1349px) {
+    .plate .nm { font-size: 11px; padding: 1px 6px; }
+  }
+  @media (max-width: 900px) {
+    .page { padding: 16px 12px 24px; }
+    header h1 { font-size: 19px; }
+    .pill { font-size: 11px; padding: 2px 7px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <h1>观测设备与数据传输</h1>
+    <p>样地仪器采集 → 采集箱汇总 → 4G 组网上传 → 云端 → 网页实时曲线<span class="en">　Field instruments → Data logger → 4G network → Cloud → Live web charts</span></p>
+  </header>
+
+  <div class="stage-wrap">
+  <div class="stage" id="stage">
+    <!-- 点云林 + 数据总线（最底层） -->
+    <canvas id="dots"></canvas>
+    <div class="ground"></div>
+
+    <!-- 9 台仪器（图片与名称由脚本按 DEVICES 生成） -->
+    <div id="devLayer"></div>
+
+    <img class="ph cabinet" src="img/cabinet.webp" alt="数据采集箱内部模块" />
+    <div class="plate wide" style="left: 76.8%; top: 83.4%;">
+      <div class="tri"></div>
+      <div class="nm">数据采集箱 <span style="font-weight:400;color:#8ea296">组网 · 数采 · 太阳能 · 扩展 · 4G · 不间断电源</span></div>
+    </div>
+
+    <div class="pill" style="left: 45%; top: 97.5%;">数据汇入采集箱</div>
+    <div class="pill" style="left: 77.7%; top: 46%;">4G 上传</div>
+
+    <!-- 电脑 -->
+    <div class="pc">
+      <svg viewBox="0 0 220 300" aria-label="电脑与实时曲线">
+        <path d="M78 30h56a13 13 0 0 0 0-26 17 17 0 0 0-32-5 14 14 0 0 0-24 31z"
+              fill="#eaf3f9" stroke="#8fbcd8" stroke-width="2"/>
+        <rect x="76" y="33" width="60" height="17" rx="8.5" fill="#fff" opacity=".92" />
+        <text x="106" y="46" text-anchor="middle" font-size="13" fill="#5f8ba6">云端</text>
+        <rect x="16" y="62" width="188" height="132" rx="9" fill="#2b3630"/>
+        <rect x="25" y="71" width="170" height="114" rx="4" fill="#f6faf6"/>
+        <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <polyline stroke="#2f7a4f" stroke-width="2.4"
+            points="33,166 55,156 77,146 99,133 121,120 143,104 165,88 187,74" />
+          <polyline stroke="#2a7fb8" stroke-width="2.4" stroke-dasharray="4 3"
+            points="33,120 55,128 77,110 99,118 121,98 143,106 165,86 187,92" />
+        </g>
+        <line x1="31" y1="180" x2="189" y2="180" stroke="#e2ece4" stroke-width="1.4" />
+        <rect x="98" y="194" width="24" height="26" fill="#2b3630" />
+        <rect x="72" y="220" width="76" height="8" rx="4" fill="#2b3630" />
+        <rect x="26" y="240" width="152" height="44" rx="7" fill="#eef3ee" stroke="#cfdcd2" stroke-width="1.6" />
+        <g stroke="#cfdcd2" stroke-width="1.4">
+          <line x1="38" y1="252" x2="166" y2="252" />
+          <line x1="38" y1="264" x2="166" y2="264" />
+          <line x1="86" y1="264" x2="86" y2="276" />
+          <line x1="118" y1="264" x2="118" y2="276" />
+        </g>
+        <rect x="188" y="250" width="20" height="30" rx="10" fill="#eef3ee" stroke="#cfdcd2" stroke-width="1.6" />
+        <line x1="10" y1="290" x2="214" y2="290" stroke="#dbe7dd" stroke-width="2" />
+      </svg>
+    </div>
+  </div>
+  </div>
+
+  <footer style="margin-top:14px;padding-top:12px;border-top:1px solid #e3ece5;color:#8ea296;font-size:12.5px;">
+    点云树按网站三维点云的样式绘制（真彩色、细点）；仪器为抠除背景后的实拍图。
+  </footer>
+
+</div>
+
+<script>
+/* ==========================================================================
+   观测设备示意图 v3
+   --------------------------------------------------------------------------
+   · 9 台仪器来自展板：大气气候与环境集成、植物生长节律、生态系统能量平衡观测、
+     干湿沉降采样系统、土壤温湿盐自动观测、土壤温室气体自动观测、根系原位监测、
+     乔木胸径生长环、分布式叶面积指数仪。
+   · 点云树：递归枝干骨架 + 枝头椭球撒点，真彩色（棕灰木质 / 绿色叶片），
+     与网站三维点云一致；每棵单独画到离屏画布，逐帧只贴图 + 轻微摆动。
+   · 数据总线：仪器下方一条蓝色虚线，由左向右汇入采集箱，再接到电脑，蓝点持续流动。
+   · 全部按 2000×900 逻辑坐标绘制，画布随舞台等比缩放。
+   ========================================================================== */
+(function () {
+  'use strict';
+
+  var W = 2000, H = 900;
+  var GROUND = 740;                       /* 地面线 */
+  var BUS = 820;                          /* 数据总线 */
+  var CAB_L = 1360, CAB_CX = 1535;        /* 采集箱左边界 / 中心 */
+
+  /* ---------- 9 台仪器：名称 + 位置（x 为百分比，h 为相对舞台高度的百分比） ---------- */
+  var DEVICES = [
+    { f: 1, name: '大气气候与环境集成',   x: 5.5,  h: 29 },
+    { f: 2, name: '植物生长节律',         x: 12.8, h: 27 },
+    { f: 3, name: '生态系统能量平衡观测', x: 20.1, h: 30 },
+    { f: 4, name: '干湿沉降采样系统',     x: 27.4, h: 24 },
+    { f: 5, name: '土壤温湿盐自动观测',   x: 34.7, h: 29 },
+    { f: 6, name: '土壤温室气体自动观测', x: 42.0, h: 24 },
+    { f: 7, name: '根系原位监测',         x: 49.3, h: 26 },
+    { f: 8, name: '乔木胸径生长环',       x: 56.6, h: 25 },
+    { f: 9, name: '分布式叶面积指数仪',   x: 63.9, h: 27 }
+  ];
+
+  var layer = document.getElementById('devLayer');
+  DEVICES.forEach(function (d) {
+    var fig = document.createElement('figure');
+    fig.className = 'dev';
+    fig.style.left = d.x + '%';
+    fig.innerHTML = '<img src="img/dev' + d.f + '.webp" alt="' + d.name + '" style="height:' +
+                    (d.h / 100 * H) + 'px" />';
+    layer.appendChild(fig);
+
+    var pl = document.createElement('div');
+    pl.className = 'plate';
+    pl.style.left = d.x + '%';
+    pl.innerHTML = '<div class="tri"></div><div class="nm">' + d.name + '</div>';
+    layer.appendChild(pl);
+  });
+
+  var stage = document.getElementById('stage');
+  var cv = document.getElementById('dots');
+  var ctx = cv.getContext('2d');
+
+  function seeded(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  /* ---------- 一棵点云树 ---------- */
+  function makeTree(h, seed) {
+    var rnd = seeded(seed);
+    var pts = [], wood = [], tips = [];
+
+    (function br(x, y, ang, len, w, d) {
+      var x2 = x + Math.cos(ang) * len, y2 = y + Math.sin(ang) * len;
+      wood.push([x, y, x2, y2, w]);
+      if (d <= 0 || len < h * 0.03) { tips.push([x2, y2, w]); return; }
+      var n = rnd() < 0.32 ? 3 : 2;
+      for (var i = 0; i < n; i++) {
+        br(x2, y2,
+          ang + (i - (n - 1) / 2) * (0.58 + rnd() * 0.34) + (rnd() - 0.5) * 0.22,
+          len * (0.71 + rnd() * 0.09), w * 0.66, d - 1);
+      }
+    })(0, 0, -Math.PI / 2 + (rnd() - 0.5) * 0.1, h * 0.30, h * 0.035, 6);
+
+    wood.forEach(function (s) {
+      var L = Math.hypot(s[2] - s[0], s[3] - s[1]);
+      var n = Math.max(2, Math.round(L / 2.2));
+      for (var i = 0; i <= n; i++) {
+        var t = i / n, x = s[0] + (s[2] - s[0]) * t, y = s[1] + (s[3] - s[1]) * t;
+        var w = Math.max(0.6, s[4] * (1 - t * 0.35));
+        var k = Math.max(1, Math.round(w * 1.5));
+        for (var j = 0; j < k; j++) {
+          var a = rnd() * 6.2832, r = Math.pow(rnd(), 0.5) * w;
+          pts.push([x + Math.cos(a) * r, y + Math.sin(a) * r, 0.8 + rnd() * 0.7, 0]);
+        }
+      }
+    });
+
+    var spread = h * 0.075;
+    tips.forEach(function (p) {
+      for (var i = 0; i < 42; i++) {
+        var a = rnd() * 6.2832, u = rnd() * 2 - 1, rr = Math.pow(rnd(), 0.45);
+        var s = Math.sqrt(1 - u * u) * rr * spread;
+        pts.push([p[0] + Math.cos(a) * s, p[1] + Math.sin(a) * s * 0.8 + u * spread * 0.55,
+                  0.8 + rnd() * 0.8, 1]);
+      }
+    });
+
+    var ys = pts.map(function (p) { return p[1]; });
+    var yMin = Math.min.apply(null, ys), yMax = Math.max.apply(null, ys);
+    var xs = pts.map(function (p) { return p[0]; });
+    var xMin = Math.min.apply(null, xs), xMax = Math.max.apply(null, xs);
+    var pad = 3, dpr = Math.min(2, window.devicePixelRatio || 1);
+    var cw = Math.ceil(xMax - xMin + pad * 2), ch = Math.ceil(yMax - yMin + pad * 2);
+    var off = document.createElement('canvas');
+    off.width = Math.ceil(cw * dpr); off.height = Math.ceil(ch * dpr);
+    var oc = off.getContext('2d');
+    oc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    pts.forEach(function (p) {
+      var t = (p[1] - yMax) / (yMin - yMax || 1);
+      var col;
+      if (p[3] === 0) {
+        col = 'rgb(' + (104 + t * 34 | 0) + ',' + (88 + t * 30 | 0) + ',' + (72 + t * 26 | 0) + ')';
+      } else {
+        col = 'rgb(' + (46 + t * 58 + rnd() * 22 | 0) + ',' + (92 + t * 52 + rnd() * 26 | 0) + ',' + (50 + t * 44 | 0) + ')';
+      }
+      oc.fillStyle = col;
+      oc.beginPath();
+      oc.arc(p[0] - xMin + pad, p[1] - yMin + pad, p[2], 0, 6.2832);
+      oc.fill();
+    });
+    return { canvas: off, ox: xMin - pad, oy: yMin - pad, w: cw, h: ch };
+  }
+
+  var TREES = [
+    { x: 210, h: 400, s: 11 }, { x: 430, h: 520, s: 22 }, { x: 650, h: 350, s: 33 },
+    { x: 870, h: 460, s: 44 }, { x: 1090, h: 380, s: 55 }, { x: 1310, h: 300, s: 66 },
+    { x: 1530, h: 430, s: 77 }, { x: 1760, h: 330, s: 88 }
+  ].map(function (t) {
+    var m = makeTree(t.h, t.s);
+    m.x = t.x; m.base = GROUND;
+    return m;
+  });
+
+  var scale = 1, dpr = Math.min(2, window.devicePixelRatio || 1);
+  var t0 = performance.now();
+
+  function resize() {
+    var w = stage.clientWidth || 1;
+    scale = w / W;
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(w * (H / W) * dpr);
+  }
+
+  function frame(now) {
+    var el = (now - t0) / 1000;
+
+    ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    TREES.forEach(function (m, i) {
+      var fade = Math.min(1, Math.max(0, (el - i * 0.09) / 0.9));
+      if (fade <= 0) { return; }
+      ctx.save();
+      ctx.globalAlpha = fade;
+      ctx.translate(m.x, m.base);
+      ctx.rotate(Math.sin(el * 0.5 + i * 1.3) * 0.008);
+      ctx.drawImage(m.canvas, m.ox, m.oy, m.w, m.h);
+      ctx.restore();
+    });
+    ctx.globalAlpha = 1;
+
+    /* 数据总线 + 各仪器引出线 */
+    ctx.strokeStyle = 'rgba(42,127,184,.38)';
+    ctx.lineWidth = 1.6;
+    ctx.setLineDash([7, 5]);
+    ctx.beginPath();
+    ctx.moveTo(60, BUS); ctx.lineTo(CAB_CX, BUS);
+    DEVICES.forEach(function (d) {
+      var x = d.x / 100 * W;
+      ctx.moveTo(x, 795); ctx.lineTo(x, BUS);
+    });
+    ctx.moveTo(CAB_CX, BUS); ctx.lineTo(CAB_CX, 640);
+    ctx.moveTo(1706, 690); ctx.lineTo(1730, 690);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    /* 流动蓝点 */
+    var RUNS = [
+      { p: [[60, BUS], [CAB_CX, BUS]], n: 30, sp: 0.05 },
+      { p: [[CAB_CX, BUS], [CAB_CX, 640]], n: 4, sp: 0.35 },
+      { p: [[1706, 690], [1730, 690]], n: 2, sp: 0.4 }
+    ];
+    RUNS.forEach(function (run, ri) {
+      var segs = [], total = 0;
+      for (var j = 1; j < run.p.length; j++) {
+        var L = Math.hypot(run.p[j][0] - run.p[j - 1][0], run.p[j][1] - run.p[j - 1][1]);
+        segs.push(L); total += L;
+      }
+      for (var k = 0; k < run.n; k++) {
+        var d = ((el * run.sp + k / run.n + ri * 0.37) % 1) * total;
+        var acc = 0, sg = 0;
+        while (sg < segs.length - 1 && acc + segs[sg] < d) { acc += segs[sg]; sg++; }
+        var u = segs[sg] ? (d - acc) / segs[sg] : 0;
+        var x = run.p[sg][0] + (run.p[sg + 1][0] - run.p[sg][0]) * u;
+        var y = run.p[sg][1] + (run.p[sg + 1][1] - run.p[sg][1]) * u;
+        ctx.globalAlpha = 0.3 + 0.7 * Math.sin(u * Math.PI);
+        ctx.fillStyle = '#2a7fb8';
+        ctx.beginPath(); ctx.arc(x, y, 3, 0, 6.2832); ctx.fill();
+      }
+    });
+    ctx.globalAlpha = 1;
+
+    requestAnimationFrame(frame);
+  }
+
+  resize();
+  window.addEventListener('resize', resize);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

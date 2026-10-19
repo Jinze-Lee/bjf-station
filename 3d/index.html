@@ -699,7 +699,7 @@
 			var V = cam.matrixWorldInverse.elements, P = cam.projectionMatrix.elements;
 			var W = innerWidth, H = innerHeight;
 			var me = cam.matrixWorld.elements, cx = me[12], cy = me[13], cz = me[14];
-			var texts = [];
+			var texts = [], DEV = [];
 			for (var i = 0; i < DOTPTS.length; i++) {
 				var p = DOTPTS[i];
 				var clip = m4apply(P, m4apply(V, [p.E, p.N, p.Z, 1]));
@@ -747,7 +747,8 @@
 					}
 					drawShape(sx, sy, dsh, dc);
 					DOTSCREEN.push({ x: sx, y: sy, name: p.name, kind: p.kind, tree: TREE_IDS[p.name] ? p.name : null });
-					if (d2 < LABEL_DIST * LABEL_DIST) texts.push({ sx: sx, sy: sy, d2: d2, name: p.name, col: lcol });
+					/* 设备标签不做距离门槛：远看也要有（扎堆时下面会合并成一个） */
+					DEV.push({ sx: sx, sy: sy, d2: d2, name: p.name, kind: p.kind, col: lcol });
 					continue;
 				} else {
 					/* 样方内树（RTK 实测）：固定大小的圆点（原来只有 1.7~3.2px） */
@@ -757,14 +758,45 @@
 				if (d2 < LABEL_DIST * LABEL_DIST) texts.push({ sx: sx, sy: sy, d2: d2, name: p.name, col: lcol });
 			}
 
-			// 放大后显示名称（近的优先，重叠的跳过）
+			/* 液流 / 径向生长 / LAI：屏幕上扎堆（同类两点 ≤70px）就合并成一个
+			   「液流 ×N」；拉近散开后各自显示编号 —— 金总要的"远看一个、近看分开"。 */
+			var TYPE_NAME = { 'dev-sap': (LANG === 'zh' ? '液流' : 'Sap flow'),
+			                  'dev-den': (LANG === 'zh' ? '径向生长' : 'Dendrometer'),
+			                  'dev-lai': 'LAI' };
+			['dev-sap', 'dev-den', 'dev-lai'].forEach(function (kind) {
+				var arr = DEV.filter(function (d) { return d.kind === kind; });
+				var used = [];
+				for (var i = 0; i < arr.length; i++) {
+					if (used[i]) { continue; }
+					var grp = [arr[i]]; used[i] = 1;
+					for (var j = i + 1; j < arr.length; j++) {
+						if (used[j]) { continue; }
+						var ax = arr[j].sx - arr[i].sx, ay = arr[j].sy - arr[i].sy;
+						if (ax * ax + ay * ay <= 70 * 70) { grp.push(arr[j]); used[j] = 1; }
+					}
+					var gx = 0, gy = 0, gd = 0;
+					grp.forEach(function (g) { gx += g.sx; gy += g.sy; gd += g.d2; });
+					gx /= grp.length; gy /= grp.length; gd /= grp.length;
+					if (grp.length > 1) {
+						texts.push({ sx: gx, sy: gy, d2: gd, big: true,
+						             name: TYPE_NAME[kind] + ' \u00d7' + grp.length, col: arr[0].col });
+					} else {
+						texts.push({ sx: gx, sy: gy, d2: gd, name: grp[0].name, col: grp[0].col });
+					}
+				}
+			});
+
+			// 显示名称（近的优先，重叠的跳过）
 			if (texts.length) {
 				texts.sort(function (a, b) { return a.d2 - b.d2; });
 				dctx.font = '12px Raleway,"Microsoft YaHei",sans-serif';
 				dctx.textAlign = 'left'; dctx.textBaseline = 'middle';
 				var placed = [];
 				for (var k = 0; k < texts.length; k++) {
-					var t = texts[k], w = dctx.measureText(t.name).width + 8, h = 15;
+					var t = texts[k];
+					/* 合并标签做大一号，远看更醒目 */
+					dctx.font = (t.big ? 'bold 13.5px ' : 'bold 12px ') + 'Raleway,"Microsoft YaHei",sans-serif';
+					var w = dctx.measureText(t.name).width + 8, h = t.big ? 18 : 15;
 					var x = t.sx + 7, y = t.sy;
 					var ok = true;
 					for (var j = 0; j < placed.length; j++) {
@@ -895,7 +927,7 @@
 			areas.forEach(function (a) {
 				var n = a.ring.length, ax = 0, ay = 0, az = 0;
 				for (var i = 0; i < n; i++) { ax += a.ring[i][0]; ay += a.ring[i][1]; az += a.ring[i][2]; }
-				var L = addLabel(ax / n, ay / n, az / n + 25, a.nameZh, 'log', null, a.name, '#3f8fd0');
+				var L = addLabel(ax / n, ay / n, az / n + 25, a.nameZh, 'log', null, a.name, '#f98422');
 				L.el.addEventListener('mousemove', function (ev) {
 					showTip(ev, '<b>' + L.el.textContent + '</b>');
 				});
@@ -960,9 +992,9 @@
 			if (G20_ON) bndRings('grid20').forEach(function (p) { drawRing(p, V, P, null, 'rgba(235,235,235,.75)', 1.1, 0, true); });
 			if (G40_ON) bndRings('grid40').forEach(function (p) { drawRing(p, V, P, null, 'rgba(255,210,127,.85)', 1.6, 0, true); });
 			if (DRAIN_ON) (BNDS.drainage || []).forEach(function (l) { drawRing(l, V, P, null, 'rgba(72,138,178,0.85)', 1.3, 0, false); });   /* 水系：灰蓝细线，不抢视线 */
-			/* 大样地 / 白桦林样地：蓝色描边，跟橙色三个样地区分开 */
+			/* 大样地 / 白桦林样地：与落叶松/油松等样地同色（金总要求统一为橙） */
 			if (BIG_ON && SITE3) {
-				SITE3.areas.forEach(function (a) { drawRing(a.ring, V, P, '#3f8fd0', '#3f8fd0', 2.4, 0.14, true); });
+				SITE3.areas.forEach(function (a) { drawRing(a.ring, V, P, '#f98422', '#f98422', 2.4, 0.14, true); });
 			}
 			/* 生活区 / 林场：只留标签，不画点（金总要求） */
 			/* 监测设施点：温室气体=五角星(绿)、土壤呼吸=三角形(淡蓝) —— 与微气候同大小，形状区分 */
