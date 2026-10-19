@@ -820,12 +820,8 @@
 				DOTPTS.push({ E: m.E, N: m.N, Z: 1.5, name: m.name || m.id || '', kind: 'main' });
 				nm++;
 			});
-			(ANNOT.plotTrees || []).forEach(function (t, i) {
-				if (t.E == null || t.N == null) { return; }
-				DOTPTS.push({ E: t.E, N: t.N, Z: 1.5, name: t.name || t.id || ('T' + i), kind: 'quad' });
-				nq++;
-			});
-			console.info('[3d] 实测树已加入：主树 ' + nm + ' 棵 / 样方内树 ' + nq + ' 棵');
+			/* 样方内树 318 棵太密，金总要求只留主树，这里不加入 */
+			console.info('[3d] 实测主树已加入：' + nm + ' 棵（样方内树已按要求略过）');
 		}
 		function drawDots() {
 			dctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
