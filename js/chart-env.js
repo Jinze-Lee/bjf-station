@@ -149,32 +149,40 @@
 
         var C = palette();
         var keys = activeKeys();
-        var showAxes = keys.length > 0 && keys.length <= 2;
+        /* 刻度/轴标题一直显示 —— 原来"超过 2 个变量就全关掉"，选 3 个以上就成了三无图。
+         * 现在多变量左右交替分布（见下面 left/stack），同侧多根轴用 offset 叠开。 */
+        var showAxes = keys.length > 0;
+        var AX_STEP = 46;                       /* 同侧相邻两根轴的水平间距（px） */
         /* 窄屏收掉竖排轴标题（"Light (klux)" 这种），它在手机上要吃掉
          * 几十像素宽度，而变量名已经写在下方的彩色标签上了。
          * 刻度数字保留 —— 没有数字的曲线读不出量级。 */
         var showTitles = showAxes &&
                          (window.ChartMetrics ? ChartMetrics.showAxisTitles() : true);
 
-        var yAxes = [], series = [];
+        var yAxes = [], series = [], leftN = 0, rightN = 0;
         keys.forEach(function (key, i) {
             var col = COLORS[key];
             /* 风向不画曲线、只画箭头，所以它的纵轴（0–360°）没有任何东西可读，
              * 留着只会占掉一侧的位置、还让人以为有条线没显示出来。 */
             var isArrow = (key === 'windDir');
+            /* 左右交替：0/2/4 在左、1/3/5 在右 —— 变量再多也是两边均分 */
+            var left = (i % 2 === 0) && !isArrow;
+            var stack = left ? leftN++ : (isArrow ? 0 : rightN++);
             yAxes.push({
                 /* 每条曲线一个独立轴，各自缩放 —— 量纲不同，共用轴没有意义 */
                 labels: {
                     enabled: showAxes && !isArrow,
                     style: { color: col, fontSize: '11px' },
-                    align: i === 0 ? 'left' : 'right',
-                    x: i === 0 ? 4 : -4
+                    align: left ? 'right' : 'left',
+                    x: left ? -6 : 6
                 },
                 title: {
                     text: (showTitles && !isArrow) ? label(key) + ' (' + unitOf(key) + ')' : null,
-                    style: { color: col, fontSize: '12px' }
+                    style: { color: col, fontSize: '12px' },
+                    offset: 0
                 },
-                opposite: i !== 0,
+                opposite: !left,
+                offset: stack * AX_STEP,        /* 同侧第几根 → 往外推多少像素 */
                 gridLineColor: i === 0 ? C.grid : 'transparent',
                 gridLineWidth: i === 0 ? 1 : 0,
                 gridLineDashStyle: 'longdash',
