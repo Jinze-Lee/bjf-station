@@ -643,7 +643,10 @@
     return im;
   });
 
-  /* 7 个树种的中文名与拉丁名（按 GIF 标注） */
+  /* 每个树种的专属色（叶冠染色 + 名称牌底色） */
+  var TINTS = ['#8a9a3a', '#4f7f4a', '#9aae4e', '#b2703a', '#3f8f74', '#2f6b45', '#6a7f36'];
+
+  /* 7 个树种的中文名与拉丁名 */
   var SPECIES = [
     { cn: '黄檗',   la: 'Phellodendron amurense' },
     { cn: '辽东栎', la: 'Quercus wutaishanica' },
@@ -995,8 +998,11 @@
 
       var el = document.createElement('div');
       el.className = 'species';
+      var tint = TINTS[parseInt(k, 10)] || '#2f7a4f';
       el.style.left = ((pick.x + side * 13) / W * 100).toFixed(3) + '%';
       el.style.top = ((pick.base - pick.h * 0.70) / H * 100).toFixed(3) + '%';
+      el.style.background = 'linear-gradient(180deg, rgba(255,255,255,0), ' + tint + '33 12%, ' + tint + '33 88%, rgba(255,255,255,0))';
+      el.style.borderLeft = '3px solid ' + tint;
       el.innerHTML = '<b>' + sp.cn + '</b><i>' + sp.la + '</i>';
       labelLayer.appendChild(el);
     });
@@ -1029,11 +1035,29 @@
     return (Math.sin(base) * 0.72 + Math.sin(base * 1.9 + 1.3) * 0.28) * m.amp * gust;
   }
 
+  var TINT_CACHE = {};
+  function tintedLeaf(sprite) {
+    if (TINT_CACHE[sprite]) { return TINT_CACHE[sprite]; }
+    var im = TREE_LEAF_IMGS[sprite];
+    if (!im || !im.complete || !im.naturalWidth) { return null; }
+    var c = document.createElement('canvas');
+    c.width = im.naturalWidth;
+    c.height = im.naturalHeight;
+    var x = c.getContext('2d');
+    x.drawImage(im, 0, 0);
+    x.globalCompositeOperation = 'source-atop';
+    x.globalAlpha = 0.55;
+    x.fillStyle = TINTS[sprite];
+    x.fillRect(0, 0, c.width, c.height);
+    TINT_CACHE[sprite] = c;
+    return c;
+  }
+
   function drawSpriteTree(ctx, m, el) {
     var im = TREE_IMGS[m.sprite];
     if (!im || !im.complete || !im.naturalWidth) { return; }
     var w = m.h * im.naturalWidth / im.naturalHeight;
-    var leaf = TREE_LEAF_IMGS[m.sprite];
+    var leaf = tintedLeaf(m.sprite) || TREE_LEAF_IMGS[m.sprite];
     ctx.save();
     ctx.globalAlpha = m.a;
     ctx.translate(m.x, m.base);

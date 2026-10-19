@@ -613,7 +613,7 @@
 					<span class="tc-latin" id="tcLatin"></span>
 					<div class="tc-meta" id="tcMeta"></div>
 					<div class="tc-spark">
-						<canvas id="tcSpark" width="560" height="90"></canvas>
+						<canvas id="tcSpark" width="560" height="150"></canvas>
 						<div class="cap" id="tcSparkCap"></div>
 					</div>
 				</div>
@@ -1655,11 +1655,44 @@
 				if (isFinite(v)) { if (v < mn) { mn = v; } if (v > mx) { mx = v; } }
 			}
 			if (!isFinite(mn) || mx <= mn) { return; }
-			var pad = 8;
-			function X(j) { return pad + (W - pad * 2) * (n <= 1 ? 0 : j / (n - 1)); }
-			function Y(v) { return pad + (H - pad * 2) * (1 - (v - mn) / (mx - mn)); }
-			g.strokeStyle = 'rgba(160,180,120,.25)'; g.lineWidth = 1;
-			g.beginPath(); g.moveTo(pad, pad); g.lineTo(pad, H - pad); g.lineTo(W - pad, H - pad); g.stroke();
+			/* 留出坐标轴的位置 */
+			var L = 44, R = 12, T = 16, B = 26;
+			var PW = W - L - R, PH = H - T - B;
+			if (PW < 20 || PH < 20) { return; }
+			/* 纵轴上下各留 8% 余量，曲线不顶到框 */
+			var pad = (mx - mn) * 0.08; mn -= pad; mx += pad;
+			function X(k) { return L + PW * (n <= 1 ? 0 : k / (n - 1)); }
+			function Y(v) { return T + PH * (1 - (v - mn) / (mx - mn)); }
+
+			/* 网格 + 纵轴刻度（3 档） */
+			g.font = '11px Raleway,"Microsoft YaHei",sans-serif';
+			g.textAlign = 'right'; g.textBaseline = 'middle';
+			for (var t = 0; t <= 2; t++) {
+				var vv = mn + (mx - mn) * t / 2, yy = Y(vv);
+				g.strokeStyle = t === 0 ? 'rgba(160,180,120,.45)' : 'rgba(160,180,120,.16)';
+				g.lineWidth = 1;
+				g.beginPath(); g.moveTo(L, yy); g.lineTo(L + PW, yy); g.stroke();
+				g.fillStyle = '#9fb08a';
+				g.fillText(vv.toFixed(3), L - 7, yy);
+			}
+			/* 纵轴轴线 */
+			g.strokeStyle = 'rgba(160,180,120,.45)'; g.lineWidth = 1;
+			g.beginPath(); g.moveTo(L, T); g.lineTo(L, T + PH); g.stroke();
+			g.beginPath(); g.moveTo(L, T + PH); g.lineTo(L + PW, T + PH); g.stroke();
+
+			/* 横轴日期刻度（首 / 中 / 末） */
+			g.textAlign = 'center'; g.textBaseline = 'top';
+			g.fillStyle = '#9fb08a';
+			var ds = (typeof P_DATA !== 'undefined' && P_DATA && P_DATA.dates) ? P_DATA.dates : [];
+			[0, Math.floor((n - 1) / 2), n - 1].forEach(function (k) {
+				if (ds[k]) { g.fillText(ds[k], X(k), T + PH + 6); }
+			});
+			/* 轴标题 */
+			g.textAlign = 'left'; g.fillStyle = '#cfe3b0';
+			g.font = '11.5px Raleway,"Microsoft YaHei",sans-serif';
+			g.fillText((typeof LANG === 'undefined' || LANG === 'zh') ? '冠层 P' : 'Canopy P', 4, 2);
+
+			/* 曲线（按 progress 逐点长出） */
 			var upto = Math.max(1, Math.min(n, Math.ceil((prog == null ? 1 : prog) * n)));
 			g.beginPath();
 			for (i = 0; i < upto; i++) {
@@ -1667,7 +1700,7 @@
 				if (i === 0) { g.moveTo(X(i), y); } else { g.lineTo(X(i), y); }
 			}
 			if (upto > 1) {
-				g.lineTo(X(upto - 1), H - pad); g.lineTo(X(0), H - pad); g.closePath();
+				g.lineTo(X(upto - 1), T + PH); g.lineTo(X(0), T + PH); g.closePath();
 				g.fillStyle = 'rgba(126,196,232,.16)'; g.fill();
 			}
 			g.beginPath();
@@ -3157,7 +3190,7 @@
 		}
 			/* 单木卡片里的冠层 P 反演小曲线 */
 		#treeCard .tc-spark { margin-top: 12px; padding-top: 9px; border-top: 1px solid rgba(160, 180, 120, .22); }
-		#treeCard .tc-spark canvas { display: block; width: 100%; height: 86px; }
+		#treeCard .tc-spark canvas { display: block; width: 100%; height: 132px; }
 		#treeCard .tc-spark .cap { margin-top: 5px; font-size: 11.5px; color: #9fb08a;
 			font-variant-numeric: tabular-nums; }
 		#treeCard .tc-spark .cap b { color: #cfe3b0; }
