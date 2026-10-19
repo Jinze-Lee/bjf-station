@@ -1614,12 +1614,12 @@
 		   拉丁名与二维树数据（js/trees.js）保持一致。 */
 		var TREE_GIF = {
 			'油松': 'yousong', '胡桃楸': 'hutaqiu', '落叶松': 'luoyesong',
-			'五角枫': 'wujiaofeng', '山杨': 'shanyang', '黄檗': 'huangbo', '蒙古栎': 'mengguli'
+			'五角枫': 'wujiaofeng', '山杨': 'shanyang', '黄檗': 'huangbo', '辽东栎': 'liaodongli'
 		};
 		var TREE_LATIN = {
 			'油松': 'Pinus tabuliformis', '胡桃楸': 'Juglans mandshurica',
 			'落叶松': 'Larix gmelinii var. principis-rupprechtii', '五角枫': 'Acer pictum subsp. mono',
-			'山杨': 'Populus davidiana', '黄檗': 'Phellodendron amurense', '蒙古栎': 'Quercus mongolica'
+			'山杨': 'Populus davidiana', '黄檗': 'Phellodendron amurense', '辽东栎': 'Quercus wutaishanica'
 		};
 		/* 每张动图里「树」的包围盒 [x, y, w, h]，画幅统一 1138x640。
 		   动图四周是大片透明边距，裁掉它，树才能真正占满、放大后看得到细节。 */
@@ -1627,7 +1627,7 @@
 			yousong: [443, 11, 252, 611], hutaqiu: [282, 11, 575, 542],
 			luoyesong: [463, 11, 212, 610], wujiaofeng: [359, 11, 420, 554],
 			shanyang: [438, 11, 261, 613], huangbo: [354, 11, 430, 589],
-			mengguli: [351, 11, 436, 562]
+			liaodongli: [351, 11, 436, 562]
 		};
 		var TC = null;
 		function treeCard() {

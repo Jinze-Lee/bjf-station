@@ -302,9 +302,9 @@
     display: block;
   }
   .lap-base {
-    width: 118%;
+    width: 42%;
     height: 0;
-    margin-top: 3px;
+    margin-top: 4px;
   }
   .lap-base svg { display: block; width: 100%; height: auto; }
   .lap-caption {
@@ -373,9 +373,6 @@
         <div class="tri wifi"></div>
         <div class="nm">GT200 网关主站</div>
       </div>
-      <div class="gt-inset">
-        <img src="img/gt200.webp" alt="GT200 网关主站放大特写" />
-      </div>
       <!-- 层 4：近景仪器 -->
       <div id="fgPhotoLayer"></div>
       <!-- 层 5：无线 WiFi 波纹与有线数据流动 -->
@@ -391,9 +388,11 @@
           </svg>
         </div>
         <div class="lap-base" aria-hidden="true">
-          <svg viewBox="0 0 240 18" preserveAspectRatio="none">
-            <path d="M16 1H224L240 16H0Z" fill="#f6f2e6" stroke="#8ba08a" stroke-width="1.6" stroke-linejoin="round"/>
-            <path d="M96 6H144" stroke="#c3cdba" stroke-width="1.4" stroke-linecap="round"/>
+          <svg viewBox="0 0 120 30" preserveAspectRatio="xMidYMid meet">
+            <path d="M60 0 L60 12" stroke="#8ba08a" stroke-width="2" stroke-linecap="round"/>
+            <path d="M60 12 L42 27" stroke="#8ba08a" stroke-width="2" stroke-linecap="round"/>
+            <path d="M60 12 L78 27" stroke="#8ba08a" stroke-width="2" stroke-linecap="round"/>
+            <path d="M34 27 H86" stroke="#8ba08a" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </div>
         <div class="lap-caption"><b>数据接收</b><span>实验室工作站</span></div>
@@ -647,7 +646,7 @@
   /* 7 个树种的中文名与拉丁名（按 GIF 标注） */
   var SPECIES = [
     { cn: '黄檗',   la: 'Phellodendron amurense' },
-    { cn: '蒙古栎', la: 'Quercus mongolica' },
+    { cn: '辽东栎', la: 'Quercus wutaishanica' },
     { cn: '山杨',   la: 'Populus davidiana' },
     { cn: '五角枫', la: 'Acer pictum' },
     { cn: '落叶松', la: 'Larix gmelinii' },
@@ -964,20 +963,40 @@
   var scale = 1, dpr = Math.min(2, window.devicePixelRatio || 1);
   var t0 = performance.now();
 
-  /* 树种名：贴树干竖排（中文 + 拉丁名） */
+  /* 树种名：在同类树里挑"离仪器远 + 彼此不挤"的一棵挂牌，竖排贴树干外侧 */
   function addSpeciesLabels() {
-    var reps = {};
-    if (!reps[HERO_TREE.sprite]) { reps[HERO_TREE.sprite] = HERO_TREE; }
-    FG_TREES.forEach(function (m) { if (!reps[m.sprite]) { reps[m.sprite] = m; } });
-    BACK_TREES.forEach(function (m) { if (!reps[m.sprite]) { reps[m.sprite] = m; } });
+    var all = [HERO_TREE].concat(FG_TREES, BACK_TREES);
+    var bySprite = {};
+    all.forEach(function (m) {
+      var clear = 1e9;
+      ITEMS.forEach(function (d) { clear = Math.min(clear, Math.abs(d.cx - m.x)); });
+      m.clear = clear;
+      (bySprite[m.sprite] = bySprite[m.sprite] || []).push(m);
+    });
 
-    Object.keys(reps).forEach(function (k) {
-      var m = reps[k], sp = SPECIES[k];
+    var placed = [];
+    Object.keys(bySprite).sort().forEach(function (k) {
+      var sp = SPECIES[k];
       if (!sp) { return; }
+      var cands = bySprite[k].slice().sort(function (a, b) { return b.clear - a.clear; });
+      var pick = null;
+      for (var i = 0; i < cands.length; i++) {
+        var ok = placed.every(function (px) { return Math.abs(px - cands[i].x) >= 118; });
+        if (ok) { pick = cands[i]; break; }
+      }
+      if (!pick) { pick = cands[0]; }
+      placed.push(pick.x);
+
+      var nearestX = pick.x;
+      ITEMS.forEach(function (d) {
+        if (Math.abs(d.cx - pick.x) < Math.abs(nearestX - pick.x)) { nearestX = d.cx; }
+      });
+      var side = (nearestX >= pick.x) ? -1 : 1;
+
       var el = document.createElement('div');
       el.className = 'species';
-      el.style.left = ((m.x + 3) / W * 100).toFixed(3) + '%';
-      el.style.top = ((m.base - m.h * 0.58) / H * 100).toFixed(3) + '%';
+      el.style.left = ((pick.x + side * 13) / W * 100).toFixed(3) + '%';
+      el.style.top = ((pick.base - pick.h * 0.70) / H * 100).toFixed(3) + '%';
       el.innerHTML = '<b>' + sp.cn + '</b><i>' + sp.la + '</i>';
       labelLayer.appendChild(el);
     });
@@ -1032,7 +1051,7 @@
   function buildGroundDetail() {
     var rnd = seeded(20261019);
     /* 草丛：每丛 18~30 个小点，沿地面铺开 */
-    for (var i = 0; i < 120; i++) {
+    for (var i = 0; i < 240; i++) {
       var gx = 40 + rnd() * 1900;
       var gy = 700 + rnd() * 34;
       var n = 16 + Math.floor(rnd() * 14);
@@ -1049,7 +1068,7 @@
       }
     }
     /* 石头：若干灰色小圆点簇 */
-    for (var k = 0; k < 26; k++) {
+    for (var k = 0; k < 60; k++) {
       var rx = 60 + rnd() * 1860;
       var ry = 706 + rnd() * 30;
       var rw = 4 + rnd() * 7;
@@ -1258,21 +1277,20 @@
     fctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
     fctx.clearRect(0, 0, W, H);
 
-    /* ---- A. 有线电缆：从设备垂落、贴地缠绕，最后沿三脚架升入采集箱 ---- */
-    var CABLE_Y = 806;
-    var busLeft = 640, busRight = 1542;
+    /* ---- A. 有线：每台设备一根平滑曲线连到数采，数据点沿线流动 ---- */
+    var CAB_X = 1542, CAB_Y = 700;
 
-    function bundleY(x) {
-      return CABLE_Y
-        + Math.sin((x - busLeft) * 0.013) * 3.4
-        + Math.sin((x - busLeft) * 0.033) * 1.5;
+    function cubic(p0, c1, c2, p3, u) {
+      var v = 1 - u;
+      return [
+        v * v * v * p0[0] + 3 * v * v * u * c1[0] + 3 * v * u * u * c2[0] + u * u * u * p3[0],
+        v * v * v * p0[1] + 3 * v * v * u * c1[1] + 3 * v * u * u * c2[1] + u * u * u * p3[1]
+      ];
     }
-    function strokeCable(pathFn, width, color) {
+    function strokeCurve(p0, c1, c2, p3, width, color) {
       fctx.beginPath();
-      for (var i = 0; i <= 90; i++) {
-        var u = i / 90, p = pathFn(u);
-        if (i === 0) { fctx.moveTo(p[0], p[1]); } else { fctx.lineTo(p[0], p[1]); }
-      }
+      fctx.moveTo(p0[0], p0[1]);
+      fctx.bezierCurveTo(c1[0], c1[1], c2[0], c2[1], p3[0], p3[1]);
       fctx.strokeStyle = color;
       fctx.lineWidth = width;
       fctx.stroke();
@@ -1281,53 +1299,34 @@
     fctx.lineCap = 'round';
     fctx.lineJoin = 'round';
 
-    /* 贴地主干：一条有起伏的电缆 */
-    strokeCable(function (u) {
-      var x = busLeft + (busRight - busLeft) * u;
-      return [x, bundleY(x)];
-    }, 5.4, 'rgba(247, 251, 247, .94)');
-    strokeCable(function (u) {
-      var x = busLeft + (busRight - busLeft) * u;
-      return [x, bundleY(x)];
-    }, 2.3, 'rgba(38, 94, 138, .64)');
-
-    /* 每个设备的支线：从底部垂落，带弧度和轻微摆动 */
     WIRED_LIST.forEach(function (d, idx) {
-      var x0 = d.wireX, y0 = d.wireY0;
-      var x1 = d.wireX;
-      var y1 = bundleY(x1);
-      var drop = function (u) {
-        var x = x0 + (x1 - x0) * u + Math.sin(u * Math.PI * 2.2) * 1.4 * (1 - u);
-        var y = y0 + (y1 - y0) * u + Math.sin(u * Math.PI) * 10;
-        return [x, y];
-      };
-      strokeCable(drop, 4.8, 'rgba(247, 251, 247, .92)');
-      strokeCable(drop, 2.1, 'rgba(38, 94, 138, .56)');
+      var p0 = [d.wireX, d.wireY0];
+      var p3 = [CAB_X - 26 + idx * 7, CAB_Y + 6];
+      var c1 = [d.wireX + (idx % 2 ? 26 : -22), d.wireY0 + 74];
+      var c2 = [p3[0] - 190, CAB_Y + 52];
 
-      for (var k2 = 0; k2 < 2; k2++) {
-        var u2 = (el * 0.5 + k2 * 0.5 + idx * 0.13) % 1;
-        var p2 = drop(u2);
-        fctx.globalAlpha = 0.3 + 0.6 * Math.sin(u2 * Math.PI);
+      /* 白描边 + 蓝色曲线 */
+      strokeCurve(p0, c1, c2, p3, 4.6, 'rgba(248, 252, 248, .92)');
+      strokeCurve(p0, c1, c2, p3, 2.0, 'rgba(38, 94, 138, .62)');
+
+      /* 沿线流动的数据点 */
+      for (var k = 0; k < 3; k++) {
+        var u = (el * 0.30 + k / 3 + idx * 0.12) % 1;
+        var pt = cubic(p0, c1, c2, p3, u);
+        fctx.globalAlpha = 0.25 + 0.7 * Math.sin(u * Math.PI);
         fctx.fillStyle = '#1d6ea8';
-        fctx.beginPath(); fctx.arc(p2[0], p2[1], 2.5, 0, 6.2832); fctx.fill();
+        fctx.beginPath();
+        fctx.arc(pt[0], pt[1], 2.6, 0, 6.2832);
+        fctx.fill();
       }
+      fctx.globalAlpha = 1;
     });
-    fctx.globalAlpha = 1;
 
-    /* 主干沿采集箱三脚架升上去 */
-    var upPath = function (u) {
-      return [busRight + Math.sin(u * Math.PI * 2) * 2.4, CABLE_Y - (CABLE_Y - 612) * u];
-    };
-    strokeCable(upPath, 4.8, 'rgba(247, 251, 247, .92)');
-    strokeCable(upPath, 2.1, 'rgba(38, 94, 138, .56)');
-
-    /* 主干上向右爬行的数据点 */
-    for (var k = 0; k < 14; k++) {
-      var u3 = (el * 0.12 + k / 14) % 1;
-      var xb = busLeft + (busRight - busLeft) * u3;
-      fctx.fillStyle = '#1d6ea8';
-      fctx.beginPath(); fctx.arc(xb, bundleY(xb), 2.6, 0, 6.2832); fctx.fill();
-    }
+    /* 汇入数采的短竖线 */
+    strokeCurve([CAB_X, CAB_Y + 6], [CAB_X, CAB_Y - 10], [CAB_X, 650], [CAB_X, 612],
+                4.6, 'rgba(248, 252, 248, .92)');
+    strokeCurve([CAB_X, CAB_Y + 6], [CAB_X, CAB_Y - 10], [CAB_X, 650], [CAB_X, 612],
+                2.0, 'rgba(38, 94, 138, .62)');
 
     /* ---- B. 无线 WiFi 组 ---- */
     WIRELESS_ARCS.forEach(function (arc, idx) {
