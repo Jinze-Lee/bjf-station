@@ -680,12 +680,11 @@
 				(DEVICES[g[0]] || []).forEach(function (d) {
 					if (d.lon == null || d.lat == null) return;
 					var p = proj4('EPSG:4326', 'EPSG:32650', [d.lon, d.lat]);   // -> [E, N]
-					/* 点云范围外的点不画：源表里有 10 个（DEN-039~046、HB-004/005）偏了约 600 m，
-					   明显是错坐标/别的场地，画出来会飘在点云外面（金总已指出）。 */
-					if (B && (p[0] < B.min[0] - 2 || p[0] > B.max[0] + 2 ||
-					          p[1] < B.min[1] - 2 || p[1] > B.max[1] + 2)) { n_skip++; return; }
+					/* 原来这里按点云包围盒过滤，把白桦林样地（约 700 m 外）和大样地边上的
+					   设备点全挡掉了 —— 金总 2026-10 复查确认那些点是真实存在的，去掉过滤。
+					   高程优先用 groundZ（贴渲染出来的地面），地面还没铺好时退回源表海拔。 */
 					DOTPTS.push({ E: p[0], N: p[1], Z: (d.z || 0) + 1.5,
-						name: d.name || d.id, kind: g[1] });
+						name: d.name || d.id, kind: g[1], srcZ: d.z || 0 });
 				});
 			});
 			if (n_skip) console.info('[3d] 有 ' + n_skip + ' 个设备点在点云范围外，已略过');
@@ -702,12 +701,18 @@
 			var texts = [], DEV = [];
 			for (var i = 0; i < DOTPTS.length; i++) {
 				var p = DOTPTS[i];
-				var clip = m4apply(P, m4apply(V, [p.E, p.N, p.Z, 1]));
+				/* 设备点：地面铺好后优先贴地面，避免源表海拔与场景基准差十几米 */
+				var pz = p.Z;
+				if (p.kind && p.kind.indexOf('dev-') === 0 && window.groundZ) {
+					var gz = window.groundZ(p.E, p.N);
+					if (isFinite(gz)) { pz = gz + 1.5; }
+				}
+				var clip = m4apply(P, m4apply(V, [p.E, p.N, pz, 1]));
 				if (clip[3] <= 0.0001) continue;
 				var sx = (clip[0] / clip[3] * 0.5 + 0.5) * W;
 				var sy = (-clip[1] / clip[3] * 0.5 + 0.5) * H;
 				if (sx < -5 || sx > W + 5 || sy < -5 || sy > H + 5) continue;
-				var dx = p.E - cx, dy = p.N - cy, dz = p.Z - cz;
+				var dx = p.E - cx, dy = p.N - cy, dz = pz - cz;
 				var d2 = dx * dx + dy * dy + dz * dz;
 
 				// 标记：单木识别按物种着色；主树用 🌳；样方内树用圆点
