@@ -612,6 +612,10 @@
 					<span class="tc-name" id="tcName"></span>
 					<span class="tc-latin" id="tcLatin"></span>
 					<div class="tc-meta" id="tcMeta"></div>
+					<div class="tc-spark">
+						<canvas id="tcSpark" width="560" height="90"></canvas>
+						<div class="cap" id="tcSparkCap"></div>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -1094,7 +1098,7 @@
 					var col = (SPECIES[p.sp] && SPECIES[p.sp].color) || '#888888';
 					if (P_ON) { var pc = pColorOf(p.pi); if (pc) { col = pc; } }   // 冠层 P 模式：按当天 P 值着色
 					if (p.ring) { drawCrown(p.ring, V, P, col); }   // 树冠多边形：整片填色
-					DOTSCREEN.push({ x: sx, y: sy, kind: 'det', sp: p.sp, E: p.E, N: p.N, Z: p.Z });
+					DOTSCREEN.push({ x: sx, y: sy, kind: 'det', sp: p.sp, E: p.E, N: p.N, Z: p.Z, pi: p.pi });
 					continue;
 				}
 				var lcol = '#d3a970';                      /* 该点的标签底色 */
@@ -1641,6 +1645,52 @@
 			var e = treeCard();
 			if (e.box) { e.box.classList.remove('open'); }
 		}
+		/* 冠层 P 反演小曲线：progress 0~1 控制画到第几个点（做"逐渐长出来"的动画） */
+		function drawSpark(cv, series, prog) {
+			var g = cv.getContext('2d'), W = cv.width, H = cv.height, i, n = series.length;
+			g.clearRect(0, 0, W, H);
+			var mn = 1e9, mx = -1e9;
+			for (i = 0; i < n; i++) {
+				var v = series[i];
+				if (isFinite(v)) { if (v < mn) { mn = v; } if (v > mx) { mx = v; } }
+			}
+			if (!isFinite(mn) || mx <= mn) { return; }
+			var pad = 8;
+			function X(j) { return pad + (W - pad * 2) * (n <= 1 ? 0 : j / (n - 1)); }
+			function Y(v) { return pad + (H - pad * 2) * (1 - (v - mn) / (mx - mn)); }
+			g.strokeStyle = 'rgba(160,180,120,.25)'; g.lineWidth = 1;
+			g.beginPath(); g.moveTo(pad, pad); g.lineTo(pad, H - pad); g.lineTo(W - pad, H - pad); g.stroke();
+			var upto = Math.max(1, Math.min(n, Math.ceil((prog == null ? 1 : prog) * n)));
+			g.beginPath();
+			for (i = 0; i < upto; i++) {
+				var y = Y(series[i]);
+				if (i === 0) { g.moveTo(X(i), y); } else { g.lineTo(X(i), y); }
+			}
+			if (upto > 1) {
+				g.lineTo(X(upto - 1), H - pad); g.lineTo(X(0), H - pad); g.closePath();
+				g.fillStyle = 'rgba(126,196,232,.16)'; g.fill();
+			}
+			g.beginPath();
+			for (i = 0; i < upto; i++) {
+				var y2 = Y(series[i]);
+				if (i === 0) { g.moveTo(X(i), y2); } else { g.lineTo(X(i), y2); }
+			}
+			g.strokeStyle = '#7fc4e8'; g.lineWidth = 2; g.stroke();
+			g.beginPath(); g.arc(X(upto - 1), Y(series[upto - 1]), 3.2, 0, 6.2832);
+			g.fillStyle = '#eaf6ff'; g.fill();
+		}
+		var SPARK_RAF = null;
+		function animateSpark(cv, series) {
+			if (SPARK_RAF) { cancelAnimationFrame(SPARK_RAF); SPARK_RAF = null; }
+			var t0 = performance.now(), dur = 1100;
+			(function step(now) {
+				var p2 = Math.min(1, (now - t0) / dur);
+				drawSpark(cv, series, p2);
+				if (p2 < 1) { SPARK_RAF = requestAnimationFrame(step); }
+				else { SPARK_RAF = null; }
+			}(t0));
+		}
+
 		function showTreeCard(spId, ev, tree) {
 			var e = treeCard();
 			if (!e.box) { return; }
@@ -1683,6 +1733,17 @@
 					((typeof LANG === 'undefined' || LANG === 'zh') ? '（暂无该树种动图）' : '(no GIF yet)');
 			}
 			e.meta.innerHTML = meta;
+			var cv = document.getElementById('tcSpark'), cap = document.getElementById('tcSparkCap');
+			var PD = (typeof window.CANOPYP !== 'undefined') ? window.CANOPYP
+			       : ((typeof CANOPYP !== 'undefined') ? CANOPYP : null);
+			if (cv && cap && PD && PD.values && tree && tree.pi != null && PD.values[tree.pi]) {
+				var ser = PD.values[tree.pi];
+				animateSpark(cv, ser);                     /* 逐点长出来 */
+				var d0 = (PD.dates && PD.dates[0]) || '', d1 = (PD.dates && PD.dates[PD.dates.length - 1]) || '';
+				cap.innerHTML = (LANG === 'zh' ? '冠层磷 P 反演　' : 'Canopy P　') +
+					'<b>' + d0 + ' → ' + d1 + '</b>　' +
+					(LANG === 'zh' ? '末值 ' : 'last ') + '<b>' + (Math.round(ser[ser.length - 1] * 1000) / 1000) + '</b>';
+			} else if (cap) { cap.textContent = ''; }
 			e.box.classList.add('open');
 		}
 		document.addEventListener('keydown', function (ev) {
@@ -3094,6 +3155,12 @@
 		@media (max-width: 430px) {
 			#legend3d { max-width: 40vw; }
 		}
-	</style>
+			/* 单木卡片里的冠层 P 反演小曲线 */
+		#treeCard .tc-spark { margin-top: 12px; padding-top: 9px; border-top: 1px solid rgba(160, 180, 120, .22); }
+		#treeCard .tc-spark canvas { display: block; width: 100%; height: 86px; }
+		#treeCard .tc-spark .cap { margin-top: 5px; font-size: 11.5px; color: #9fb08a;
+			font-variant-numeric: tabular-nums; }
+		#treeCard .tc-spark .cap b { color: #cfe3b0; }
+</style>
 </body>
 </html>

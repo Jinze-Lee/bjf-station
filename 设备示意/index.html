@@ -410,7 +410,6 @@
       </div>
       <div class="gt-inset">
         <img src="img/gt200.webp" alt="GT200 网关主站放大特写" />
-        <div class="cap"><b>GT200 网关主站</b><span>塔顶放大 · 无线数据先汇于此</span></div>
       </div>
       <!-- 层 4：近景仪器 -->
       <div id="fgPhotoLayer"></div>
@@ -746,7 +745,7 @@
     var rnd = seeded(90917);
     var steel = [104, 120, 112];
     var steelDark = [78, 94, 88];
-    var levels = 9;
+    var levels = 12;
 
     function P(x, y, col, rad) {
       var c = mix(col, HAZE, haze);
@@ -757,11 +756,17 @@
       });
     }
 
+    /* 混凝土基座 */
+    for (var b1 = -wBottom - 7; b1 <= wBottom + 7; b1 += 1.4) {
+      P(bx + b1, by, [146, 150, 140], 1.0);
+      P(bx + b1, by + 2.5, [128, 132, 122], 0.9);
+    }
+
     /* 四条塔腿（前后两榀，做出立体感） */
     [-1, 1].forEach(function (side) {
       [-1, 1].forEach(function (depth) {
-        for (var i = 0; i <= 120; i++) {
-          var t = i / 120;
+        for (var i = 0; i <= 150; i++) {
+          var t = i / 150;
           var w = wBottom + (wTop - wBottom) * t;
           P(bx + side * w + depth * 4.5, by - h * t,
             depth < 0 ? steelDark : steel, 0.9);
@@ -774,46 +779,81 @@
       var t2 = L / levels;
       var y = by - h * t2;
       var w2 = wBottom + (wTop - wBottom) * t2;
-      for (var i2 = 0; i2 <= 46; i2++) {
-        var x2 = bx - w2 + 2 * w2 * i2 / 46;
+      for (var i2 = 0; i2 <= 54; i2++) {
+        var x2 = bx - w2 + 2 * w2 * i2 / 54;
         P(x2, y, steel, 0.82);
       }
     }
 
-    /* 斜撑（X 形） */
+    /* 主斜撑（每层 X 形） */
     for (var L2 = 0; L2 < levels; L2++) {
       var a0 = L2 / levels, a1 = (L2 + 1) / levels;
       var y0 = by - h * a0, y1 = by - h * a1;
       var w0 = wBottom + (wTop - wBottom) * a0;
       var w1 = wBottom + (wTop - wBottom) * a1;
-      for (var i3 = 0; i3 <= 26; i3++) {
-        var u = i3 / 26;
+      for (var i3 = 0; i3 <= 30; i3++) {
+        var u = i3 / 30;
         P((bx - w0) + (-w1 + w0) * u, y0 + (y1 - y0) * u, steel, 0.72);
         P((bx + w0) + (w1 - w0) * u, y0 + (y1 - y0) * u, steel, 0.72);
       }
+      /* 次斜撑：每层中间再补一对，形成更密的格构 */
+      for (var i4 = 0; i4 <= 16; i4++) {
+        var v = i4 / 16;
+        P((bx - w0) + (w0) * v, y0 + (y1 - y0) * v, steelDark, 0.5);
+        P((bx + w0) + (-w0) * v, y0 + (y1 - y0) * v, steelDark, 0.5);
+      }
     }
 
-    /* 顶部平台 */
+    /* 正面爬梯：两根立杆 + 踏步 */
+    for (var ly = 0; ly <= h; ly += 1.6) {
+      var tw = (ly / h);
+      var lw = (wBottom + (wTop - wBottom) * tw) * 0.26;
+      P(bx - lw, by - ly, steelDark, 0.62);
+      P(bx + lw, by - ly, steelDark, 0.62);
+    }
+    for (var ry = 8; ry < h; ry += 7) {
+      var tw2 = ry / h;
+      var lw2 = (wBottom + (wTop - wBottom) * tw2) * 0.26;
+      for (var rx = -lw2; rx <= lw2; rx += 1.2) {
+        P(bx + rx, by - ry, steel, 0.55);
+      }
+    }
+
+    /* 顶部平台 + 栏杆 */
     var topY = by - h;
-    for (var i4 = 0; i4 <= 40; i4++) {
-      var x4 = bx - wTop - 7 + (2 * wTop + 14) * i4 / 40;
-      P(x4, topY, steel, 0.95);
-      P(x4, topY - 5, steelDark, 0.8);
+    for (var i5 = 0; i5 <= 48; i5++) {
+      var x5 = bx - wTop - 9 + (2 * wTop + 18) * i5 / 48;
+      P(x5, topY, steel, 0.95);
+      P(x5, topY - 6, steelDark, 0.8);
+    }
+    for (var r2 = 0; r2 <= 10; r2++) {
+      var rx2 = bx - wTop - 9 + (2 * wTop + 18) * r2 / 10;
+      for (var ry2 = 6; ry2 <= 13; ry2 += 2) {
+        P(rx2, topY - ry2, steelDark, 0.6);
+      }
     }
 
-    /* 平台上的天线杆 + 避雷针（从 GT200 顶部再探出一小截） */
-    for (var i5 = 0; i5 <= 76; i5++) {
-      P(bx, topY - i5 * 0.95, steel, 0.9);
-    }
-    /* 顶部航空警示小灯 */
-    P(bx, topY - 78, [196, 108, 74], 1.25);
+    /* 平台上的天线组：两面微波鼓 + 三根鞭状天线 */
+    [-1, 1].forEach(function (side) {
+      for (var d = 0; d < 26; d++) {
+        var ang = -Math.PI * 0.15 + (d / 26) * Math.PI * 1.3;
+        P(bx + side * (wTop + 16) + Math.cos(ang) * 7, topY - 26 + Math.sin(ang) * 7, steel, 0.7);
+      }
+      P(bx + side * (wTop + 9), topY - 26, steelDark, 0.7);
+    });
+    [[-wTop * 0.4, 34], [0, 46], [wTop * 0.5, 30]].forEach(function (a) {
+      for (var i6 = 0; i6 <= a[1]; i6++) {
+        P(bx + a[0], topY - 6 - i6, steel, 0.85);
+      }
+      P(bx + a[0], topY - 8 - a[1], [196, 108, 74], 1.2);
+    });
 
     /* 四根拉线 */
     [-1, 1].forEach(function (side) {
-      for (var i6 = 0; i6 <= 44; i6++) {
-        var u2 = i6 / 44;
-        P(bx + side * (wTop + 2) + side * 52 * u2, topY + 18 + (by - topY - 18) * u2,
-          [150, 164, 154], 0.62);
+      for (var i7 = 0; i7 <= 50; i7++) {
+        var u2 = i7 / 50;
+        P(bx + side * (wTop + 2) + side * 58 * u2, topY + 18 + (by - topY - 18) * u2,
+          [150, 164, 154], 0.6);
       }
     });
 
