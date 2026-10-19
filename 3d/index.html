@@ -1535,7 +1535,8 @@
 			// 样地边界 / 网格 / 水系
 			fetch('bounds.json').then(function (r) { return r.json(); }).then(function (b) { BNDS = b; }).catch(function () {});
 			/* 生活区 / 林场 / 大样地 / 白桦林样地（高程等地形铺好后现算，见 ensureSiteZ） */
-			fetch('sites.json').then(function (r) { return r.json(); }).then(function (s) { SITES = s; }).catch(function () {});
+			/* no-store：站点名改过但浏览器会沿用缓存里的旧 JSON（实测改完仍显示旧名） */
+			fetch('sites.json', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (s) { SITES = s; }).catch(function () {});
 			/* 冠层 P（磷）反演：与 treestems 同一批树冠，索引一一对应 */
 			fetch('canopyP.json').then(function (r) { return r.json(); }).then(function (d) {
 				P_DATA = d;
