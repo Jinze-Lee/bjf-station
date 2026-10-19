@@ -97,6 +97,39 @@
     transform: translateX(-50%);
     filter: drop-shadow(0 3px 5px rgba(24, 52, 36, .28));
   }
+  /* 树种铭牌：中文名 + 拉丁名，立在树桩旁 */
+  .species {
+    position: absolute;
+    z-index: 6;
+    transform: translateX(-50%);
+    text-align: center;
+    white-space: nowrap;
+    line-height: 1.25;
+    pointer-events: none;
+  }
+  .species::before {
+    content: '';
+    display: block;
+    width: 1px;
+    height: 9px;
+    margin: 0 auto 2px;
+    background: rgba(47, 122, 79, .55);
+  }
+  .species b {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #24452f;
+    text-shadow: 0 0 4px #f4f8f3, 0 0 8px #f4f8f3, 0 0 12px #f4f8f3;
+  }
+  .species i {
+    display: block;
+    font-size: 11px;
+    font-style: italic;
+    color: #4c6a58;
+    text-shadow: 0 0 4px #f4f8f3, 0 0 8px #f4f8f3, 0 0 12px #f4f8f3;
+  }
+
   /* 塔顶 GT200 的放大子图（右侧特写） */
   .gt-inset {
     position: absolute;
@@ -603,6 +636,23 @@
     im.src = src;
     return im;
   });
+  /* 每个树形对应的点云叶冠（按各自冠形生成，不是统一圆球） */
+  var TREE_LEAF_IMGS = TREE_SRC.map(function (src) {
+    var im = new Image();
+    im.src = src.replace('.webp', '-leaf.webp');
+    return im;
+  });
+
+  /* 7 个树种的中文名与拉丁名（按 GIF 标注） */
+  var SPECIES = [
+    { cn: '紫椴',   la: 'Tilia amurensis' },
+    { cn: '山杨',   la: 'Populus davidiana' },
+    { cn: '五角枫', la: 'Acer pictum' },
+    { cn: '糠椴',   la: 'Tilia mandshurica' },
+    { cn: '胡桃楸', la: 'Juglans mandshurica' },
+    { cn: '蒙古栎', la: 'Quercus mongolica' },
+    { cn: '青楷槭', la: 'Acer tegmentosum' }
+  ];
 
   /* 后景树（画在 #backCanvas，在中远景仪器之后） */
   var BACK_TREE_SPEC = [
@@ -897,11 +947,16 @@
     var im = TREE_IMGS[m.sprite];
     if (!im || !im.complete || !im.naturalWidth) { return; }
     var w = m.h * im.naturalWidth / im.naturalHeight;
+    var leaf = TREE_LEAF_IMGS[m.sprite];
     ctx.save();
     ctx.globalAlpha = m.a;
     ctx.translate(m.x, m.base);
     ctx.rotate(windAngle(el, m));
     if (m.flip) { ctx.scale(-1, 1); }
+    /* 先铺叶冠，再叠枝干，枝条从叶团里透出来 */
+    if (leaf && leaf.complete && leaf.naturalWidth) {
+      ctx.drawImage(leaf, -w / 2, -m.h, w, m.h);
+    }
     ctx.drawImage(im, -w / 2, -m.h, w, m.h);
     ctx.restore();
   }
@@ -1288,6 +1343,7 @@
     requestAnimationFrame(tick);
   }
 
+  addSpeciesLabels();
   resize();
   window.addEventListener('resize', resize);
   requestAnimationFrame(tick);

@@ -1302,7 +1302,7 @@
 		}
 
 		/* 样地贴地透明大字：字号跟着样地在屏幕上的大小走（样地越大字越大） */
-		function drawPlotText(ring, V, P, name, color) {
+		function drawPlotText(ring, V, P, name, color, scale) {
 			var n = ring.length, ok = true;
 			var cx = 0, cy = 0, minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9;
 			for (var i = 0; i < n; i++) {
@@ -1318,13 +1318,20 @@
 			cx /= n; cy /= n;
 			var w = maxx - minx, h = maxy - miny;
 			if (w < 12 || h < 8) { return; }                 /* 太远就不画，免得糊成一片 */
+			/* 小样地（几十米见方）字号再放大一档，金总要求 1.5~2.5 倍 */
+			var spanPx = Math.max(w, h);
+			var sc2 = (scale || 1) * (spanPx < 260 ? 2.0 : 1.0);
 			var fs = Math.min(w / Math.max(3, name.length * 0.95), h * 0.62);
-			fs = Math.max(11, Math.min(110, fs));
+			fs = Math.max(11, Math.min(110, fs)) * sc2;
+			fs = Math.min(200, fs);
 			dctx.save();
 			dctx.globalAlpha = 0.46;                 /* 原来 0.20 太透，看不清 */
-			dctx.fillStyle = color;
 			dctx.font = '700 ' + fs.toFixed(0) + 'px Raleway,"Microsoft YaHei",sans-serif';
 			dctx.textAlign = 'center'; dctx.textBaseline = 'middle';
+			dctx.lineWidth = Math.max(1.4, fs * 0.035);
+			dctx.strokeStyle = '#ff2d55';            /* 红色描边：透底上更抓眼 */
+			dctx.strokeText(name, cx, cy);
+			dctx.fillStyle = color;
 			dctx.fillText(name, cx, cy);
 			dctx.restore();
 		}
@@ -1334,7 +1341,7 @@
 			if (!pc || !cam || !BNDS) return;
 			var V = cam.matrixWorldInverse.elements, P = cam.projectionMatrix.elements;
 			if (BND_ON) bndRings('boundaries').forEach(function (p, bi) {
-					drawRing(p, V, P, '#ff2d55', '#ff2d55', 3.6, 0.26, true);
+					drawRing(p, V, P, '#f98422', '#ff2d55', 3.6, 0.26, true);
 					var nm = (BNDS.boundaries[bi] && BNDS.boundaries[bi].name) || '';
 					if (nm) { drawPlotText(p, V, P, nm + '样地', '#ff2d55'); }
 				});
@@ -1344,7 +1351,7 @@
 			/* 大样地 / 白桦林样地：与落叶松/油松等样地同色（金总要求统一为橙） */
 			if (BIG_ON && SITE3) {
 				SITE3.areas.forEach(function (a) {
-					drawRing(a.ring, V, P, '#ff2d55', '#ff2d55', 3.6, 0.26, true);
+					drawRing(a.ring, V, P, '#f98422', '#ff2d55', 3.6, 0.26, true);
 					drawPlotText(a.ring, V, P, a.nameZh, '#ff2d55');
 				});
 			}
