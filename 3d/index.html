@@ -808,6 +808,25 @@
 			});
 			if (n_skip) console.info('[3d] 有 ' + n_skip + ' 个设备点在点云范围外，已略过');
 		}
+		/* RTK 实测树（主树 103 = VIT…/T…，样方内树 318）—— 之前根本没进 DOTPTS，
+		   所以三维里一直看不到"每棵树的点"。这里补进去，样式和其他点一致。 */
+		var TREES_ADDED = false;
+		function addTrees() {
+			if (TREES_ADDED || typeof ANNOT === 'undefined' || !ANNOT) { return; }
+			TREES_ADDED = true;
+			var nm = 0, nq = 0;
+			(ANNOT.maintrees || []).forEach(function (m) {
+				if (m.E == null || m.N == null) { return; }
+				DOTPTS.push({ E: m.E, N: m.N, Z: 1.5, name: m.name || m.id || '', kind: 'main' });
+				nm++;
+			});
+			(ANNOT.plotTrees || []).forEach(function (t, i) {
+				if (t.E == null || t.N == null) { return; }
+				DOTPTS.push({ E: t.E, N: t.N, Z: 1.5, name: t.name || t.id || ('T' + i), kind: 'quad' });
+				nq++;
+			});
+			console.info('[3d] 实测树已加入：主树 ' + nm + ' 棵 / 样方内树 ' + nq + ' 棵');
+		}
 		function drawDots() {
 			dctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
 			dctx.clearRect(0, 0, innerWidth, innerHeight);
@@ -822,7 +841,7 @@
 				var p = DOTPTS[i];
 				/* 设备点：地面铺好后优先贴地面，避免源表海拔与场景基准差十几米 */
 				var pz = p.Z;
-				if (p.kind && p.kind.indexOf('dev-') === 0 && window.groundZ) {
+				if (window.groundZ && p.kind && (p.kind.indexOf('dev-') === 0 || p.kind === 'main' || p.kind === 'quad')) {
 					var gz = window.groundZ(p.E, p.N);
 					if (isFinite(gz)) { pz = gz + 1.5; }
 				}
@@ -845,9 +864,9 @@
 				}
 				var lcol = '#d3a970';                      /* 该点的标签底色 */
 				if (p.kind === 'main') {
-					/* 实测主树：固定大小；留到最后一遍画，免得被树冠盖住 */
+					/* 实测主树（VIT…/T…）：和其他点同一套样式 —— 菱形 + 深描边 + 小柱子 */
 					lcol = '#8fb4d6';
-					LATE.push({ x: sx, y: sy, emoji: true });
+					LATE.push({ x: sx, y: sy, shape: 'diamond', col: '#8fb4d6', size: 9 });
 				} else if (p.kind && p.kind.indexOf('dev-') === 0) {
 					/* 设备点：液流 / 径向生长 / LAI —— 颜色 + 形状区分；
 					   标记留到最后一遍画（在树冠之上），否则远看整片被树冠盖住 */
@@ -881,12 +900,6 @@
 			   微气候那些是在 drawBounds 里最后画的所以一直可见，树点也得这样才不会"只有放大才看得到"。 */
 			LATE.forEach(function (m) {
 				if (!m.pole) { drawPin(m.x, m.y, m.col || '#d3a970'); }   /* 设备已有 6m 杆 */
-				if (m.emoji) {
-					dctx.font = '19px "Segoe UI Emoji","Noto Color Emoji",serif';
-					dctx.textAlign = 'center'; dctx.textBaseline = 'middle';
-					dctx.fillText('\uD83C\uDF33', m.x, m.y);
-					return;
-				}
 				if (m.pole) {
 					dctx.strokeStyle = m.col; dctx.globalAlpha = 0.85; dctx.lineWidth = 1.6;
 					dctx.beginPath(); dctx.moveTo(m.x0, m.y0); dctx.lineTo(m.x, m.y); dctx.stroke();
@@ -1175,19 +1188,95 @@
 			return (BNDS[key] || []).map(function (o) { return o.pts; });
 		}
 
+		/* 样地周界矮墙：沿边界立一堵半透明的墙（顶边抬高），地景里一眼能认出样地边界 */
+		function drawPlotWall(ring, V, P, color) {
+			var n = ring.length;
+			if (n < 3) { return; }
+			/* 高度按样地跨度自适应：小样地 7 m、大样地 ~16 m */
+			var E0 = 1e9, E1 = -1e9, N0 = 1e9, N1 = -1e9;
+			for (var k = 0; k < n; k++) {
+				if (ring[k][0] < E0) { E0 = ring[k][0]; }
+				if (ring[k][0] > E1) { E1 = ring[k][0]; }
+				if (ring[k][1] < N0) { N0 = ring[k][1]; }
+				if (ring[k][1] > N1) { N1 = ring[k][1]; }
+			}
+			var span = Math.max(E1 - E0, N1 - N0);
+			var hgt = Math.max(6, Math.min(18, span * 0.035));
+			dctx.save();
+			dctx.globalAlpha = 0.22; dctx.fillStyle = color;
+			for (var i = 0; i < n - 1; i++) {
+				var a = ring[i], b = ring[i + 1];
+				var a0 = projXYZ(V, P, a[0], a[1], a[2]);
+				var b0 = projXYZ(V, P, b[0], b[1], b[2]);
+				var a1 = projXYZ(V, P, a[0], a[1], a[2] + hgt);
+				var b1 = projXYZ(V, P, b[0], b[1], b[2] + hgt);
+				if (!a0 || !b0 || !a1 || !b1) { continue; }
+				dctx.beginPath();
+				dctx.moveTo(a0[0], a0[1]); dctx.lineTo(b0[0], b0[1]);
+				dctx.lineTo(b1[0], b1[1]); dctx.lineTo(a1[0], a1[1]);
+				dctx.closePath(); dctx.fill();
+			}
+			/* 墙顶描一条亮线，边界更利落 */
+			dctx.globalAlpha = 0.9; dctx.strokeStyle = color; dctx.lineWidth = 1.8;
+			dctx.beginPath();
+			var st = false;
+			for (var j = 0; j < n; j++) {
+				var t = projXYZ(V, P, ring[j][0], ring[j][1], ring[j][2] + hgt);
+				if (!t) { st = false; continue; }
+				if (st) { dctx.lineTo(t[0], t[1]); } else { dctx.moveTo(t[0], t[1]); st = true; }
+			}
+			dctx.stroke();
+			dctx.restore();
+		}
+
+		/* 样地贴地透明大字：字号跟着样地在屏幕上的大小走（样地越大字越大） */
+		function drawPlotText(ring, V, P, name, color) {
+			var n = ring.length, ok = true;
+			var cx = 0, cy = 0, minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9;
+			for (var i = 0; i < n; i++) {
+				var q = projXYZ(V, P, ring[i][0], ring[i][1], ring[i][2]);
+				if (!q) { ok = false; break; }
+				cx += q[0]; cy += q[1];
+				if (q[0] < minx) { minx = q[0]; }
+				if (q[0] > maxx) { maxx = q[0]; }
+				if (q[1] < miny) { miny = q[1]; }
+				if (q[1] > maxy) { maxy = q[1]; }
+			}
+			if (!ok || n < 3) { return; }
+			cx /= n; cy /= n;
+			var w = maxx - minx, h = maxy - miny;
+			if (w < 12 || h < 8) { return; }                 /* 太远就不画，免得糊成一片 */
+			var fs = Math.min(w / Math.max(3, name.length * 0.95), h * 0.62);
+			fs = Math.max(11, Math.min(110, fs));
+			dctx.save();
+			dctx.globalAlpha = 0.20;
+			dctx.fillStyle = color;
+			dctx.font = '700 ' + fs.toFixed(0) + 'px Raleway,"Microsoft YaHei",sans-serif';
+			dctx.textAlign = 'center'; dctx.textBaseline = 'middle';
+			dctx.fillText(name, cx, cy);
+			dctx.restore();
+		}
+
 		function drawBounds() {
 			var pc = viewer.scene.pointclouds[0], cam = viewer.scene.getActiveCamera();
 			if (!pc || !cam || !BNDS) return;
 			var V = cam.matrixWorldInverse.elements, P = cam.projectionMatrix.elements;
-			if (BND_ON) bndRings('boundaries').forEach(function (p) {
+			if (BND_ON) bndRings('boundaries').forEach(function (p, bi) {
 					drawRing(p, V, P, '#f98422', '#f98422', 2.5, 0.16, true);
+					drawPlotWall(p, V, P, '#f98422');
+					var nm = (BNDS.boundaries[bi] && BNDS.boundaries[bi].name) || '';
+					if (nm) { drawPlotText(p, V, P, nm + '样地', '#f98422'); }
 				});
 			if (G20_ON) bndRings('grid20').forEach(function (p) { drawRing(p, V, P, null, 'rgba(235,235,235,.75)', 1.1, 0, true); });
 			if (G40_ON) bndRings('grid40').forEach(function (p) { drawRing(p, V, P, null, 'rgba(255,210,127,.85)', 1.6, 0, true); });
 			if (DRAIN_ON) (BNDS.drainage || []).forEach(function (l) { drawRing(l, V, P, null, 'rgba(72,138,178,0.85)', 1.3, 0, false); });   /* 水系：灰蓝细线，不抢视线 */
 			/* 大样地 / 白桦林样地：与落叶松/油松等样地同色（金总要求统一为橙） */
 			if (BIG_ON && SITE3) {
-				SITE3.areas.forEach(function (a) { drawRing(a.ring, V, P, '#f98422', '#f98422', 2.4, 0.14, true); });
+				SITE3.areas.forEach(function (a) {
+					drawRing(a.ring, V, P, '#f98422', '#f98422', 2.4, 0.14, true);
+					drawPlotWall(a.ring, V, P, '#f98422');
+					drawPlotText(a.ring, V, P, a.nameZh, '#f98422');
+				});
 			}
 			/* 生活区 / 林场：只留标签，不画点（金总要求） */
 			/* 监测设施点：温室气体=五角星(绿)、土壤呼吸=三角形(淡蓝) —— 与微气候同大小，形状区分 */
@@ -1513,6 +1602,7 @@
 				/* 103 棵 RTK 实测主树的 E/N（VIT16/T189…）—— 给「格网编号」找最近的点用 */
 				MAINT = (data.maintrees || []).filter(function (m) { return m.E != null && m.N != null; })
 					.map(function (m) { return { name: m.name, E: m.E, N: m.N }; });
+				addTrees();
 				/* 20 棵监测树的树号 —— 液流点名字若与它相同，点击就能跳到主页看该树曲线 */
 				(data.trees || []).forEach(function (t) { if (t.id) TREE_IDS[t.id] = 1; });
 				/* RTK 实测主树/样方内树的散点已按金总要求全部移除 */
