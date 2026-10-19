@@ -832,7 +832,9 @@
 					if (!el) {
 						el = document.createElement('div');
 						el.className = 'devinfo';
-						document.body.appendChild(el);
+						/* 必须挂进 #labels —— 名称标注那个开关就是隐藏 #labels，
+						   挂到 body 上会不听话（金总指出） */
+						document.getElementById('labels').appendChild(el);
 						pool.push(el);
 					}
 					pi++;
