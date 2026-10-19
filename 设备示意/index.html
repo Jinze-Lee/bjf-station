@@ -236,9 +236,9 @@
     border: none;
     box-shadow: none;
     font-family: "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "SimSun", serif;
-    font-size: 15px;
+    font-size: 18px;
     font-weight: 700;
-    letter-spacing: .06em;
+    letter-spacing: .05em;
     color: #1c3b28;
     line-height: 1.3;
     text-shadow: 0 0 4px #f4f8f3, 0 0 8px #f4f8f3, 0 0 14px #f4f8f3, 0 1px 2px rgba(244,248,243,.9);
@@ -703,7 +703,13 @@
     { sprite: 3, x: 1120, base: 660, h: 350, a: .82, flip: true  },
     { sprite: 5, x: 1260, base: 638, h: 260, a: .58, flip: false },
     { sprite: 1, x: 1465, base: 646, h: 300, a: .64, flip: true  },
-    { sprite: 4, x: 1745, base: 652, h: 300, a: .68, flip: false }
+    { sprite: 4, x: 1745, base: 652, h: 300, a: .68, flip: false },
+    { sprite: 2, x: 133,  base: 640, h: 250, a: .52, flip: true  },
+    { sprite: 5, x: 355,  base: 636, h: 235, a: .50, flip: false },
+    { sprite: 6, x: 520,  base: 632, h: 245, a: .48, flip: true  },
+    { sprite: 0, x: 820,  base: 634, h: 240, a: .46, flip: false },
+    { sprite: 3, x: 1050, base: 630, h: 230, a: .44, flip: false },
+    { sprite: 5, x: 1600, base: 636, h: 245, a: .50, flip: false }
   ];
 
   /* 前景遮挡树（画在 #fgTreeCanvas，位于中远景仪器之前、近景仪器之后！
@@ -904,9 +910,9 @@
     });
 
     /* (4) 叶面积指数仪 (dev9, baseY=654)：照片底边 y=620 -> 三脚架延伸到 654 */
-    addLinePoints(BACK_EXT_POINTS, 1278, 618, 1265, 654, 2.2, 2.2, STEEL_DARK, STEEL_LIGHT, 0.85);
-    addLinePoints(BACK_EXT_POINTS, 1366, 618, 1379, 654, 2.2, 2.2, STEEL_DARK, STEEL_LIGHT, 0.85);
-    addLinePoints(BACK_EXT_POINTS, 1322, 618, 1322, 656, 2.2, 2.2, STEEL_DARK, STEEL_LIGHT, 0.85);
+    addLinePoints(BACK_EXT_POINTS, 1278, 586, 1265, 654, 2.2, 2.2, STEEL_DARK, STEEL_LIGHT, 0.9);
+    addLinePoints(BACK_EXT_POINTS, 1366, 586, 1379, 654, 2.2, 2.2, STEEL_DARK, STEEL_LIGHT, 0.9);
+    addLinePoints(BACK_EXT_POINTS, 1322, 560, 1322, 656, 2.2, 2.2, STEEL_DARK, STEEL_LIGHT, 0.9);
 
     /* ---- 前景仪器的点云补全（放入 FG_EXT_POINTS） ---- */
     /* (5) 液流主树下半截：从 sapflow-band.webp 底边 (852, 660) 往下接到 (852, 736) + 树根 */
@@ -921,9 +927,9 @@
     addLinePoints(FG_EXT_POINTS, 271, 680, 294, 722, 2.2, 2.2, STEEL_DARK, STEEL_LIGHT, 0.75);
 
     /* (7) 能量平衡涡度塔 (dev3, baseY=748)：照片底边 y=672 -> 三脚架延伸到 748 */
-    addLinePoints(FG_EXT_POINTS, 435, 668, 414, 748, 2.6, 2.6, POLE_DARK, POLE_LIGHT, 0.85);
-    addLinePoints(FG_EXT_POINTS, 541, 668, 562, 748, 2.6, 2.6, POLE_DARK, POLE_LIGHT, 0.85);
-    addLinePoints(FG_EXT_POINTS, 488, 668, 488, 750, 3.2, 3.2, POLE_DARK, POLE_LIGHT, 0.85);
+    addLinePoints(FG_EXT_POINTS, 435, 636, 414, 748, 2.6, 2.6, POLE_DARK, POLE_LIGHT, 0.9);
+    addLinePoints(FG_EXT_POINTS, 541, 636, 562, 748, 2.6, 2.6, POLE_DARK, POLE_LIGHT, 0.9);
+    addLinePoints(FG_EXT_POINTS, 488, 618, 488, 750, 3.0, 3.0, POLE_DARK, POLE_LIGHT, 0.9);
     addLinePoints(FG_EXT_POINTS, 424, 708, 552, 708, 1.8, 1.8, STEEL_DARK, STEEL_LIGHT, 0.7);
 
     /* (8) 土壤温室气体 (dev6, baseY=746)：气室底部土壤环 */
@@ -967,8 +973,8 @@
       if (!sp) { return; }
       var el = document.createElement('div');
       el.className = 'species';
-      el.style.left = ((m.x + 17) / W * 100).toFixed(3) + '%';
-      el.style.top = ((m.base - 120) / H * 100).toFixed(3) + '%';
+      el.style.left = ((m.x + 3) / W * 100).toFixed(3) + '%';
+      el.style.top = ((m.base - m.h * 0.58) / H * 100).toFixed(3) + '%';
       el.innerHTML = '<b>' + sp.cn + '</b><i>' + sp.la + '</i>';
       labelLayer.appendChild(el);
     });
@@ -1017,6 +1023,45 @@
     }
     ctx.drawImage(im, -w / 2, -m.h, w, m.h);
     ctx.restore();
+  }
+
+  var GRASS = { pts: [] };
+  function buildGroundDetail() {
+    var rnd = seeded(20261019);
+    /* 草丛：每丛 18~30 个小点，沿地面铺开 */
+    for (var i = 0; i < 120; i++) {
+      var gx = 40 + rnd() * 1900;
+      var gy = 700 + rnd() * 34;
+      var n = 16 + Math.floor(rnd() * 14);
+      var baseC = [58 + rnd() * 26, 118 + rnd() * 40, 62 + rnd() * 24];
+      for (var j = 0; j < n; j++) {
+        var a = -Math.PI / 2 + (rnd() - 0.5) * 1.5;
+        var len = 4 + rnd() * 9;
+        GRASS.pts.push({
+          x: gx + Math.cos(a) * len * 0.5 + (rnd() - .5) * 5,
+          y: gy - Math.abs(Math.sin(a)) * len - rnd() * 2,
+          r: 0.7 + rnd() * 0.6,
+          c: 'rgb(' + (baseC[0] | 0) + ',' + (baseC[1] | 0) + ',' + (baseC[2] | 0) + ')'
+        });
+      }
+    }
+    /* 石头：若干灰色小圆点簇 */
+    for (var k = 0; k < 26; k++) {
+      var rx = 60 + rnd() * 1860;
+      var ry = 706 + rnd() * 30;
+      var rw = 4 + rnd() * 7;
+      var cnt = 10 + Math.floor(rnd() * 10);
+      for (var m = 0; m < cnt; m++) {
+        var ang = rnd() * 6.2832, rr = Math.pow(rnd(), .6) * rw;
+        var g = 118 + rnd() * 44;
+        GRASS.pts.push({
+          x: rx + Math.cos(ang) * rr,
+          y: ry + Math.sin(ang) * rr * 0.55,
+          r: 0.8 + rnd() * 0.8,
+          c: 'rgb(' + (g | 0) + ',' + ((g + 6) | 0) + ',' + ((g - 4) | 0) + ')'
+        });
+      }
+    }
   }
 
   function drawBackLayer(el) {
@@ -1070,8 +1115,11 @@
     bctx.bezierCurveTo(600, 720, 1240, 752, 1960, 736);
     bctx.stroke();
 
-    /* 后景树（7 种真实树形贴图，随风轻摆） */
+    /* 后景树（7 种真实树形贴图，随风轻摆；远处轻微虚化，拉开景深） */
+    bctx.save();
+    bctx.filter = 'blur(1.1px)';
     BACK_TREES.forEach(function (m) { drawSpriteTree(bctx, m, el); });
+    bctx.restore();
 
     /* 远景点云铁塔：立在山脊上，整座塔完整露出 */
     drawTower();
@@ -1243,10 +1291,10 @@
     /* 每个设备的支线：从底部垂落，带弧度和轻微摆动 */
     WIRED_LIST.forEach(function (d, idx) {
       var x0 = d.wireX, y0 = d.wireY0;
-      var x1 = d.wireX + (idx % 2 ? 9 : -11);
+      var x1 = d.wireX;
       var y1 = bundleY(x1);
       var drop = function (u) {
-        var x = x0 + (x1 - x0) * u + Math.sin(u * Math.PI * 2.2 + idx) * 2.4;
+        var x = x0 + (x1 - x0) * u + Math.sin(u * Math.PI * 2.2) * 1.4 * (1 - u);
         var y = y0 + (y1 - y0) * u + Math.sin(u * Math.PI) * 10;
         return [x, y];
       };
