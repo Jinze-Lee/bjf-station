@@ -639,7 +639,7 @@
   /* 每个树形对应的点云叶冠（按各自冠形生成，不是统一圆球） */
   var TREE_LEAF_IMGS = TREE_SRC.map(function (src) {
     var im = new Image();
-    im.src = src.replace('.webp', '-leaf.webp');
+    im.src = src.replace('.webp', '-ltint.webp');
     return im;
   });
 
@@ -1057,7 +1057,7 @@
     var im = TREE_IMGS[m.sprite];
     if (!im || !im.complete || !im.naturalWidth) { return; }
     var w = m.h * im.naturalWidth / im.naturalHeight;
-    var leaf = tintedLeaf(m.sprite) || TREE_LEAF_IMGS[m.sprite];
+    var leaf = TREE_LEAF_IMGS[m.sprite];
     ctx.save();
     ctx.globalAlpha = m.a;
     ctx.translate(m.x, m.base);
