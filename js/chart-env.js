@@ -152,7 +152,7 @@
         /* 刻度/轴标题一直显示 —— 原来"超过 2 个变量就全关掉"，选 3 个以上就成了三无图。
          * 现在多变量左右交替分布（见下面 left/stack），同侧多根轴用 offset 叠开。 */
         var showAxes = keys.length > 0;
-        var AX_STEP = 46;                       /* 同侧相邻两根轴的水平间距（px） */
+        var AX_STEP = 40;                       /* 同侧相邻两根轴的水平间距（px） */
         /* 窄屏收掉竖排轴标题（"Light (klux)" 这种），它在手机上要吃掉
          * 几十像素宽度，而变量名已经写在下方的彩色标签上了。
          * 刻度数字保留 —— 没有数字的曲线读不出量级。 */
@@ -233,9 +233,11 @@
                 plotBorderColor: C.bg,
                 style: { fontFamily: 'inherit' },
                 zooming: { type: 'x' },
-                /* 与上方图表左右对齐，见 plotMargin() 的说明 */
-                marginLeft: plotMargin(),
-                marginRight: plotMargin(),
+                /* 边距至少够放下这一侧所有轴（多变量时每侧会叠 3~5 根），
+                 * 否则轴被压回绘图区、标签互相盖住甚至整根裁掉。
+                 * 变量少时仍用 plotMargin()，和上方图表保持左右对齐。 */
+                marginLeft: Math.max(plotMargin(), 16 + leftN * AX_STEP),
+                marginRight: Math.max(plotMargin(), 16 + rightN * AX_STEP),
                 spacingTop: 2,
                 /* 时间轴已搬到上方图表底部，这里只留绘图区 + 日期刻度 */
                 height: window.ChartMetrics ? ChartMetrics.heights().env : 340
