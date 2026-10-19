@@ -92,7 +92,7 @@
 			transform: translate(-50%, -50%); white-space: nowrap; font-size: 11.5px; font-weight: 700;
 			padding: 2px 7px; border-radius: 10px; color: #14170f;
 			box-shadow: 0 1px 4px rgba(0,0,0,.55); border: 1px solid rgba(10,13,8,.45); }
-		body.ui-off .devinfo { display: none !important; }
+		/* 设备聚合标签挂在 #labels 里，属于"名称标注"，隐藏界面时保留 */
 
 		/* 鼠标处的三维坐标读数（左下角，指到哪读到哪） */
 		#coordBox { position: fixed; left: 12px; bottom: 14px; z-index: 1900; display: none;
@@ -100,9 +100,10 @@
 			color: #e7e3d8; background: rgba(20, 24, 15, .84); border: 1px solid rgba(160, 180, 120, .35); }
 		#coordBox b { color: #9ed06a; font-weight: 600; }
 		body.ui-off #coordBox { display: none !important; }
+		/* 只收「操作界面」：顶栏/镜头条/台站条/机位组面板/坐标读数。
+		   名称标签(#labels)、散点(#dots)、悬浮提示、树种卡片、图例都保留 —— 金总要求。 */
 		body.ui-off #topbar, body.ui-off #ctrlHint, body.ui-off #staBar, body.ui-off #camBar,
-		body.ui-off #legend3d, body.ui-off #labels, body.ui-off #dots, body.ui-off #tip,
-		body.ui-off #treeCard { display: none !important; }
+		body.ui-off #kfPanel, body.ui-off #coordBox { display: none !important; }
 		#uiRestore { display: none; position: fixed; top: 10px; right: 10px; z-index: 3100;
 			font: inherit; font-size: 12.5px; padding: 6px 12px; border-radius: 4px; cursor: pointer;
 			color: #e7e3d8; background: rgba(38, 42, 30, .72); border: 1px solid rgba(160, 180, 120, .35); }
