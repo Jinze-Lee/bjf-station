@@ -1125,7 +1125,7 @@
 			points.forEach(function (p) {
 				var isSta = (p.id === 'station');
 				var L = addLabel(p.E, p.N, p.Z + 25, p.nameZh, isSta ? 'log station' : 'log',
-					null, p.name, isSta ? '#c2255c' : '#ffd400');
+					null, p.name, isSta ? '#b2df8a' : '#ffd400');
 				L.group = 'site';
 				L.el.addEventListener('mousemove', function (ev) {
 					showTip(ev, '<b>' + L.el.textContent + '</b>' +
