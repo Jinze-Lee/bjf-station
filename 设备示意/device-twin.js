@@ -203,10 +203,8 @@
       box(p, .31, .54, .205, .20, .18, .018, [139, 140, 65], .025);
       box(p, .08, .27, .205, .23, .20, .018, [126, 53, 96], .025);
       box(p, .32, .27, .205, .20, .20, .018, [50, 113, 98], .025);
-      for (var foot = 0; foot < 4; foot++) {
-        var fx = foot % 2 ? .30 : -.30, fz = foot > 1 ? .13 : -.13;
-        rod(p, [fx, .08, fz], [fx, .01, fz], .016, DARK);
-      }
+      /* 落地底座，不是三脚架 */
+      box(p, 0, .045, 0, .86, .09, .48, [96, 112, 98], .04);
       rod(p, [.40,.70,0], [.40,.98,0], .018, AMBER);
     }
     return p;
@@ -220,9 +218,8 @@
     { id:'soil', name:'土壤温湿盐自动观测', short:'土壤温湿盐', kind:'soil', photo:'img/dev5.webp', x:1100, base:810, h:225, p:.55, py:.66, group:'soil' },
     { id:'ghg', name:'土壤温室气体自动观测', short:'土壤温室气体', kind:'ghg', photo:'img/dev6.webp', crop:[70,70,500,520], x:1280, base:810, h:225, p:.48, py:.55, group:'soil' },
     { id:'root', name:'根系原位监测', short:'根系原位', kind:'root', photo:'img/dev7.webp', x:1480, base:840, h:260, p:.48, py:.56, group:'soil' },
-    { id:'dbh', name:'乔木胸径生长环', short:'胸径生长环', kind:'dbh', photo:'img/dev8.webp', crop:[110,190,390,370], x:980, base:805, h:610, p:.23, py:.54, dx:16, group:'tree', onTree:true },
     { id:'lai', name:'分布式叶面积指数仪', short:'叶面积指数', kind:'lai', photo:'img/dev9.webp', crop:[70,0,260,320], x:1655, base:770, h:285, p:.44, py:.78, group:'canopy' },
-    { id:'sapflow', name:'液流与径向生长', short:'液流 · 径向生长', kind:'sapflow', photo:'img/sapflow-radial.png', crop:[82,16,270,590], x:980, base:805, h:610, p:.31, py:.34, dx:37, group:'tree', onTree:true },
+    { id:'sapflow', name:'液流与径向生长', short:'液流 · 径向生长', kind:'sapflow', photo:'img/sapflow-band.webp', x:995, base:805, h:610, p:.34, py:.40, dx:6, group:'tree', onTree:true },
     { id:'gateway', name:'数据采集箱', short:'组网 · 数采 · 太阳能 · 4G', kind:'gateway', photo:'img/cabinet.webp', x:1765, base:800, h:295, p:.58, py:.53, group:'network' }
   ];
 
@@ -256,36 +253,66 @@
     ctx.globalAlpha = 1;
   }
 
-  function makeForestTree(height, seedOffset, leafCount) {
-    seed += seedOffset;
+  function makeForestTree(height, seedOffset, leafCount, haze) {
+    seed = 7000 + seedOffset * 37;
     var pts = [];
-    rod(pts, [0,0,0], [0,1,0], .035, [111,91,70], 60);
+    var woodC = [106 + rand() * 16, 88 + rand() * 12, 70 + rand() * 10];
+    var tint = rand();
+    var leafA = [44 + tint * 24, 106 + tint * 26, 56 + tint * 18];
+    var leafB = [112 + tint * 28, 168 + tint * 24, 96 + tint * 18];
+    var crownY = .66, crownR = .46;
+
+    rod(pts, [0, 0, 0], [0, .40, 0], .026, woodC, 70);
+
     var tips = [];
-    function branch(x,y,z,angle,len,r,depth) {
-      var ex = x + Math.cos(angle) * len;
-      var ey = y + Math.sin(angle) * len;
-      var ez = z + (rand() - .5) * len * .12;
-      rod(pts,[x,y,z],[ex,ey,ez],r,[117,97,73],45);
-      if (depth <= 0 || len < .065) { tips.push([ex,ey,ez]); return; }
-      branch(ex,ey,ez,angle-.56-rand()*.12,len*.72,r*.66,depth-1);
-      branch(ex,ey,ez,angle+.58+rand()*.12,len*.72,r*.66,depth-1);
+    function branch(x, y, z, ang, len, r, depth) {
+      var ex = x + Math.cos(ang) * len;
+      var ey = y + Math.sin(ang) * len;
+      var ez = z + (rand() - .5) * len * .26;
+      rod(pts, [x, y, z], [ex, ey, ez], Math.max(r, .0032), woodC, 56);
+      if (depth <= 0 || len < .022) { tips.push([ex, ey, ez]); return; }
+      var n = rand() < .30 ? 3 : 2;
+      for (var i = 0; i < n; i++) {
+        branch(ex, ey, ez,
+          ang + (i - (n - 1) / 2) * (.52 + rand() * .30) + (rand() - .5) * .16,
+          len * (.71 + rand() * .08), r * .66, depth - 1);
+      }
     }
-    for (var i = 0; i < 4; i++) branch(0,.46+i*.075,0,Math.PI/2+(i-1.5)*.22,.34,.016,2);
-    tips.forEach(function (t) {
-      for (var i = 0; i < (leafCount || 65); i++) {
-        var a = rand() * Math.PI * 2, rr = Math.pow(rand(), .55) * .17;
-        point(pts, t[0] + Math.cos(a)*rr, t[1] + (rand()-.5)*.19, t[2] + Math.sin(a)*rr,
-              rand() > .78 ? [91,145,82] : [55,125,72], .8 + rand()*.7);
+    for (var b = 0; b < 5; b++) {
+      branch(0, .40 + b * .046, 0, Math.PI / 2 + (b - 2) * .34,
+             .22, .0105, 3);
+    }
+
+    var leaves = leafCount || 90;
+    tips.forEach(function (p) {
+      for (var i = 0; i < leaves; i++) {
+        var a = rand() * Math.PI * 2, u = rand() * 2 - 1, rr = Math.pow(rand(), .45);
+        var s = Math.sqrt(1 - u * u) * rr * .050;
+        var x = p[0] + Math.cos(a) * s;
+        var y = p[1] + Math.sin(a) * s * .82 + u * .028;
+        var z = p[2] + Math.sin(a) * s * .62;
+        var c = rand() > .5 ? leafA : leafB;
+        var lit = 1 - .26 * ((x / crownR) * .55 + ((y - crownY) / crownR) * .8);
+        var q = [c[0] * lit, c[1] * lit, c[2] * lit];
+        if (haze) {
+          q = [q[0] + (238 - q[0]) * haze, q[1] + (245 - q[1]) * haze, q[2] + (238 - q[2]) * haze];
+        }
+        point(pts, x, y, z, q, .85 + rand() * .8);
       }
     });
-    return { points:pts, height:height };
+    return { points: pts };
   }
 
   var forest = [
-    {x:40, base:770, h:330, seed:101, a:.25, leaves:42},
-    {x:480, base:770, h:390, seed:202, a:.34, leaves:54},
-    {x:995, base:805, h:610, seed:404, a:.72, leaves:78},
-    {x:1510, base:770, h:370, seed:505, a:.30, leaves:48}
+    { x: 35,  base: 770, h: 330, seed: 101, a: .26, haze: .52, leaves: 70 },
+    { x: 260, base: 770, h: 300, seed: 112, a: .30, haze: .46, leaves: 66 },
+    { x: 505, base: 770, h: 430, seed: 202, a: .55, haze: .10, leaves: 96 },
+    { x: 760, base: 770, h: 355, seed: 303, a: .40, haze: .28, leaves: 82 },
+    { x: 995, base: 805, h: 660, seed: 404, a: .94, haze: 0,   leaves: 120 },
+    { x: 1235, base: 770, h: 385, seed: 414, a: .44, haze: .22, leaves: 86 },
+    { x: 1440, base: 770, h: 470, seed: 505, a: .58, haze: .06, leaves: 100 },
+    { x: 1660, base: 770, h: 405, seed: 606, a: .46, haze: .18, leaves: 88 },
+    { x: 1905, base: 770, h: 360, seed: 707, a: .36, haze: .34, leaves: 78 }
   ];
 
   var modelPoints = {};
@@ -313,15 +340,17 @@
     var host = document.getElementById('labels');
     var adjusted = {
       climate:[7.8,48], phenology:[20,52], flux:[30.1,44], deposition:[40.5,50],
-      soil:[50.4,65], ghg:[58.7,65], root:[68,71], dbh:[45.5,72], lai:[77,57],
-      sapflow:[47.2,59], gateway:[84.1,50]
+      soil:[50.4,65], ghg:[58.7,65], root:[68,71], lai:[77,57],
+      sapflow:[44.6,55], gateway:[84.1,50]
     };
     defs.forEach(function (d) {
       var pos = adjusted[d.id];
       var el = document.createElement('div');
       el.className = 'label' + (d.onTree ? ' sensor' : '');
       el.style.left = pos[0] + '%'; el.style.top = pos[1] + '%';
-      el.innerHTML = '<strong>' + d.short + '</strong>' + (d.onTree ? '<small>树干传感器</small>' : '');
+      el.innerHTML = '<strong>' + d.short + '</strong>' +
+        (d.onTree ? '<small>树干传感器</small>' : '') +
+        (d.id === 'root' ? '<small>现场直读</small>' : '');
       host.appendChild(el);
     });
   }
@@ -352,7 +381,7 @@
 
     /* Background forest points. */
     forest.forEach(function (t) {
-      var tree = makeForestTree(t.h,t.seed,t.leaves);
+      var tree = makeForestTree(t.h,t.seed,t.leaves,t.haze);
       drawPoints(cloudCtx,tree.points,t.x,t.base,t.h,t.a,.25);
     });
 
@@ -375,40 +404,115 @@
     cloudCtx.beginPath(); cloudCtx.moveTo(1825,770); cloudCtx.lineTo(1825,635); cloudCtx.lineTo(1970,635); cloudCtx.stroke();
   }
 
-  var paths = [
-    [[185,760],[430,675],[760,700],[1030,700]],
-    [[430,675],[900,565],[1210,640],[1510,790]],
-    [[1100,810],[1390,850],[1710,790]],
-    [[1030,700],[1370,735],[1710,790]],
-    [[1880,770],[1960,730],[2050,700]]
+  /* ---- 有线：土壤温湿盐 / 土壤温室气体 / 液流·径向 / 干湿沉降 → 采集箱 ---- */
+  var WIRE_Y = 838;
+  var WIRED_DROPS = [
+    [995, 690],    /* 液流·径向：沿树干下来 */
+    [1100, 818],   /* 土壤温湿盐 */
+    [1280, 818],   /* 土壤温室气体 */
+    [885, 790]     /* 干湿沉降（自动采样器控制单元就近接入） */
   ];
+  var PC_LINK = [[1872, 700], [1926, 646]];
+
+  /* ---- 无线：大气气候 / 物候相机 / 能量平衡 → 网关（4G） ---- */
+  var WIRELESS = [
+    { x: 212, y: 700, cx: 520, cy: 470 },
+    { x: 470, y: 640, cx: 980, cy: 420 },
+    { x: 700, y: 700, cx: 1330, cy: 470 }
+  ];
+  var RADIO_TARGET = [1832, 636];
+
+  function drawWifi(ctx, x, y, t, size) {
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (var i = 0; i < 3; i++) {
+      var phase = (t * .9 - i * .18) % 1;
+      if (phase < 0) phase += 1;
+      var a = .12 + .78 * (1 - Math.abs(phase - .5) * 2);
+      ctx.strokeStyle = 'rgba(40, 150, 92,' + a.toFixed(3) + ')';
+      ctx.lineWidth = 2.4 - i * .45;
+      ctx.beginPath();
+      ctx.arc(x, y, size * (.38 + i * .30), -Math.PI * .80, -Math.PI * .20);
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(40, 150, 92,.85)';
+    ctx.beginPath(); ctx.arc(x, y, 2.1, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  function quad(ax, ay, cx, cy, bx, by, u) {
+    var v = 1 - u;
+    return [v * v * ax + 2 * v * u * cx + u * u * bx,
+            v * v * ay + 2 * v * u * cy + u * u * by];
+  }
 
   function drawSignals(now) {
-    var ctx=flowCtx, t=now/1000;
-    ctx.setTransform(dpr*scale,0,0,dpr*scale,0,0);
-    ctx.clearRect(0,0,W,H);
-    ctx.lineWidth=1.35;
-    ctx.strokeStyle='rgba(36,124,172,.18)';
-    paths.forEach(function (path) {
-      ctx.beginPath(); ctx.moveTo(path[0][0],path[0][1]);
-      for (var i=1;i<path.length;i++) ctx.lineTo(path[i][0],path[i][1]);
-      ctx.stroke();
-    });
-    paths.forEach(function (path,pi) {
-      var lengths=[],total=0;
-      for (var i=1;i<path.length;i++) { var len=Math.hypot(path[i][0]-path[i-1][0],path[i][1]-path[i-1][1]); lengths.push(len); total+=len; }
-      var count=Math.max(2,Math.round(total/105));
-      for (var k=0;k<count;k++) {
-        var dist=((t*.13+k/count+pi*.19)%1)*total,acc=0,s=0;
-        while(s<lengths.length-1 && acc+lengths[s]<dist){acc+=lengths[s++];}
-        var u=(dist-acc)/(lengths[s]||1);
-        var x=path[s][0]+(path[s+1][0]-path[s][0])*u;
-        var y=path[s][1]+(path[s+1][1]-path[s][1])*u;
-        ctx.globalAlpha=.38+.62*Math.sin(u*Math.PI);
-        ctx.fillStyle='#247cac'; ctx.beginPath(); ctx.arc(x,y,2.4,0,Math.PI*2); ctx.fill();
+    var ctx = flowCtx, t = now / 1000;
+    ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    /* 有线总线 + 支线 + 进柜 + 到电脑 */
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(36,124,172,.34)';
+    ctx.beginPath();
+    ctx.moveTo(880, WIRE_Y); ctx.lineTo(1765, WIRE_Y);
+    ctx.moveTo(1765, WIRE_Y); ctx.lineTo(1765, 700);
+    ctx.moveTo(PC_LINK[0][0], PC_LINK[0][1]); ctx.lineTo(PC_LINK[1][0], PC_LINK[1][1]);
+    WIRED_DROPS.forEach(function (p) { ctx.moveTo(p[0], p[1]); ctx.lineTo(p[0], WIRE_Y); });
+    ctx.stroke();
+
+    /* 有线数据流：沿线跑的小蓝点 */
+    var wiredRuns = [
+      { a: [880, WIRE_Y], b: [1765, WIRE_Y], n: 22, sp: .11 },
+      { a: [1765, WIRE_Y], b: [1765, 700], n: 3, sp: .3 },
+      { a: PC_LINK[0], b: PC_LINK[1], n: 2, sp: .5 }
+    ];
+    wiredRuns.forEach(function (run, ri) {
+      for (var k = 0; k < run.n; k++) {
+        var u = (t * run.sp + k / run.n + ri * .21) % 1;
+        var x = run.a[0] + (run.b[0] - run.a[0]) * u;
+        var y = run.a[1] + (run.b[1] - run.a[1]) * u;
+        ctx.globalAlpha = .35 + .55 * Math.sin(u * Math.PI);
+        ctx.fillStyle = '#247cac';
+        ctx.beginPath(); ctx.arc(x, y, 2.3, 0, Math.PI * 2); ctx.fill();
       }
     });
-    ctx.globalAlpha=1;
+    /* 支线里向下汇入的短脉冲 */
+    WIRED_DROPS.forEach(function (p, pi) {
+      var u = (t * .32 + pi * .27) % 1;
+      ctx.globalAlpha = .5 * Math.sin(u * Math.PI);
+      ctx.fillStyle = '#247cac';
+      ctx.beginPath(); ctx.arc(p[0], p[1] + (WIRE_Y - p[1]) * u, 2.1, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    /* 无线链路：虚线弧 + 两端 WiFi 脉冲 */
+    ctx.save();
+    ctx.setLineDash([3, 7]);
+    ctx.lineDashOffset = -t * 22;
+    ctx.strokeStyle = 'rgba(40,150,92,.30)';
+    ctx.lineWidth = 1.5;
+    WIRELESS.forEach(function (w) {
+      ctx.beginPath();
+      ctx.moveTo(w.x, w.y);
+      ctx.quadraticCurveTo(w.cx, w.cy, RADIO_TARGET[0], RADIO_TARGET[1]);
+      ctx.stroke();
+    });
+    ctx.restore();
+
+    WIRELESS.forEach(function (w, i) {
+      drawWifi(ctx, w.x + 26, w.y - 32, t + i * .35, 13);
+      for (var k = 0; k < 2; k++) {
+        var u = (t * .07 + k * .5 + i * .17) % 1;
+        var p = quad(w.x, w.y, w.cx, w.cy, RADIO_TARGET[0], RADIO_TARGET[1], u);
+        ctx.globalAlpha = .45 * Math.sin(u * Math.PI);
+        ctx.fillStyle = '#2a9a64';
+        ctx.beginPath(); ctx.arc(p[0], p[1], 2.2, 0, Math.PI * 2); ctx.fill();
+      }
+    });
+    drawWifi(ctx, RADIO_TARGET[0], RADIO_TARGET[1], t + 1.1, 19);
+    ctx.globalAlpha = 1;
+
     requestAnimationFrame(drawSignals);
   }
 

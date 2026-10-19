@@ -53,28 +53,45 @@
     .label small { display: block; color: #536e5f; font-size: 11px; }
     .label.sensor { color: #245a49; }
 
-    /* 电脑端不是卡通电脑，而是网站实际到达的浏览器界面 */
-    .browser {
+    /* 最右侧：真正的电脑，屏幕里是网站实时数据 */
+    .computer {
       position: absolute; z-index: 4;
-      left: 87.4%; top: 40%; width: 12.4%;
-      min-width: 180px; aspect-ratio: 1.08 / 1;
-      border: 1px solid #9eb8a8; border-radius: 8px;
-      background: #fbfdfb; overflow: hidden;
-      box-shadow: 0 12px 26px rgba(26, 63, 43, .16);
+      left: 86.2%; top: 33.5%; width: 13.6%;
+      display: flex; flex-direction: column; align-items: center;
     }
-    .browser-bar {
-      height: 25px; display: flex; align-items: center; gap: 5px;
-      padding: 3px 9px; border-bottom: 1px solid #dce8de; background: #eaf2eb;
+    .monitor {
+      width: 100%; padding: 11px 11px 16px;
+      background: linear-gradient(160deg, #333e37, #161d19 72%);
+      border-radius: 11px;
+      box-shadow: 0 18px 34px rgba(24, 52, 36, .26), inset 0 1px 0 rgba(255, 255, 255, .18);
     }
-    .browser-bar i { width: 5px; height: 5px; border-radius: 50%; background: #91ac99; }
-    .browser-bar span { margin-left: 5px; color: #526d5c; font-size: 11px; }
-    .web-title { padding: 7px 9px 2px; font-size: 12px; font-weight: 700; color: #244b36; }
-    .web-sub { padding: 0 9px; font-size: 11px; color: #536e5f; }
-    .web-chart { display: block; width: calc(100% - 16px); height: 48%; margin: 4px 8px 0; }
-    .web-legend { display: flex; gap: 9px; padding: 3px 9px; color: #526d5c; font-size: 11px; }
-    .web-legend i { display: inline-block; width: 8px; height: 2px; margin-right: 3px; vertical-align: 2px; }
-    .monitor-stand { position: absolute; z-index: 4; left: 93.5%; top: 63%; width: 2px; height: 4%; background: #758b7d; }
-    .monitor-foot { position: absolute; z-index: 4; left: 91.4%; top: 67%; width: 4.4%; height: 3px; border-radius: 3px; background: #758b7d; }
+    .screen {
+      position: relative; overflow: hidden;
+      background: #fbfdfb; border-radius: 3px;
+      aspect-ratio: 16 / 10.4;
+      display: flex; flex-direction: column;
+    }
+    .screen-bar {
+      min-height: 26px; display: flex; align-items: center; gap: 4px;
+      padding: 4px 9px; background: #eaf2eb; border-bottom: 1px solid #dce8de;
+    }
+    .screen-bar i { width: 4px; height: 4px; border-radius: 50%; background: #9db3a4; }
+    .screen-bar span { margin-left: 4px; font-size: 11px; color: #4f685a; }
+    .live { margin-left: auto; display: flex; align-items: center; gap: 3px; font-size: 11px; color: #276a44; letter-spacing: .08em; }
+    .live b { width: 6px; height: 6px; border-radius: 50%; background: #2fa05e; }
+    .screen-title { padding: 6px 9px 0; font-size: 12px; font-weight: 700; color: #244b36; }
+    .screen-sub { padding: 0 9px; font-size: 11px; color: #4f685a; }
+    .screen-chart { display: block; width: 100%; flex: 1 1 auto; margin-top: 2px; }
+    .screen-legend { display: flex; gap: 8px; padding: 2px 9px 5px; font-size: 11px; color: #4b6556; }
+    .screen-legend i { display: inline-block; width: 7px; height: 2px; margin-right: 3px; vertical-align: 2px; }
+    .monitor-neck { width: 9%; height: 15px; background: linear-gradient(180deg, #2b3630, #465046); }
+    .monitor-foot { width: 38%; height: 6px; border-radius: 3px; background: #3a443c; }
+    .monitor-keyboard {
+      width: 80%; height: 14px; margin-top: 3px; border-radius: 3px;
+      background: #eef4ef;
+      border: 1px solid #c9d6cb;
+      box-shadow: inset 0 2px 0 #dbe6dc, 0 4px 8px rgba(24, 52, 36, .10);
+    }
 
     .flow-note {
       position: absolute; z-index: 4; left: 82.5%; top: 38.5%;
@@ -99,11 +116,12 @@
     <header>
       <div>
         <h1>森林观测设备：从实物到实时数据</h1>
-        <p class="intro">现场仪器以点云数字孪生呈现，实拍部件嵌回对应位置；数据汇入采集箱，经 4G 传至网页。</p>
+        <p class="intro">现场仪器以点云数字孪生呈现，实拍部件嵌回对应位置；土壤类与液流经数据线汇入采集箱，气象、物候、能量平衡经网关 4G 无线回传。</p>
       </div>
       <div class="key" aria-label="图例">
         <span><i style="background:#398255"></i>点云仪器与森林</span>
-        <span><i style="background:#2a7fb8"></i>数据传输</span>
+        <span><i style="background:#2a7fb8"></i>数据线</span>
+        <span><i style="background:#2a9a64"></i>无线 WiFi</span>
         <span><i style="background:#d9a768"></i>实拍部件</span>
       </div>
     </header>
@@ -115,21 +133,30 @@
         <div id="labels"></div>
 
         <div class="flow-note">4G · 实时回传</div>
-        <div class="browser" aria-label="网页实时数据面板">
-          <div class="browser-bar"><i></i><i></i><i></i><span>bjf-station / data</span></div>
-          <div class="web-title">森林站 · 实时观测</div>
-          <div class="web-sub">液流　茎干生长　环境要素</div>
-          <svg class="web-chart" viewBox="0 0 240 100" preserveAspectRatio="none" aria-hidden="true">
-            <path d="M0 85H240M0 56H240M0 27H240" fill="none" stroke="#e5eee6" stroke-width="1"/>
-            <path d="M4 78 C24 76 27 53 47 59 S73 79 92 53 S120 37 138 48 S170 59 187 29 S219 23 236 12"
-                  fill="none" stroke="#28784f" stroke-width="2.4"/>
-            <path d="M4 46 C25 39 33 57 51 48 S78 31 96 39 S120 64 141 48 S170 37 188 49 S216 59 236 43"
-                  fill="none" stroke="#247cac" stroke-width="2" stroke-dasharray="5 3"/>
-          </svg>
-          <div class="web-legend"><span><i style="background:#28784f"></i>液流</span><span><i style="background:#247cac"></i>径向生长</span></div>
+        <div class="computer" aria-label="电脑屏幕上的网站实时数据">
+          <div class="monitor">
+            <div class="screen">
+              <div class="screen-bar">
+                <i></i><i></i><i></i><span>bjf-station / data</span>
+                <span class="live"><b></b>LIVE</span>
+              </div>
+              <div class="screen-title">森林站 · 实时观测</div>
+              <div class="screen-sub">液流　茎干生长　环境要素</div>
+              <svg class="screen-chart" viewBox="0 0 240 100" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M0 84H240M0 56H240M0 28H240" fill="none" stroke="#e5eee6" stroke-width="1"/>
+                <path id="liveA" fill="none" stroke="#28784f" stroke-width="2.6" stroke-linejoin="round"/>
+                <path id="liveB" fill="none" stroke="#247cac" stroke-width="2.2" stroke-linejoin="round"/>
+              </svg>
+              <div class="screen-legend">
+                <span><i style="background:#28784f"></i>液流</span>
+                <span><i style="background:#247cac"></i>径向生长</span>
+              </div>
+            </div>
+          </div>
+          <div class="monitor-neck" aria-hidden="true"></div>
+          <div class="monitor-foot" aria-hidden="true"></div>
+          <div class="monitor-keyboard" aria-hidden="true"></div>
         </div>
-        <div class="monitor-stand" aria-hidden="true"></div>
-        <div class="monitor-foot" aria-hidden="true"></div>
       </section>
     </div>
 
@@ -138,6 +165,36 @@
       <span>仪器名称按老师展板标注</span>
     </footer>
   </main>
+  <script>
+    /* 屏幕上两条曲线实时滚动：模拟网站每秒刷新的观测序列 */
+    (function () {
+      var A = document.getElementById('liveA');
+      var B = document.getElementById('liveB');
+      if (!A || !B) return;
+      var N = 64, a = [], b = [], t = 0;
+      function clamp(v) { return Math.max(6, Math.min(94, v)); }
+      for (var i = 0; i < N; i++) {
+        a.push(clamp(54 + Math.sin(i * .21) * 13));
+        b.push(clamp(48 + Math.cos(i * .17) * 15));
+      }
+      function line(arr) {
+        var d = '', n = arr.length;
+        for (var i = 0; i < n; i++) {
+          d += (i ? ' L' : 'M') + (i / (n - 1) * 240).toFixed(1) + ' ' + arr[i].toFixed(1);
+        }
+        return d;
+      }
+      function draw() { A.setAttribute('d', line(a)); B.setAttribute('d', line(b)); }
+      draw();
+      setInterval(function () {
+        t += .19;
+        a.push(clamp(53 + Math.sin(t) * 15 + Math.sin(t * 2.7) * 4));
+        b.push(clamp(49 + Math.cos(t * 1.25) * 16 + Math.sin(t * 3.2) * 3));
+        a.shift(); b.shift();
+        draw();
+      }, 180);
+    })();
+  </script>
   <script src="device-twin.js"></script>
 </body>
 </html>

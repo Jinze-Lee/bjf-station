@@ -1271,8 +1271,12 @@
 					dctx.fillText(d.take[k].name, sx, sy);
 				});
 			}
-			if (G20_ON) one('grid20');
-			if (G40_ON) one('grid40');
+			/* 只勾「格网编号（VIT/T）」也要能看到编号 ——
+			   原来必须同时勾 20/40 m 网格才会画，等于点了没反应（金总发现编号"不见了"）。
+			   优先跟显示的网格走；两个网格都没开时，默认画 20 m 那套编号。 */
+			if (G20_ON) { one('grid20'); }
+			else if (G40_ON) { one('grid40'); }
+			else { one('grid20'); }
 		}
 
 		// 悬停实测点显示名称

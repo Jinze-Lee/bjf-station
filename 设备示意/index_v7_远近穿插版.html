@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>森林观测设备与数据传输示意图 · 北京森林生态系统研究站</title>
+<style>
+  :root {
+    --ink:       #1d3126;
+    --ink-soft:  #4f685a;
+    --deep:      #1f6b45;
+    --wifi:      #16857a;
+    --wire:      #2478b4;
+    --paper:     #f4f8f3;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font: 15px/1.6 "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1760px; margin: 0 auto; padding: 24px 24px 28px; }
+
+  header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 20px; flex-wrap: wrap; margin-bottom: 4px;
+  }
+  header h1 {
+    margin: 0; font-size: clamp(21px, 2vw, 27px);
+    font-weight: 700; letter-spacing: .03em; color: var(--ink);
+  }
+  header p { margin: 5px 0 0; color: var(--ink-soft); font-size: 13.5px; }
+  .legend {
+    display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
+    font-size: 12.5px; color: var(--ink-soft);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .legend .line-chip { width: 18px; height: 2.5px; border-radius: 2px; display: inline-block; }
+
+  /* 舞台：严格按 2000×920 逻辑坐标等比缩放，多层画布与远近照片穿插 */
+  .stage-wrap { overflow-x: auto; overflow-y: hidden; }
+  .stage {
+    position: relative;
+    width: 100%;
+    min-width: 1240px;
+    aspect-ratio: 2000 / 920;
+    margin: 4px 0 0;
+    isolation: isolate;
+  }
+  .stage canvas {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    pointer-events: none;
+  }
+  /* 四层空间穿插：
+     z=1 远中景树与坡面 -> z=2 中远景仪器（会被前景树遮挡一部分）
+     -> z=3 前景树与主树点云 -> z=4 近景仪器 -> z=5 无线/有线动态 -> z=6 标签与电脑 */
+  #backCanvas   { z-index: 1; }
+  #midPhotoLayer{ position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+  #fgTreeCanvas { z-index: 3; }
+  #fgPhotoLayer { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+  #fxCanvas     { z-index: 5; }
+  #labelLayer   { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+
+  .real-photo {
+    position: absolute;
+    transform: translateX(-50%);
+    width: auto;
+    display: block;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+  /* 中远景仪器：柔和落地阴影，不加厚白边，好让前景点云树枝/树干自然遮挡其边缘 */
+  .real-photo.depth-mid {
+    opacity: 0.94;
+    filter: drop-shadow(0 5px 10px rgba(24, 52, 36, .16));
+  }
+  /* 近景仪器：清晰突出 */
+  .real-photo.depth-fg {
+    filter: drop-shadow(0 0 8px rgba(244, 248, 243, .85))
+            drop-shadow(0 8px 14px rgba(24, 52, 36, .22));
+  }
+  .real-photo.sapflow-patch {
+    filter: drop-shadow(0 2px 8px rgba(24, 52, 36, .22));
+  }
+
+  /* 铁塔顶上的 GT200 网关主站：z=3，画在前景树层之后、近景仪器之前 */
+  .gt200 {
+    position: absolute;
+    z-index: 3;
+    left: 80%;
+    top: 18.0%;
+    height: 5.9%;
+    width: auto;
+    transform: translateX(-50%);
+    filter: drop-shadow(0 3px 5px rgba(24, 52, 36, .28));
+  }
+  .gt-tag {
+    position: absolute;
+    z-index: 3;
+    left: 80%;
+    top: 14.8%;
+    transform: translateX(-50%);
+    text-align: center;
+    white-space: nowrap;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #1d4a33;
+    background: rgba(244, 248, 243, .92);
+    border: 1px solid rgba(47, 122, 79, .22);
+    border-radius: 6px;
+    padding: 2px 7px;
+    line-height: 1.3;
+    box-shadow: 0 2px 6px rgba(24, 52, 36, .12);
+  }
+  .gt-tag small {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: #4f685a;
+  }
+
+  /* 设备名称牌（随各仪器远近高低错落排布） */
+  .plate {
+    position: absolute;
+    transform: translateX(-50%);
+    text-align: center;
+    white-space: nowrap;
+  }
+  .plate .tri {
+    width: 0; height: 0; margin: 0 auto 2px;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 7px solid var(--deep);
+  }
+  .plate .tri.wifi { border-bottom-color: var(--wifi); }
+  .plate .tri.wire { border-bottom-color: var(--wire); }
+  .plate .nm {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 5px;
+    background: rgba(244, 248, 243, .90);
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #243b2e;
+    line-height: 1.32;
+    box-shadow: 0 1px 4px rgba(24, 52, 36, .10);
+  }
+  .plate .sub {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink-soft);
+  }
+  .plate .sub.wifi-tag { color: #146e64; }
+  .plate .sub.wire-tag { color: #1f6599; }
+
+  /* 右侧电脑（显示器 + 支架 + 底座 + 键盘，屏幕内实时滚动曲线） */
+  .computer {
+    position: absolute;
+    z-index: 6;
+    left: 91.2%;
+    top: 44.5%;
+    width: 14.2%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .monitor {
+    width: 100%;
+    padding: 9px 9px 13px;
+    border-radius: 10px;
+    background: linear-gradient(160deg, #344039, #18201b 74%);
+    box-shadow: 0 16px 32px rgba(20, 44, 30, .24), inset 0 1px 0 rgba(255, 255, 255, .16);
+  }
+  .screen {
+    background: #fbfdfb;
+    border-radius: 4px;
+    overflow: hidden;
+    aspect-ratio: 16 / 10.6;
+    display: flex;
+    flex-direction: column;
+  }
+  .screen-bar {
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background: #e9f2ea;
+    border-bottom: 1px solid #d8e5da;
+  }
+  .screen-bar i {
+    width: 4px; height: 4px; border-radius: 50%;
+    background: #8fa998;
+  }
+  .screen-bar .url {
+    margin-left: 3px;
+    font-size: 11px;
+    color: #496354;
+  }
+  .screen-bar .live-pill {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #1f6b45;
+  }
+  .screen-bar .live-pill b {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #289e5a;
+    display: inline-block;
+  }
+  .screen-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 5px 8px 1px;
+  }
+  .screen-title {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #1f3f2d;
+  }
+  .screen-sub {
+    font-size: 11px;
+    color: #4d6758;
+  }
+  .screen-chart {
+    width: 100%;
+    flex: 1 1 auto;
+    display: block;
+    margin-top: 1px;
+  }
+  .screen-legend {
+    display: flex;
+    gap: 10px;
+    padding: 2px 8px 4px;
+    font-size: 11px;
+    color: #496354;
+    border-top: 1px solid #edf3ee;
+  }
+  .screen-legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .screen-legend i { width: 8px; height: 2.5px; border-radius: 1px; display: inline-block; }
+  .monitor-neck {
+    width: 9%;
+    height: 14px;
+    background: linear-gradient(180deg, #26312b, #434f47);
+  }
+  .monitor-foot {
+    width: 38%;
+    height: 6px;
+    border-radius: 3px;
+    background: #354039;
+  }
+  .monitor-keyboard {
+    width: 78%;
+    height: 12px;
+    margin-top: 3px;
+    border-radius: 3px;
+    background: #eef4ef;
+    border: 1px solid #c5d4c8;
+    box-shadow: inset 0 2px 0 #dce7de, 0 4px 8px rgba(24, 52, 36, .10);
+  }
+
+  footer {
+    margin-top: 14px;
+    padding-top: 11px;
+    border-top: 1px solid #dce7de;
+    color: var(--ink-soft);
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 900px) {
+    .page { padding: 16px 12px 20px; }
+    header h1 { font-size: 19px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div>
+      <h1>森林观测设备与实时数据传输</h1>
+      <p>实拍仪器按远近景深穿插在点云森林中（部分受林木自然遮挡），缺失的树冠、立杆与三脚架由点云补全；无线 WiFi 与有线数据线汇入采集箱，实时传至电脑。</p>
+    </div>
+    <div class="legend" aria-label="图例">
+      <span><i class="dot" style="background:#2f7a4f"></i>点云森林与补全结构</span>
+      <span><i class="line-chip" style="background:#16857a"></i>无线 WiFi 传输</span>
+      <span><i class="line-chip" style="background:#2478b4"></i>有线数据线传输</span>
+    </div>
+  </header>
+
+  <div class="stage-wrap">
+    <section class="stage" id="stage" aria-label="森林观测设备点云接续示意图">
+      <!-- 层 1：远中景树与林地坡面 -->
+      <canvas id="backCanvas" aria-hidden="true"></canvas>
+      <!-- 层 2：中远景仪器（会被层 3 的前景点云树局部遮挡） -->
+      <div id="midPhotoLayer"></div>
+      <!-- 层 3：前景点云树、主树树冠与近景仪器点云补全结构 -->
+      <canvas id="fgTreeCanvas" aria-hidden="true"></canvas>
+      <!-- 远景铁塔顶上的 GT200 网关主站（无线汇聚点） -->
+      <img class="gt200" src="img/gt200.webp" alt="GT200 网关主站" />
+      <div class="gt-tag">GT200 网关主站<small>无线数据汇聚</small></div>
+      <!-- 层 4：近景仪器 -->
+      <div id="fgPhotoLayer"></div>
+      <!-- 层 5：无线 WiFi 波纹与有线数据流动 -->
+      <canvas id="fxCanvas" aria-hidden="true"></canvas>
+      <!-- 层 6：随景深错落的名称牌 -->
+      <div id="labelLayer"></div>
+
+      <!-- 最右侧：电脑屏幕实时动态曲线 -->
+      <div class="computer" aria-label="电脑屏幕实时观测曲线">
+        <div class="monitor">
+          <div class="screen">
+            <div class="screen-bar">
+              <i></i><i></i><i></i>
+              <span class="url">bjf-station / live</span>
+              <span class="live-pill"><b></b>LIVE</span>
+            </div>
+            <div class="screen-head">
+              <span class="screen-title">森林站 · 实时数据</span>
+              <span class="screen-sub">30 min 同步</span>
+            </div>
+            <svg class="screen-chart" viewBox="0 0 240 92" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0 74H240M0 48H240M0 22H240" fill="none" stroke="#e6efe8" stroke-width="1" />
+              <path id="areaA" fill="rgba(40, 120, 79, 0.10)" stroke="none" />
+              <path id="liveA" fill="none" stroke="#28784f" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" />
+              <path id="liveB" fill="none" stroke="#2478b4" stroke-width="2.1" stroke-dasharray="4 2.5" stroke-linejoin="round" stroke-linecap="round" />
+              <circle id="dotA" r="3.2" fill="#28784f" />
+              <circle id="dotB" r="3.0" fill="#2478b4" />
+            </svg>
+            <div class="screen-legend">
+              <span><i style="background:#28784f"></i>树干液流</span>
+              <span><i style="background:#2478b4"></i>径向生长</span>
+            </div>
+          </div>
+        </div>
+        <div class="monitor-neck" aria-hidden="true"></div>
+        <div class="monitor-foot" aria-hidden="true"></div>
+        <div class="monitor-keyboard" aria-hidden="true"></div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <span>无线 WiFi 组：气象环境、物候相机、能量平衡观测 → 远景点云铁塔顶的 GT200 网关主站 → 电脑；有线组：干湿沉降、树干液流/径向生长、土壤温湿盐、土壤温室气体、叶面积指数仪 → 采集箱 → GT200。</span>
+    <span>远近多层穿插：中远景仪器置于林坡深处并受前景点云树局部遮挡</span>
+  </footer>
+
+</div>
+
+<script>
+/* ==========================================================================
+   森林观测设备与数据传输示意图 v7（远近景深 + 多图层林木穿插遮挡版）
+   ========================================================================== */
+(function () {
+  'use strict';
+
+  var W = 2000, H = 920;
+
+  var stage = document.getElementById('stage');
+  var backCanvas = document.getElementById('backCanvas');
+  var fgTreeCanvas = document.getElementById('fgTreeCanvas');
+  var fxCanvas = document.getElementById('fxCanvas');
+  var bctx = backCanvas.getContext('2d');
+  var tctx = fgTreeCanvas.getContext('2d');
+  var fctx = fxCanvas.getContext('2d');
+  var midPhotoLayer = document.getElementById('midPhotoLayer');
+  var fgPhotoLayer = document.getElementById('fgPhotoLayer');
+  var labelLayer = document.getElementById('labelLayer');
+
+  function seeded(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function mix(c1, c2, k) {
+    return [
+      Math.round(c1[0] + (c2[0] - c1[0]) * k),
+      Math.round(c1[1] + (c2[1] - c1[1]) * k),
+      Math.round(c1[2] + (c2[2] - c1[2]) * k)
+    ];
+  }
+
+  /* ========================================================================
+     1. 9 台设备按远近景深（layer: 'mid' 中远景 vs 'fg' 近景，baseY 从 648 到 752 错落）
+     ------------------------------------------------------------------------
+     · 中远景（layer: 'mid'，置于 #midPhotoLayer，会被 #fgTreeCanvas 的前景树遮挡一部分）：
+       - climate (大气气候): baseY=662（林坡高处，右侧被前景树干/树冠轻遮）
+       - deposition (干湿沉降): baseY=650（林坡深处，左后侧与右角受林木半遮挡）
+       - soil (土壤温湿盐): baseY=666（林地中部，左侧被近景树干轻擦）
+       - lai (叶面积指数仪): baseY=654（林坡右后方，左腿后方与前景树穿插）
+     · 近景（layer: 'fg'，置于 #fgPhotoLayer，在前景树之前，清晰突出）：
+       - phenology (物候相机): baseY=722
+       - flux (能量平衡涡度塔): baseY=748（近景大设备）
+       - sapflow (树干液流/径向): baseY=736（主树位于前景核心）
+       - ghg (土壤温室气体): baseY=746（近景地面）
+       - cabinet (数据采集箱 + 三脚架): baseY=736（近景右侧枢纽）
+     ======================================================================== */
+  var ITEMS = [
+    {
+      id: 'climate', name: '大气气候与环境集成', sub: '无线 WiFi', mode: 'wireless',
+      layer: 'mid', src: 'img/dev1.webp', ar: 0.633,
+      cx: 138, yTop: 405, h: 198, baseY: 662,
+      wifi: [152, 388]
+    },
+    {
+      id: 'phenology', name: '植物生长节律', sub: '物候相机 · 无线 WiFi', mode: 'wireless',
+      layer: 'fg', src: 'img/dev2.webp', ar: 0.947,
+      cx: 312, yTop: 468, h: 122, baseY: 722,
+      wifi: [334, 448]
+    },
+    {
+      id: 'flux', name: '生态系统能量平衡观测', sub: '涡度相关 · 无线 WiFi', mode: 'wireless',
+      layer: 'fg', src: 'img/dev3.webp', ar: 0.440,
+      cx: 488, yTop: 404, h: 268, baseY: 748,
+      wifi: [488, 382]
+    },
+    {
+      id: 'deposition', name: '干湿沉降采样系统', sub: '有线数据线', mode: 'wired',
+      layer: 'mid', src: 'img/dev4.webp', ar: 0.904,
+      cx: 666, yTop: 478, h: 150, baseY: 650,
+      wireX: 666, wireY0: 650
+    },
+    {
+      id: 'sapflow', name: '液流与径向生长', sub: '树干传感器 · 有线', mode: 'wired',
+      layer: 'fg', src: 'img/sapflow-band.webp', ar: 0.250,
+      cx: 852, yTop: 480, h: 186, baseY: 736,
+      patch: true, wireX: 852, wireY0: 736
+    },
+    {
+      id: 'soil', name: '土壤温湿盐自动观测', sub: '有线数据线', mode: 'wired',
+      layer: 'mid', src: 'img/dev5.webp', ar: 0.244,
+      cx: 1015, yTop: 444, h: 180, baseY: 666,
+      wireX: 1020, wireY0: 666
+    },
+    {
+      id: 'ghg', name: '土壤温室气体自动观测', sub: '有线数据线', mode: 'wired',
+      layer: 'fg', src: 'img/dev6.webp', ar: 0.906,
+      cx: 1162, yTop: 576, h: 164, baseY: 746,
+      wireX: 1162, wireY0: 746
+    },
+    {
+      id: 'lai', name: '分布式叶面积指数仪', sub: '有线数据线', mode: 'wired',
+      layer: 'mid', src: 'img/dev9.webp', ar: 0.574,
+      cx: 1322, yTop: 458, h: 162, baseY: 654,
+      wireX: 1322, wireY0: 654
+    },
+    {
+      id: 'cabinet', name: '数据采集箱', sub: '组网 · 数采 · 太阳能 · 4G', mode: 'hub',
+      layer: 'fg', src: 'img/cabinet.webp', ar: 1.307,
+      cx: 1542, yTop: 468, h: 144, baseY: 736
+    }
+  ];
+
+  ITEMS.forEach(function (d) {
+    var img = document.createElement('img');
+    img.className = 'real-photo depth-' + d.layer + (d.patch ? ' sapflow-patch' : '');
+    img.dataset.id = d.id;
+    img.dataset.layer = d.layer;
+    img.src = d.src;
+    img.alt = d.name;
+    img.style.left = (d.cx / W * 100).toFixed(3) + '%';
+    img.style.top = (d.yTop / H * 100).toFixed(3) + '%';
+    img.style.height = (d.h / H * 100).toFixed(3) + '%';
+    if (d.layer === 'mid') {
+      midPhotoLayer.appendChild(img);
+    } else {
+      fgPhotoLayer.appendChild(img);
+    }
+
+    var pl = document.createElement('div');
+    pl.className = 'plate';
+    pl.style.left = (d.cx / W * 100).toFixed(3) + '%';
+    /* 名称牌紧跟各自仪器的落地深度 baseY，形成自然的远近高低错落！ */
+    pl.style.top = ((d.baseY + 10) / H * 100).toFixed(2) + '%';
+    var triCls = d.mode === 'wireless' ? 'tri wifi' : (d.mode === 'wired' ? 'tri wire' : 'tri');
+    var subCls = d.mode === 'wireless' ? 'sub wifi-tag' : (d.mode === 'wired' ? 'sub wire-tag' : 'sub');
+    pl.innerHTML =
+      '<div class="' + triCls + '"></div>' +
+      '<div class="nm">' + d.name + '<span class="' + subCls + '">' + d.sub + '</span></div>';
+    labelLayer.appendChild(pl);
+  });
+
+  /* ========================================================================
+     2. 点云树生成器
+     ======================================================================== */
+  var HAZE = [220, 235, 221];
+  var WOOD = [108, 90, 72];
+  var LEAF = [56, 114, 64];
+
+  function makeTree(h, seed, haze, customTrunkW) {
+    var rnd = seeded(seed);
+    var pts = [], wood = [], tips = [];
+    var startW = customTrunkW || (h * 0.036);
+
+    (function br(x, y, ang, len, w, d) {
+      var x2 = x + Math.cos(ang) * len, y2 = y + Math.sin(ang) * len;
+      wood.push([x, y, x2, y2, w]);
+      if (d <= 0 || len < h * 0.028) { tips.push([x2, y2, w]); return; }
+      var n = rnd() < 0.34 ? 3 : 2;
+      for (var i = 0; i < n; i++) {
+        br(x2, y2,
+          ang + (i - (n - 1) / 2) * (0.46 + rnd() * 0.28) + (rnd() - 0.5) * 0.18,
+          len * (0.71 + rnd() * 0.09), w * 0.66, d - 1);
+      }
+    })(0, 0, -Math.PI / 2 + (rnd() - 0.5) * 0.07, h * 0.30, startW, 6);
+
+    wood.forEach(function (s) {
+      var L = Math.hypot(s[2] - s[0], s[3] - s[1]);
+      var n = Math.max(2, Math.round(L / 2.1));
+      for (var i = 0; i <= n; i++) {
+        var t = i / n, x = s[0] + (s[2] - s[0]) * t, y = s[1] + (s[3] - s[1]) * t;
+        var w = Math.max(0.7, s[4] * (1 - t * 0.32));
+        var k = Math.max(1, Math.round(w * 1.55));
+        for (var j = 0; j < k; j++) {
+          var a = rnd() * 6.2832, r = Math.pow(rnd(), 0.5) * w;
+          pts.push([x + Math.cos(a) * r, y + Math.sin(a) * r, 0.85 + rnd() * 0.65, 0]);
+        }
+      }
+    });
+
+    var spread = h * 0.090;
+    tips.forEach(function (p) {
+      for (var i = 0; i < 86; i++) {
+        var a = rnd() * 6.2832, u = rnd() * 2 - 1, rr = Math.pow(rnd(), 0.43);
+        var s = Math.sqrt(1 - u * u) * rr * spread;
+        pts.push([
+          p[0] + Math.cos(a) * s,
+          p[1] + Math.sin(a) * s * 0.80 + u * spread * 0.54,
+          0.85 + rnd() * 0.75, 1
+        ]);
+      }
+    });
+
+    var ys = pts.map(function (p) { return p[1]; });
+    var yMin = Math.min.apply(null, ys), yMax = Math.max.apply(null, ys);
+    var xs = pts.map(function (p) { return p[0]; });
+    var xMin = Math.min.apply(null, xs), xMax = Math.max.apply(null, xs);
+    var pad = 4, dpr = Math.min(2, window.devicePixelRatio || 1);
+    var cw = Math.ceil(xMax - xMin + pad * 2), ch = Math.ceil(yMax - yMin + pad * 2);
+    var off = document.createElement('canvas');
+    off.width = Math.ceil(cw * dpr); off.height = Math.ceil(ch * dpr);
+    var oc = off.getContext('2d');
+    oc.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    var tint = rnd() - 0.5;
+    var leafA = [LEAF[0] + tint * 38, LEAF[1] - Math.abs(tint) * 8, LEAF[2] + tint * 28];
+    var leafB = [122 + tint * 34, 168, 100 + tint * 24];
+    var cx0 = 0, cy0 = -h * 0.62, cr0 = h * 0.45;
+
+    pts.forEach(function (p) {
+      var t = (p[1] - yMax) / (yMin - yMax || 1);
+      var col = (p[3] === 0)
+        ? mix(WOOD, [144, 126, 106], t * 0.68 + rnd() * 0.15)
+        : mix(leafA, leafB, t * 0.52 + rnd() * 0.35);
+      if (p[3] === 1) {
+        var lit = 1 - 0.28 * ((p[0] - cx0) / cr0 * 0.6 + (p[1] - cy0) / cr0 * 0.8);
+        col = [col[0] * lit, col[1] * lit, col[2] * lit];
+      }
+      if (haze) { col = mix(col, HAZE, haze); }
+      oc.fillStyle = 'rgb(' + (col[0] | 0) + ',' + (col[1] | 0) + ',' + (col[2] | 0) + ')';
+      oc.beginPath();
+      oc.arc(p[0] - xMin + pad, p[1] - yMin + pad, p[2], 0, 6.2832);
+      oc.fill();
+    });
+    return { canvas: off, ox: xMin - pad, oy: yMin - pad, w: cw, h: ch, pointCount: pts.length };
+  }
+
+  /* 后景树（画在 #backCanvas，在中远景仪器之后） */
+  var BACK_TREE_SPEC = [
+    { x: 65,   base: 642, h: 275, s: 101, hz: .56, a: .74 },
+    { x: 245,  base: 648, h: 315, s: 102, hz: .50, a: .78 },
+    { x: 420,  base: 658, h: 390, s: 22,  hz: .22, a: .88 },
+    { x: 590,  base: 638, h: 295, s: 103, hz: .52, a: .76 },
+    { x: 945,  base: 642, h: 325, s: 104, hz: .48, a: .78 },
+    { x: 1120, base: 660, h: 410, s: 44,  hz: .20, a: .88 },
+    { x: 1260, base: 638, h: 285, s: 105, hz: .52, a: .75 },
+    { x: 1465, base: 646, h: 300, s: 106, hz: .46, a: .80 },
+    { x: 1745, base: 652, h: 300, s: 66,  hz: .28, a: .85 }
+  ];
+
+  /* 前景遮挡树（画在 #fgTreeCanvas，位于中远景仪器之前、近景仪器之后！
+     它们的主干或低垂枝叶会自然遮挡中远景仪器的局部边缘） */
+  var FG_TREE_SPEC = [
+    /* 192 处的树：树干与左冠会轻微遮挡 气象环境(138) 的右侧横臂末端 */
+    { x: 202,  base: 704, h: 430, s: 11,  hz: 0,   a: .95 },
+    /* 742 处的树：树干会轻微遮挡 干湿沉降(666) 的右下角与箱体侧边 */
+    { x: 742,  base: 696, h: 415, s: 33,  hz: 0,   a: .94 },
+    /* 1058 处的树：树干在 土壤温湿盐(1015) 右前方斜穿，形成林间遮挡感 */
+    { x: 1056, base: 706, h: 440, s: 88,  hz: 0.05, a: .92 },
+    /* 1384 处的树：树干遮挡 分布式叶面积指数仪(1322) 右侧支腿的一部分 */
+    { x: 1382, base: 698, h: 415, s: 55,  hz: 0,   a: .94 }
+  ];
+
+  var BACK_TREES = BACK_TREE_SPEC.map(function (t) {
+    var m = makeTree(t.h, t.s, t.hz);
+    m.x = t.x; m.base = t.base; m.alpha = t.a;
+    /* 风从左往右掠过：相位随 x 递增，每棵树频率略有差别 */
+    m.phase = t.x * 0.0065 + (t.s % 11) * 0.21;
+    m.freq = 0.40 + (t.s % 6) * 0.035;
+    m.amp = 0.008 + (t.s % 4) * 0.0016;
+    return m;
+  });
+  var FG_TREES = FG_TREE_SPEC.map(function (t) {
+    var m = makeTree(t.h, t.s, t.hz);
+    m.x = t.x; m.base = t.base; m.alpha = t.a;
+    m.phase = t.x * 0.0065 + (t.s % 11) * 0.21;
+    m.freq = 0.38 + (t.s % 6) * 0.04;
+    m.amp = 0.011 + (t.s % 4) * 0.0018;
+    return m;
+  });
+
+  /* 液流主树：从 sapflow-band.webp 顶部 (852, 488) 往上长出整冠大树 */
+  var HERO_CROWN = makeTree(425, 77, 0, 21);
+  HERO_CROWN.x = 852;
+  HERO_CROWN.base = 488;
+  HERO_CROWN.phase = 0.9;
+  HERO_CROWN.freq = 0.43;
+  HERO_CROWN.amp = 0.0105;
+
+  /* ========================================================================
+     2.5 远景点云铁塔（绘制在后景树之前，从而被后景树冠、前景树与采集箱层层遮挡）
+     ======================================================================== */
+  function makeTower(bx, by, h, wBottom, wTop, haze) {
+    var pts = [];
+    var rnd = seeded(90917);
+    var steel = [104, 120, 112];
+    var steelDark = [78, 94, 88];
+    var levels = 9;
+
+    function P(x, y, col, rad) {
+      var c = mix(col, HAZE, haze);
+      pts.push({
+        x: x, y: y,
+        r: (rad || 0.95) * (0.85 + rnd() * 0.35),
+        c: 'rgb(' + (c[0] | 0) + ',' + (c[1] | 0) + ',' + (c[2] | 0) + ')'
+      });
+    }
+
+    /* 四条塔腿（前后两榀，做出立体感） */
+    [-1, 1].forEach(function (side) {
+      [-1, 1].forEach(function (depth) {
+        for (var i = 0; i <= 120; i++) {
+          var t = i / 120;
+          var w = wBottom + (wTop - wBottom) * t;
+          P(bx + side * w + depth * 4.5, by - h * t,
+            depth < 0 ? steelDark : steel, 0.9);
+        }
+      });
+    });
+
+    /* 水平横撑 */
+    for (var L = 0; L <= levels; L++) {
+      var t2 = L / levels;
+      var y = by - h * t2;
+      var w2 = wBottom + (wTop - wBottom) * t2;
+      for (var i2 = 0; i2 <= 46; i2++) {
+        var x2 = bx - w2 + 2 * w2 * i2 / 46;
+        P(x2, y, steel, 0.82);
+      }
+    }
+
+    /* 斜撑（X 形） */
+    for (var L2 = 0; L2 < levels; L2++) {
+      var a0 = L2 / levels, a1 = (L2 + 1) / levels;
+      var y0 = by - h * a0, y1 = by - h * a1;
+      var w0 = wBottom + (wTop - wBottom) * a0;
+      var w1 = wBottom + (wTop - wBottom) * a1;
+      for (var i3 = 0; i3 <= 26; i3++) {
+        var u = i3 / 26;
+        P((bx - w0) + (-w1 + w0) * u, y0 + (y1 - y0) * u, steel, 0.72);
+        P((bx + w0) + (w1 - w0) * u, y0 + (y1 - y0) * u, steel, 0.72);
+      }
+    }
+
+    /* 顶部平台 */
+    var topY = by - h;
+    for (var i4 = 0; i4 <= 40; i4++) {
+      var x4 = bx - wTop - 7 + (2 * wTop + 14) * i4 / 40;
+      P(x4, topY, steel, 0.95);
+      P(x4, topY - 5, steelDark, 0.8);
+    }
+
+    /* 平台上的天线杆 + 避雷针（从 GT200 顶部再探出一小截） */
+    for (var i5 = 0; i5 <= 76; i5++) {
+      P(bx, topY - i5 * 0.95, steel, 0.9);
+    }
+    /* 顶部航空警示小灯 */
+    P(bx, topY - 78, [196, 108, 74], 1.25);
+
+    /* 四根拉线 */
+    [-1, 1].forEach(function (side) {
+      for (var i6 = 0; i6 <= 44; i6++) {
+        var u2 = i6 / 44;
+        P(bx + side * (wTop + 2) + side * 52 * u2, topY + 18 + (by - topY - 18) * u2,
+          [150, 164, 154], 0.62);
+      }
+    });
+
+    return pts;
+  }
+
+  /* 铁塔放在远景右侧坡上（基座 y=650，高 340），塔身被后景树冠与前景采集箱分层遮挡，
+     塔顶露出林冠，上面安装 GT200 网关主站 */
+  var TOWER_POINTS = makeTower(1600, 650, 430, 34, 11, 0.34);
+  var TOWER_TOP = 650 - 430;   /* = 220 */
+  var GT200_POS = [1600, TOWER_TOP - 27];
+
+  function drawTower() {
+    for (var i = 0; i < TOWER_POINTS.length; i++) {
+      var p = TOWER_POINTS[i];
+      bctx.fillStyle = p.c;
+      bctx.beginPath();
+      bctx.arc(p.x, p.y, p.r, 0, 6.2832);
+      bctx.fill();
+    }
+  }
+
+  /* ========================================================================
+     3. 点云补全结构（按所在层分别放入 BACK_EXT_POINTS 和 FG_EXT_POINTS）
+     ======================================================================== */
+  var BACK_EXT_POINTS = [];
+  var FG_EXT_POINTS = [];
+  var FG_FOLIAGE_PATCHES = [];
+  var tripodPointCount = 0;
+  var heroTrunkPointCount = HERO_CROWN.pointCount;
+
+  (function buildPointExtensions() {
+    var rnd = seeded(20261019);
+
+    function addLinePoints(targetArr, x0, y0, x1, y1, halfW0, halfW1, colA, colB, density) {
+      var L = Math.hypot(x1 - x0, y1 - y0) || 1;
+      var steps = Math.max(3, Math.round(L * (density || 0.75)));
+      var nx = -(y1 - y0) / L, ny = (x1 - x0) / L;
+      var count = 0;
+      for (var i = 0; i <= steps; i++) {
+        var t = i / steps;
+        var cx = x0 + (x1 - x0) * t, cy = y0 + (y1 - y0) * t;
+        var hw = halfW0 + (halfW1 - halfW0) * t;
+        var k = Math.max(2, Math.round(hw * 1.4));
+        for (var j = 0; j < k; j++) {
+          var u = (rnd() * 2 - 1) * hw;
+          var jitX = (rnd() - 0.5) * 1.2, jitY = (rnd() - 0.5) * 1.2;
+          var c = mix(colA, colB, (u / (hw || 1) + 1) * 0.45 + rnd() * 0.15);
+          targetArr.push({
+            x: cx + nx * u + jitX,
+            y: cy + ny * u + jitY,
+            r: 0.9 + rnd() * 0.65,
+            c: 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'
+          });
+          count++;
+        }
+      }
+      return count;
+    }
+
+    /* 在中远景仪器边缘加一簇前景点云灌木/低枝叶，形成自然的“林木半遮挡”效果 */
+    function addShrubCluster(cx, cy, rx, ry, count) {
+      for (var i = 0; i < count; i++) {
+        var a = rnd() * 6.2832, r = Math.pow(rnd(), 0.52);
+        var x = cx + Math.cos(a) * r * rx;
+        var y = cy + Math.sin(a) * r * ry;
+        var c = mix([48, 106, 58], [116, 164, 96], (cy - y + ry) / (2 * ry) * 0.7 + rnd() * 0.25);
+        FG_FOLIAGE_PATCHES.push({
+          x: x, y: y, r: 0.95 + rnd() * 0.75,
+          c: 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'
+        });
+      }
+    }
+
+    var STEEL_DARK = [58, 74, 66], STEEL_LIGHT = [132, 150, 140];
+    var POLE_DARK  = [96, 114, 104], POLE_LIGHT  = [166, 182, 172];
+    var BARK_DARK  = [92, 74, 58],   BARK_LIGHT  = [138, 116, 94];
+
+    /* ---- 中远景仪器的点云补全（放入 BACK_EXT_POINTS） ---- */
+    /* (1) 气象环境 (dev1, baseY=662)：照片底边 y=603，立杆 x=168 -> 往下点云立杆+底座到 662 */
+    addLinePoints(BACK_EXT_POINTS, 168, 600, 168, 662, 3.8, 4.4, POLE_DARK, POLE_LIGHT, 0.85);
+    addLinePoints(BACK_EXT_POINTS, 168, 632, 146, 662, 2.0, 2.0, STEEL_DARK, STEEL_LIGHT, 0.75);
+    addLinePoints(BACK_EXT_POINTS, 168, 632, 190, 662, 2.0, 2.0, STEEL_DARK, STEEL_LIGHT, 0.75);
+
+    /* (2) 干湿沉降 (dev4, baseY=650)：照片底边 y=628 -> 点云台架到 650 */
+    addLinePoints(BACK_EXT_POINTS, 626, 626, 626, 650, 2.8, 2.8, STEEL_DARK, STEEL_LIGHT, 0.8);
+    addLinePoints(BACK_EXT_POINTS, 706, 626, 706, 650, 2.8, 2.8, STEEL_DARK, STEEL_LIGHT, 0.8);
+    addLinePoints(BACK_EXT_POINTS, 616, 648, 716, 648, 2.4, 2.4, POLE_DARK, POLE_LIGHT, 0.8);
+
+    /* (3) 土壤温湿盐 (dev5, baseY=666)：照片底边 y=624 -> 点云立杆到 666 + 3层横向蓝色土壤探针 */
+    addLinePoints(BACK_EXT_POINTS, 1019, 622, 1019, 668, 2.8, 2.4, POLE_DARK, POLE_LIGHT, 0.9);
+    [636, 650, 662].forEach(function (py) {
+      addLinePoints(BACK_EXT_POINTS, 1019, py, 1044, py, 1.8, 1.5, [38, 122, 178], [92, 172, 218], 0.9);
+    });
+
+    /* (4) 叶面积指数仪 (dev9, baseY=654)：照片底边 y=620 -> 三脚架延伸到 654 */
+    addLinePoints(BACK_EXT_POINTS, 1278, 618, 1265, 654, 2.2, 2.2, STEEL_DARK, STEEL_LIGHT, 0.85);
+    addLinePoints(BACK_EXT_POINTS, 1366, 618, 1379, 654, 2.2, 2.2, STEEL_DARK, STEEL_LIGHT, 0.85);
+    addLinePoints(BACK_EXT_POINTS, 1322, 618, 1322, 656, 2.2, 2.2, STEEL_DARK, STEEL_LIGHT, 0.85);
+
+    /* ---- 前景仪器的点云补全（放入 FG_EXT_POINTS） ---- */
+    /* (5) 液流主树下半截：从 sapflow-band.webp 底边 (852, 660) 往下接到 (852, 736) + 树根 */
+    heroTrunkPointCount += addLinePoints(FG_EXT_POINTS, 852, 658, 852, 736, 21, 28, BARK_DARK, BARK_LIGHT, 0.95);
+    heroTrunkPointCount += addLinePoints(FG_EXT_POINTS, 838, 724, 814, 744, 8, 2, BARK_DARK, BARK_LIGHT, 0.8);
+    heroTrunkPointCount += addLinePoints(FG_EXT_POINTS, 866, 724, 890, 744, 8, 2, BARK_DARK, BARK_LIGHT, 0.8);
+    heroTrunkPointCount += addLinePoints(FG_EXT_POINTS, 852, 728, 852, 748, 9, 3, BARK_DARK, BARK_LIGHT, 0.8);
+
+    /* (6) 物候相机 (dev2, baseY=722)：左下卡箍在 (271, 574) -> 点云立杆从 (271, 462) 到 (271, 722) */
+    addLinePoints(FG_EXT_POINTS, 271, 462, 271, 722, 4.5, 5.2, POLE_DARK, POLE_LIGHT, 0.85);
+    addLinePoints(FG_EXT_POINTS, 271, 680, 248, 722, 2.2, 2.2, STEEL_DARK, STEEL_LIGHT, 0.75);
+    addLinePoints(FG_EXT_POINTS, 271, 680, 294, 722, 2.2, 2.2, STEEL_DARK, STEEL_LIGHT, 0.75);
+
+    /* (7) 能量平衡涡度塔 (dev3, baseY=748)：照片底边 y=672 -> 三脚架延伸到 748 */
+    addLinePoints(FG_EXT_POINTS, 435, 668, 414, 748, 2.6, 2.6, POLE_DARK, POLE_LIGHT, 0.85);
+    addLinePoints(FG_EXT_POINTS, 541, 668, 562, 748, 2.6, 2.6, POLE_DARK, POLE_LIGHT, 0.85);
+    addLinePoints(FG_EXT_POINTS, 488, 668, 488, 750, 3.2, 3.2, POLE_DARK, POLE_LIGHT, 0.85);
+    addLinePoints(FG_EXT_POINTS, 424, 708, 552, 708, 1.8, 1.8, STEEL_DARK, STEEL_LIGHT, 0.7);
+
+    /* (8) 土壤温室气体 (dev6, baseY=746)：气室底部土壤环 */
+    addLinePoints(FG_EXT_POINTS, 1114, 740, 1170, 740, 4.0, 4.0, POLE_DARK, POLE_LIGHT, 0.8);
+
+    /* (9) 数据采集箱素材 (cabinet, baseY=736)：照片底边 y=612 -> 点云中轴立杆 + 三脚架到 736 */
+    tripodPointCount += addLinePoints(FG_EXT_POINTS, 1542, 608, 1542, 718, 5.2, 4.5, STEEL_DARK, STEEL_LIGHT, 0.95);
+    tripodPointCount += addLinePoints(FG_EXT_POINTS, 1530, 664, 1554, 664, 5.5, 5.5, STEEL_DARK, POLE_LIGHT, 0.9);
+    tripodPointCount += addLinePoints(FG_EXT_POINTS, 1542, 662, 1470, 734, 3.6, 3.0, STEEL_DARK, STEEL_LIGHT, 0.95);
+    tripodPointCount += addLinePoints(FG_EXT_POINTS, 1542, 662, 1542, 738, 3.8, 3.2, STEEL_DARK, STEEL_LIGHT, 0.95);
+    tripodPointCount += addLinePoints(FG_EXT_POINTS, 1542, 662, 1614, 734, 3.6, 3.0, STEEL_DARK, STEEL_LIGHT, 0.95);
+    tripodPointCount += addLinePoints(FG_EXT_POINTS, 1542, 706, 1494, 710, 2.2, 2.2, POLE_DARK, POLE_LIGHT, 0.85);
+    tripodPointCount += addLinePoints(FG_EXT_POINTS, 1542, 706, 1590, 710, 2.2, 2.2, POLE_DARK, POLE_LIGHT, 0.85);
+    tripodPointCount += addLinePoints(FG_EXT_POINTS, 1460, 734, 1480, 734, 3.2, 3.2, STEEL_DARK, STEEL_LIGHT, 0.9);
+    tripodPointCount += addLinePoints(FG_EXT_POINTS, 1532, 738, 1552, 738, 3.2, 3.2, STEEL_DARK, STEEL_LIGHT, 0.9);
+    tripodPointCount += addLinePoints(FG_EXT_POINTS, 1604, 734, 1624, 734, 3.2, 3.2, STEEL_DARK, STEEL_LIGHT, 0.9);
+    tripodPointCount += addLinePoints(FG_EXT_POINTS, 1598, 470, 1598, 418, 3.0, 2.0, STEEL_DARK, POLE_LIGHT, 0.9);
+
+    /* ---- 前景低矮林下灌丛点云（自然半遮挡中远景仪器的脚部/侧边） ---- */
+    addShrubCluster(186, 646, 34, 22, 180);   /* 轻遮 气象环境 右下立杆侧边 */
+    addShrubCluster(726, 622, 38, 26, 210);   /* 轻遮 干湿沉降 右下箱体角 */
+    addShrubCluster(1042, 616, 28, 22, 150);  /* 轻遮 土壤温湿盐 右侧立杆中段 */
+    addShrubCluster(1368, 636, 34, 22, 175);  /* 轻遮 叶面积指数仪 右侧三脚架腿 */
+  })();
+
+  /* ========================================================================
+     4. 绘制后景层 (#backCanvas) 与前景遮挡树层 (#fgTreeCanvas)
+     ======================================================================== */
+  var scale = 1, dpr = Math.min(2, window.devicePixelRatio || 1);
+  var t0 = performance.now();
+
+  function resize() {
+    var w = stage.clientWidth || 1;
+    scale = w / W;
+    [backCanvas, fgTreeCanvas, fxCanvas].forEach(function (cv) {
+      cv.width = Math.round(w * dpr);
+      cv.height = Math.round(w * (H / W) * dpr);
+    });
+  }
+
+  function shadow(ctx, x, y, rx, ry, a) {
+    var g = ctx.createRadialGradient(x, y, 0, x, y, rx);
+    g.addColorStop(0, 'rgba(26, 56, 38,' + a + ')');
+    g.addColorStop(1, 'rgba(26, 56, 38, 0)');
+    ctx.save();
+    ctx.translate(x, y); ctx.scale(1, ry / rx); ctx.translate(-x, -y);
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, rx, 0, 6.2832); ctx.fill();
+    ctx.restore();
+  }
+
+  function windAngle(el, m) {
+    /* 主摆 + 1.9 倍频的次摆（阵风感），幅度按树的远近区分 */
+    var base = el * m.freq + m.phase;
+    var gust = Math.sin(el * 0.17 + m.phase * 0.4) * 0.35 + 0.65;
+    return (Math.sin(base) * 0.72 + Math.sin(base * 1.9 + 1.3) * 0.28) * m.amp * gust;
+  }
+
+  function drawBackLayer(el) {
+    bctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+    bctx.clearRect(0, 0, W, H);
+
+    /* 林坡三层景深地面色带 */
+    var gg = bctx.createLinearGradient(0, 615, 0, H);
+    gg.addColorStop(0, 'rgba(206, 224, 207, 0)');
+    gg.addColorStop(0.14, 'rgba(196, 217, 198, .42)');
+    gg.addColorStop(0.45, 'rgba(184, 208, 187, .52)');
+    gg.addColorStop(0.80, 'rgba(208, 223, 206, .30)');
+    gg.addColorStop(1, 'rgba(225, 234, 222, 0)');
+    bctx.fillStyle = gg;
+    bctx.fillRect(0, 615, W, H - 615);
+
+    /* 远坡与近坡两条柔和地形线 */
+    bctx.strokeStyle = 'rgba(154, 180, 160, .48)';
+    bctx.lineWidth = 1.2;
+    bctx.beginPath();
+    bctx.moveTo(30, 658);
+    bctx.bezierCurveTo(520, 642, 1120, 646, 1740, 658);
+    bctx.stroke();
+
+    bctx.strokeStyle = 'rgba(138, 168, 145, .62)';
+    bctx.lineWidth = 1.4;
+    bctx.beginPath();
+    bctx.moveTo(24, 738);
+    bctx.bezierCurveTo(600, 720, 1240, 752, 1960, 736);
+    bctx.stroke();
+
+    /* 远景点云铁塔：先画，随后被后景树冠遮挡 → 前景树与采集箱再遮一层 */
+    drawTower();
+
+    /* 后景树 */
+    BACK_TREES.forEach(function (m, i) {
+      bctx.save();
+      bctx.globalAlpha = m.alpha;
+      bctx.translate(m.x, m.base);
+      bctx.rotate(windAngle(el, m));
+      bctx.drawImage(m.canvas, m.ox, m.oy, m.w, m.h);
+      bctx.restore();
+    });
+
+    /* 中远景仪器的接地阴影与点云补全结构 */
+    ITEMS.filter(function (d) { return d.layer === 'mid'; }).forEach(function (d) {
+      var rx = Math.max(32, d.h * d.ar * 0.46);
+      shadow(bctx, d.cx, d.baseY + 3, rx, 8, 0.14);
+    });
+    for (var i = 0; i < BACK_EXT_POINTS.length; i++) {
+      var pt = BACK_EXT_POINTS[i];
+      bctx.fillStyle = pt.c;
+      bctx.beginPath();
+      bctx.arc(pt.x, pt.y, pt.r, 0, 6.2832);
+      bctx.fill();
+    }
+  }
+
+  function drawFgTreeLayer(el) {
+    tctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+    tctx.clearRect(0, 0, W, H);
+
+    /* 前景遮挡树（位于 #midPhotoLayer 之上！自然遮挡中远景仪器的局部边缘） */
+    FG_TREES.forEach(function (m, i) {
+      shadow(tctx, m.x, m.base + 3, 76, 10, 0.11);
+      tctx.save();
+      tctx.globalAlpha = m.alpha;
+      tctx.translate(m.x, m.base);
+      tctx.rotate(windAngle(el, m));
+      tctx.drawImage(m.canvas, m.ox, m.oy, m.w, m.h);
+      tctx.restore();
+    });
+
+    /* 前景林下灌丛点云（局部轻遮中远景仪器侧边） */
+    for (var j = 0; j < FG_FOLIAGE_PATCHES.length; j++) {
+      var fp = FG_FOLIAGE_PATCHES[j];
+      tctx.fillStyle = fp.c;
+      tctx.beginPath();
+      tctx.arc(fp.x, fp.y, fp.r, 0, 6.2832);
+      tctx.fill();
+    }
+
+    /* 液流主树：从树干实拍图上沿长出的整冠点云大树（同样随风轻摆） */
+    tctx.save();
+    tctx.translate(HERO_CROWN.x, HERO_CROWN.base);
+    tctx.rotate(windAngle(el, HERO_CROWN));
+    tctx.drawImage(HERO_CROWN.canvas, HERO_CROWN.ox, HERO_CROWN.oy, HERO_CROWN.w, HERO_CROWN.h);
+    tctx.restore();
+
+    /* 近景仪器的接地阴影与点云补全结构（主树下段、物候立杆、涡度塔腿、采集箱三脚架） */
+    ITEMS.filter(function (d) { return d.layer === 'fg'; }).forEach(function (d) {
+      var rx = Math.max(40, d.h * d.ar * 0.50);
+      shadow(tctx, d.cx, d.baseY + 4, rx, 9, 0.17);
+    });
+    for (var i = 0; i < FG_EXT_POINTS.length; i++) {
+      var pt = FG_EXT_POINTS[i];
+      tctx.fillStyle = pt.c;
+      tctx.beginPath();
+      tctx.arc(pt.x, pt.y, pt.r, 0, 6.2832);
+      tctx.fill();
+    }
+  }
+
+  /* ========================================================================
+     5. 前景动态层：动态 WiFi 波纹 + 无线信号弧 + 随地形走线的有线数据总线
+     ======================================================================== */
+  var GATEWAY_ANT = [1600, 194];   /* 铁塔顶 GT200 网关主站 */
+  var PC_ANT      = [1700, 476];
+  var BUS_Y       = 826;
+
+  var WIRELESS_ARCS = [
+    { id: 'climate',   from: [152, 388], cx: 640,  cy: 150, to: GATEWAY_ANT },
+    { id: 'phenology', from: [334, 448], cx: 860,  cy: 210, to: GATEWAY_ANT },
+    { id: 'flux',      from: [488, 382], cx: 1040, cy: 205, to: GATEWAY_ANT }
+  ];
+
+  var WIRED_LIST = ITEMS.filter(function (d) { return d.mode === 'wired'; });
+
+  function quadPt(p0, c, p1, u) {
+    var v = 1 - u;
+    return [
+      v * v * p0[0] + 2 * v * u * c[0] + u * u * p1[0],
+      v * v * p0[1] + 2 * v * u * c[1] + u * u * p1[1]
+    ];
+  }
+  function quadAngle(p0, c, p1, u) {
+    var dx = 2 * (1 - u) * (c[0] - p0[0]) + 2 * u * (p1[0] - c[0]);
+    var dy = 2 * (1 - u) * (c[1] - p0[1]) + 2 * u * (p1[1] - c[1]);
+    return Math.atan2(dy, dx);
+  }
+
+  function drawDynamicWifi(ctx, x, y, t, baseAngle, maxR, colorRGB) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(baseAngle);
+
+    var bg = ctx.createRadialGradient(0, -maxR * 0.35, 1, 0, -maxR * 0.35, maxR * 1.15);
+    bg.addColorStop(0, 'rgba(244, 248, 243, 0.88)');
+    bg.addColorStop(1, 'rgba(244, 248, 243, 0)');
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.arc(0, -maxR * 0.35, maxR * 1.15, 0, 6.2832);
+    ctx.fill();
+
+    ctx.lineCap = 'round';
+    for (var i = 0; i < 3; i++) {
+      var phase = (t * 0.85 + i / 3) % 1;
+      var r = 6 + phase * maxR;
+      var alpha = Math.sin(phase * Math.PI);
+      ctx.strokeStyle = 'rgba(' + colorRGB + ',' + (alpha * 0.92).toFixed(3) + ')';
+      ctx.lineWidth = 2.6 - phase * 1.0;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, -Math.PI * 0.78, -Math.PI * 0.22);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = 'rgb(' + colorRGB + ')';
+    ctx.beginPath();
+    ctx.arc(0, 0, 3.4, 0, 6.2832);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawWavePacket(ctx, x, y, ang, alpha, colorRGB) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(ang);
+    ctx.strokeStyle = 'rgba(' + colorRGB + ',' + alpha.toFixed(3) + ')';
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 2.1;
+    ctx.beginPath();
+    ctx.arc(0, 0, 5.5, -0.65, 0.65);
+    ctx.stroke();
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(0, 0, 9.5, -0.52, 0.52);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawFxLayer(el) {
+    fctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+    fctx.clearRect(0, 0, W, H);
+
+    /* ---- A. 有线数据总线（从不同景深 baseY 汇入底部主干，再沿三脚架升入采集箱） ---- */
+    var busLeft = WIRED_LIST[0].wireX;
+    var busRight = 1542;
+
+    fctx.lineCap = 'round';
+    fctx.lineJoin = 'round';
+    fctx.strokeStyle = 'rgba(244, 248, 243, 0.88)';
+    fctx.lineWidth = 4.4;
+    fctx.beginPath();
+    fctx.moveTo(busLeft, BUS_Y);
+    fctx.lineTo(busRight, BUS_Y);
+    fctx.lineTo(busRight, 612);
+    WIRED_LIST.forEach(function (d) {
+      fctx.moveTo(d.wireX, d.wireY0);
+      fctx.lineTo(d.wireX, BUS_Y);
+    });
+    fctx.stroke();
+
+    fctx.strokeStyle = 'rgba(36, 120, 180, 0.52)';
+    fctx.lineWidth = 1.9;
+    fctx.beginPath();
+    fctx.moveTo(busLeft, BUS_Y);
+    fctx.lineTo(busRight, BUS_Y);
+    fctx.lineTo(busRight, 612);
+    WIRED_LIST.forEach(function (d) {
+      fctx.moveTo(d.wireX, d.wireY0);
+      fctx.lineTo(d.wireX, BUS_Y);
+    });
+    fctx.stroke();
+
+    WIRED_LIST.forEach(function (d) {
+      fctx.fillStyle = '#2478b4';
+      fctx.beginPath();
+      fctx.arc(d.wireX, BUS_Y, 2.8, 0, 6.2832);
+      fctx.fill();
+
+      var u = (el * 0.42 + d.wireX * 0.003) % 1;
+      var py = d.wireY0 + (BUS_Y - d.wireY0) * u;
+      fctx.fillStyle = 'rgba(36, 120, 180,' + (0.35 + 0.65 * Math.sin(u * Math.PI)).toFixed(2) + ')';
+      fctx.beginPath();
+      fctx.arc(d.wireX, py, 2.7, 0, 6.2832);
+      fctx.fill();
+    });
+
+    var totalBus = (busRight - busLeft) + (BUS_Y - 612);
+    for (var k = 0; k < 16; k++) {
+      var dist = ((el * 0.14 + k / 16) % 1) * totalBus;
+      var px, py;
+      if (dist <= busRight - busLeft) {
+        px = busLeft + dist;
+        py = BUS_Y;
+      } else {
+        px = busRight;
+        py = BUS_Y - (dist - (busRight - busLeft));
+      }
+      fctx.fillStyle = '#196ca8';
+      fctx.beginPath();
+      fctx.arc(px, py, 3.0, 0, 6.2832);
+      fctx.fill();
+    }
+
+    /* ---- B. 无线 WiFi 组 ---- */
+    WIRELESS_ARCS.forEach(function (arc, idx) {
+      fctx.save();
+      fctx.setLineDash([4, 7]);
+      fctx.lineDashOffset = -el * 26;
+      fctx.strokeStyle = 'rgba(22, 133, 122, 0.34)';
+      fctx.lineWidth = 1.6;
+      fctx.beginPath();
+      fctx.moveTo(arc.from[0], arc.from[1]);
+      fctx.quadraticCurveTo(arc.cx, arc.cy, arc.to[0], arc.to[1]);
+      fctx.stroke();
+      fctx.restore();
+
+      drawDynamicWifi(fctx, arc.from[0], arc.from[1], el + idx * 0.35, 0.22, 22, '22, 133, 122');
+
+      for (var m = 0; m < 2; m++) {
+        var u = (el * 0.18 + m * 0.5 + idx * 0.23) % 1;
+        var pt = quadPt(arc.from, [arc.cx, arc.cy], arc.to, u);
+        var ang = quadAngle(arc.from, [arc.cx, arc.cy], arc.to, u);
+        var al = 0.25 + 0.70 * Math.sin(u * Math.PI);
+        drawWavePacket(fctx, pt[0], pt[1], ang, al, '22, 133, 122');
+      }
+    });
+
+    drawDynamicWifi(fctx, GATEWAY_ANT[0], GATEWAY_ANT[1], el + 0.6, 0, 24, '22, 133, 122');
+
+    /* ---- C. 采集箱 4G 路由器 -> 铁塔顶 GT200 网关主站 -> 右侧电脑 ---- */
+    var cabinetTop = [1548, 464];
+    var gtOut = [1630, 202];
+
+    /* 采集箱上行到网关 */
+    fctx.save();
+    fctx.setLineDash([4, 6]);
+    fctx.lineDashOffset = -el * 30;
+    fctx.strokeStyle = 'rgba(36, 120, 180, 0.45)';
+    fctx.lineWidth = 1.8;
+    fctx.beginPath();
+    fctx.moveTo(cabinetTop[0], cabinetTop[1]);
+    fctx.quadraticCurveTo(1584, 360, GATEWAY_ANT[0] + 6, GATEWAY_ANT[1] + 26);
+    fctx.stroke();
+    fctx.restore();
+
+    for (var q = 0; q < 2; q++) {
+      var u4 = (el * 0.34 + q * 0.5) % 1;
+      var p4 = quadPt(cabinetTop, [1584, 360], [GATEWAY_ANT[0] + 6, GATEWAY_ANT[1] + 26], u4);
+      var a4 = quadAngle(cabinetTop, [1584, 360], [GATEWAY_ANT[0] + 6, GATEWAY_ANT[1] + 26], u4);
+      drawWavePacket(fctx, p4[0], p4[1], a4, 0.35 + 0.65 * Math.sin(u4 * Math.PI), '36, 120, 180');
+    }
+
+    /* 网关下发到电脑 */
+    fctx.save();
+    fctx.setLineDash([4, 6]);
+    fctx.lineDashOffset = -el * 26;
+    fctx.strokeStyle = 'rgba(22, 133, 122, 0.42)';
+    fctx.lineWidth = 1.8;
+    fctx.beginPath();
+    fctx.moveTo(gtOut[0], gtOut[1]);
+    fctx.quadraticCurveTo(1732, 330, PC_ANT[0], PC_ANT[1]);
+    fctx.stroke();
+    fctx.restore();
+
+    for (var q2 = 0; q2 < 2; q2++) {
+      var u5 = (el * 0.30 + q2 * 0.5) % 1;
+      var p5 = quadPt(gtOut, [1732, 330], PC_ANT, u5);
+      var a5 = quadAngle(gtOut, [1732, 330], PC_ANT, u5);
+      drawWavePacket(fctx, p5[0], p5[1], a5, 0.35 + 0.65 * Math.sin(u5 * Math.PI), '22, 133, 122');
+    }
+  }
+
+  /* ========================================================================
+     6. 电脑屏幕内的平滑实时滚动曲线
+     ======================================================================== */
+  var pathA = document.getElementById('liveA');
+  var areaA = document.getElementById('areaA');
+  var pathB = document.getElementById('liveB');
+  var dotA  = document.getElementById('dotA');
+  var dotB  = document.getElementById('dotB');
+  var liveTicks = 0;
+
+  function updateLiveChart(el) {
+    var N = 54;
+    var dA = '', dB = '', lastYa = 45, lastYb = 50;
+    for (var i = 0; i < N; i++) {
+      var x = (i / (N - 1)) * 234;
+      var phase = el * 1.65 + i * 0.22;
+      var ya = 46 + Math.sin(phase) * 16 + Math.sin(phase * 2.3) * 5.5;
+      var yb = 52 + Math.cos(phase * 0.85 + 0.8) * 14 + Math.sin(phase * 1.9) * 4.5;
+      dA += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + ya.toFixed(1);
+      dB += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + yb.toFixed(1);
+      if (i === N - 1) { lastYa = ya; lastYb = yb; }
+    }
+    pathA.setAttribute('d', dA);
+    areaA.setAttribute('d', dA + ' L234 88 L0 88 Z');
+    pathB.setAttribute('d', dB);
+    dotA.setAttribute('cx', '234'); dotA.setAttribute('cy', lastYa.toFixed(1));
+    dotB.setAttribute('cx', '234'); dotB.setAttribute('cy', lastYb.toFixed(1));
+    liveTicks++;
+  }
+
+  window.SceneV6 = {
+    treeCount: BACK_TREES.length + FG_TREES.length + 1,
+    heroTreePoints: heroTrunkPointCount,
+    cabinetTripodPoints: tripodPointCount,
+    wirelessIds: WIRELESS_ARCS.map(function (a) { return a.id; }),
+    wiredIds: WIRED_LIST.map(function (d) { return d.id; }),
+    midLayerCount: ITEMS.filter(function (d) { return d.layer === 'mid'; }).length,
+    fgLayerCount: ITEMS.filter(function (d) { return d.layer === 'fg'; }).length,
+    towerPoints: TOWER_POINTS.length,
+    swayAmplitude: Math.max.apply(null, FG_TREES.concat(BACK_TREES).map(function (m) { return m.amp; })),
+    liveChartTicks: 0
+  };
+
+  function tick(now) {
+    var el = (now - t0) / 1000;
+    drawBackLayer(el);
+    drawFgTreeLayer(el);
+    drawFxLayer(el);
+    updateLiveChart(el);
+    window.SceneV6.liveChartTicks = liveTicks;
+    requestAnimationFrame(tick);
+  }
+
+  resize();
+  window.addEventListener('resize', resize);
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>观测设备与数据传输 · 链路示意图</title>
+<style>
+  :root {
+    --ink: #1c3527;
+    --muted: #5a7364;
+    --green: #2f7a4f;
+    --deep: #1f5f3d;
+    --blue: #2a7fb8;
+    --paper: #f4f8f3;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--paper); color: var(--ink);
+    font: 15px/1.6 "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1640px; margin: 0 auto; padding: 26px 24px 26px; }
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+  h1 { margin: 0; font-size: clamp(21px, 2vw, 27px); letter-spacing: .02em; }
+  header p { margin: 6px 0 0; color: var(--muted); font-size: 13.5px; }
+  .key { display: flex; gap: 16px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
+  .key i { display: inline-block; width: 18px; height: 2px; margin-right: 6px; vertical-align: 3px; border-radius: 2px; }
+
+  .scene-wrap { overflow-x: auto; overflow-y: hidden; }
+  .scene {
+    position: relative; width: 100%; min-width: 1180px;
+    aspect-ratio: 1680 / 700; margin-top: 6px;
+  }
+  .wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .cable {
+    fill: none; stroke: #5b9a7a; stroke-width: 2.6;
+    filter: drop-shadow(0 1px 1.5px rgba(255, 255, 255, .95));
+  }
+  .cable-soft {
+    fill: none; stroke: #a9c9b6; stroke-width: 1.1; stroke-dasharray: 3 7;
+    filter: drop-shadow(0 1px 1px rgba(255, 255, 255, .9));
+  }
+  .packet { fill: var(--blue); }
+
+  .wire-label {
+    position: absolute; transform: translate(-50%, -50%);
+    font-size: 11.5px; letter-spacing: .06em; color: #2a6c92;
+    background: rgba(244, 248, 243, .86); padding: 1px 7px; border-radius: 8px;
+  }
+
+  /* 照片节点：高度按舞台百分比缩放，换宽度也不走形 */
+  .dev { position: absolute; top: 0; height: 100%; }
+  .dev img {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    bottom: 28.6%; width: auto;
+    filter: drop-shadow(0 10px 14px rgba(28, 60, 42, .18));
+  }
+
+  .tag {
+    position: absolute; transform: translateX(-50%);
+    text-align: center; white-space: nowrap; font-size: 13px; color: #2c4a37;
+  }
+  .tag b {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 19px; height: 19px; margin-right: 6px; border-radius: 50%;
+    background: var(--deep); color: #fff; font-size: 11.5px; font-weight: 600;
+    vertical-align: 2px;
+  }
+  .tag small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 1px; }
+
+  .node { position: absolute; transform: translate(-50%, -50%); text-align: center; }
+  .node svg { display: block; margin: 0 auto; }
+  .node span { display: block; margin-top: 5px; font-size: 12.5px; color: #34513e; white-space: nowrap; }
+
+  .computer { position: absolute; transform: translateX(-50%); }
+  .monitor {
+    width: 100%; padding: 8px 8px 12px; border-radius: 9px;
+    background: linear-gradient(160deg, #333e37, #161d19 72%);
+    box-shadow: 0 16px 30px rgba(24, 52, 36, .24);
+  }
+  .screen {
+    display: flex; flex-direction: column; overflow: hidden;
+    background: #fbfdfb; border-radius: 2px; aspect-ratio: 16 / 10.5;
+  }
+  .screen-bar {
+    display: flex; align-items: center; gap: 4px;
+    padding: 3px 7px; background: #eaf2eb; border-bottom: 1px solid #dce8de;
+    font-size: 10px; color: #4f685a;
+  }
+  .screen-bar i { width: 4px; height: 4px; border-radius: 50%; background: #9db3a4; }
+  .screen-bar em { font-style: normal; margin-left: auto; color: #276a44; letter-spacing: .08em; font-size: 10px; }
+  .screen h4 { margin: 5px 7px 0; font-size: 10.5px; color: #244b36; }
+  .screen-chart { flex: 1 1 auto; width: 100%; margin-top: 2px; }
+  .monitor-neck { width: 8%; height: 10px; margin: 0 auto; background: #2b3630; }
+  .monitor-foot { width: 34%; height: 5px; margin: 0 auto; border-radius: 3px; background: #3a443c; }
+
+  footer {
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid #dce8de;
+    color: #6d8577; font-size: 12px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  @media (max-width: 900px) {
+    .page { padding: 18px 12px 20px; }
+    header { align-items: flex-start; flex-direction: column; gap: 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div>
+      <h1>观测设备与数据传输</h1>
+      <p>四类现场设备 → 数据采集箱 → 4G 网关 → 云端 → 网页实时曲线</p>
+    </div>
+    <div class="key" aria-label="图例">
+      <span><i style="background:#2a7fb8"></i>数据流</span>
+      <span><i style="background:#6fa98a"></i>数据链路</span>
+    </div>
+  </header>
+
+  <div class="scene-wrap">
+    <section class="scene" id="scene" aria-label="设备与数据传输链路示意图">
+      <svg class="wires" viewBox="0 0 1680 700" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <radialGradient id="groundFade" cx="50%" cy="40%" r="62%">
+          <stop offset="0" stop-color="#dfeadf" stop-opacity=".9" />
+          <stop offset="1" stop-color="#dfeadf" stop-opacity="0" />
+        </radialGradient>
+        <ellipse cx="620" cy="505" rx="590" ry="34" fill="url(#groundFade)" />
+        <line x1="40" y1="500" x2="1000" y2="500" stroke="#c9ddcd" stroke-width="1.3" />
+
+        <!-- 设备 → 采集箱（走地面以上，不压名称） -->
+        <path class="cable" d="M152 500 C 300 500, 470 492, 652 478" />
+        <path class="cable" d="M336 500 C 440 500, 560 492, 652 486" />
+        <path class="cable" d="M496 500 C 560 500, 610 494, 652 492" />
+        <path class="cable-soft" d="M152 500 C 300 500, 470 492, 652 478" />
+
+        <!-- 采集箱 → 4G → 云端 → 电脑 -->
+        <path class="cable" d="M1032 468 C 1080 452, 1100 436, 1132 424" />
+        <path class="cable" d="M1176 410 C 1210 388, 1236 374, 1266 362" />
+        <path class="cable" d="M1316 356 C 1338 366, 1352 382, 1364 402" />
+      </svg>
+
+      <figure class="dev" style="left:9%;">
+        <img src="img/trunk-cut.webp" alt="树干液流与径向生长" style="height:56%" />
+      </figure>
+      <figure class="dev" style="left:20%;">
+        <img src="img/met-cut.webp" alt="微气象站" style="height:40%" />
+      </figure>
+      <figure class="dev" style="left:29.5%;">
+        <img src="img/tripod-cut.webp" alt="三脚架采集箱" style="height:40%" />
+      </figure>
+      <figure class="dev" style="left:50%;">
+        <img src="img/cabinet-cut.webp" alt="数据采集箱" style="height:48%" />
+      </figure>
+
+      <div class="tag" style="left:9%; top:76%;"><b>1</b>树干液流 / 径向生长<small>树干传感器</small></div>
+      <div class="tag" style="left:20%; top:76%;"><b>2</b>微气象站<small>环境要素</small></div>
+      <div class="tag" style="left:29.5%; top:76%;"><b>3</b>三脚架采集箱<small>现场记录</small></div>
+      <div class="tag" style="left:50%; top:76%;"><b>4</b>数据采集箱<small>组网 · 数采 · 太阳能</small></div>
+
+      <div class="node" style="left:69%; top:59%;">
+        <svg width="60" height="74" viewBox="0 0 52 66" aria-hidden="true">
+          <line x1="26" y1="16" x2="26" y2="62" stroke="#2f7a4f" stroke-width="2.4" stroke-linecap="round" />
+          <path d="M16 14a15 15 0 0 1 20 0" fill="none" stroke="#2f7a4f" stroke-width="2.2" stroke-linecap="round" />
+          <path d="M21 9a20 20 0 0 1 10 0" fill="none" stroke="#2f7a4f" stroke-width="2.2" stroke-linecap="round" />
+          <circle cx="26" cy="20" r="2.8" fill="#2f7a4f" />
+          <rect x="18" y="38" width="16" height="13" rx="2" fill="#eef6f0" stroke="#2f7a4f" stroke-width="1.8" />
+        </svg>
+        <span>4G 网关</span>
+      </div>
+
+      <div class="node" style="left:78%; top:49%;">
+        <svg width="84" height="54" viewBox="0 0 84 54" aria-hidden="true">
+          <path d="M22 42h38a11 11 0 0 0 0-22 15 15 0 0 0-28-4 12 12 0 0 0-10 26z"
+                fill="#eef6f0" stroke="#2f7a4f" stroke-width="2.2" stroke-linejoin="round" />
+        </svg>
+        <span>云端</span>
+      </div>
+
+      <div class="computer" style="left:89%; top:44%; width:14.5%;">
+        <div class="monitor">
+          <div class="screen">
+            <div class="screen-bar"><i></i><i></i><i></i><em>LIVE</em></div>
+            <h4>森林站 · 实时观测</h4>
+            <svg class="screen-chart" viewBox="0 0 240 100" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0 82H240M0 54H240M0 26H240" fill="none" stroke="#e5eee6" stroke-width="1" />
+              <path id="liveA" fill="none" stroke="#28784f" stroke-width="2.6" stroke-linejoin="round" />
+              <path id="liveB" fill="none" stroke="#247cac" stroke-width="2.2" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <div class="monitor-neck"></div>
+          <div class="monitor-foot"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <span>设备照片为现场实拍，照片即链路节点；线为数据链路示意，不代表实际线缆走向。</span>
+    <span>液流 · 径向生长 · 气象 · 土壤</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var svg = document.querySelector('.scene .wires');
+  var paths = [].slice.call(svg.querySelectorAll('.cable'));
+  var packets = paths.map(function (path, i) {
+    var c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('class', 'packet');
+    c.setAttribute('r', i < 4 ? '3.4' : '3');
+    svg.appendChild(c);
+    return { el: c, path: path, len: path.getTotalLength(), off: i * 0.37 };
+  });
+  function tick(now) {
+    var t = now / 1000;
+    packets.forEach(function (p) {
+      var u = (t * 0.18 + p.off) % 1;
+      var pt = p.path.getPointAtLength(u * p.len);
+      p.el.setAttribute('cx', pt.x);
+      p.el.setAttribute('cy', pt.y);
+      p.el.setAttribute('opacity', (0.25 + 0.7 * Math.sin(u * Math.PI)).toFixed(2));
+    });
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  var A = document.getElementById('liveA'), B = document.getElementById('liveB');
+  var N = 56, a = [], b = [], t2 = 0;
+  function clamp(v) { return Math.max(6, Math.min(94, v)); }
+  for (var i = 0; i < N; i++) { a.push(clamp(54 + Math.sin(i * .22) * 13)); b.push(clamp(48 + Math.cos(i * .17) * 15)); }
+  function line(arr) {
+    var d = '', n = arr.length;
+    for (var i = 0; i < n; i++) d += (i ? ' L' : 'M') + (i / (n - 1) * 240).toFixed(1) + ' ' + arr[i].toFixed(1);
+    return d;
+  }
+  A.setAttribute('d', line(a)); B.setAttribute('d', line(b));
+  setInterval(function () {
+    t2 += .18;
+    a.push(clamp(53 + Math.sin(t2) * 15 + Math.sin(t2 * 2.7) * 4)); a.shift();
+    b.push(clamp(49 + Math.cos(t2 * 1.25) * 16 + Math.sin(t2 * 3.2) * 3)); b.shift();
+    A.setAttribute('d', line(a)); B.setAttribute('d', line(b));
+  }, 180);
+})();
+</script>
+</body>
+</html>
