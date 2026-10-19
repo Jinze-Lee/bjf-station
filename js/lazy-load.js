@@ -99,7 +99,8 @@
     function loadScript(src) {
         return new Promise(function (resolve, reject) {
             var el = document.createElement('script');
-            el.src = src;
+            /* 版本戳：改了 JS 但浏览器缓存住旧文件会让人以为没改（本地实测踩过两次） */
+            el.src = src + (src.indexOf('?') >= 0 ? '&' : '?') + 'v=20261019b';
             el.async = false;          /* 保险：即使被并发插入也按顺序执行 */
             el.onload = function () { resolve(); };
             el.onerror = function () { reject(new Error('加载失败: ' + src)); };
