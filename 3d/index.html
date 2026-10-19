@@ -589,7 +589,7 @@
 			if (el) el.addEventListener('change', function () { fn(this.checked); });
 		}
 		bindChk('chkDet', function (v) { DET_ON = v; renderLegend(); });
-		bindChk('chkBnd', function (v) { BND_ON = v; });
+		bindChk('chkBnd', function (v) { LBL_ON.plot = v; BND_ON = v; });
 		bindChk('chkG20', function (v) { G20_ON = v; });
 		bindChk('chkG40', function (v) { G40_ON = v; });
 		bindChk('chkDrain', function (v) { DRAIN_ON = v; });
@@ -603,10 +603,10 @@
 			for (var i = 0; i < pcs.length; i++) pcs[i].visible = v;
 		}
 		bindChk('chkPC', function (v) { PC_ON = v; setPointClouds(v); });
-		bindChk('chkBig', function (v) { BIG_ON = v; });
-		bindChk('chkSite', function (v) { SITE_ON = v; });
-		bindChk('chkMicro', function (v) { MICRO_ON = v; });
-		bindChk('chkFac', function (v) { FAC_ON = v; });		bindChk('chkName', function (v) {
+		bindChk('chkBig', function (v) { LBL_ON.big = v; BIG_ON = v; });
+		bindChk('chkSite', function (v) { LBL_ON.site = v; SITE_ON = v; });
+		bindChk('chkMicro', function (v) { LBL_ON.micro = v; MICRO_ON = v; });
+		bindChk('chkFac', function (v) { LBL_ON.fac = v; FAC_ON = v; });		bindChk('chkName', function (v) {
 			NAME_ON = v;
 			var el = document.getElementById('labels');
 			if (el) el.style.visibility = v ? 'visible' : 'hidden';
@@ -661,6 +661,8 @@
 			m[3]*v[0]+m[7]*v[1]+m[11]*v[2]+m[15]*v[3]]; }
 
 		var LABELS = [], tip = null, NAME_LABELS = [];   /* NAME_LABELS：切语言要跟着改文字的名字标签 */
+		/* 名字标签按图层分组 —— 勾掉图层，它的标签必须一起消失（原来只控制画不画点） */
+		var LBL_ON = { micro: true, fac: true, site: true, big: true, plot: true };
 		/* 标签底色/文字色按散点颜色设：亮色底配深色字，深色底配白字 */
 		function applyLblColor(el, color) {
 			if (!color) { return; }
@@ -701,6 +703,7 @@
 			var cand = [];
 			for (var i = 0; i < LABELS.length; i++) {
 				var L = LABELS[i];
+				if (L.group && !LBL_ON[L.group]) { L.el.classList.add('hidden'); continue; }
 				var dx = L.p[0] - cx, dy = L.p[1] - cy, dz = L.p[2] - cz;
 				var dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
 				if (L.cls === 'tree' && dist > TREE_DIST) { L.el.classList.add('hidden'); continue; }
@@ -1053,12 +1056,14 @@
 				var n = a.ring.length, ax = 0, ay = 0, az = 0;
 				for (var i = 0; i < n; i++) { ax += a.ring[i][0]; ay += a.ring[i][1]; az += a.ring[i][2]; }
 				var L = addLabel(ax / n, ay / n, az / n + 25, a.nameZh, 'log', null, a.name, '#f98422');
+				L.group = 'big';
 				L.el.addEventListener('mousemove', function (ev) {
 					showTip(ev, '<b>' + L.el.textContent + '</b>');
 				});
 			});
 			points.forEach(function (p) {
 				var L = addLabel(p.E, p.N, p.Z + 25, p.nameZh, 'log', null, p.name, '#ffd400');
+				L.group = 'site';
 				L.el.addEventListener('mousemove', function (ev) {
 					showTip(ev, '<b>' + L.el.textContent + '</b>' +
 						(p.alt != null ? '<br>' + p.alt + ' m' : ''));
@@ -1436,7 +1441,7 @@
 					var nm = (p.nameZh === '气象站下方样地') ? '油松样地' : p.nameZh;
 					addLabel(p.E, p.N, p.Z + 30, nm, 'log',
 						'<b>' + nm + '</b><br>' + (LANG === 'zh' ? '样点数采' : 'Plot logger'),
-						PLOT_EN[nm] || nm, '#f98422');
+						PLOT_EN[nm] || nm, '#f98422').group = 'plot';
 				});
 				/* 103 棵 RTK 实测主树的 E/N（VIT16/T189…）—— 给「格网编号」找最近的点用 */
 				MAINT = (data.maintrees || []).filter(function (m) { return m.E != null && m.N != null; })
@@ -1505,7 +1510,7 @@
 						col: isGHG ? '#00e000' : '#bed2ff', shape: isGHG ? 'star' : 'triangle' });
 			});
 			FAC3.forEach(function (p) {
-				addLabel(p.E, p.N, p.Z + 34, p.name, 'log', null, p.nameEn || p.name, p.col);
+				addLabel(p.E, p.N, p.Z + 34, p.name, 'log', null, p.nameEn || p.name, p.col).group = 'fac';
 			});
 		}
 
@@ -1519,7 +1524,7 @@
 				MICRO3.push({ name: p.name, nameEn: p.nameEn, E: p.E, N: p.N, Z: z + 1.5, col: '#00d1d1' });
 			});
 			MICRO3.forEach(function (p) {
-				addLabel(p.E, p.N, p.Z + 22, p.name, 'log', null, p.nameEn || p.name, p.col);
+				addLabel(p.E, p.N, p.Z + 22, p.name, 'log', null, p.nameEn || p.name, p.col).group = 'micro';
 			});
 		}
 
