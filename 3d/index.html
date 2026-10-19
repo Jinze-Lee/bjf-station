@@ -681,7 +681,7 @@
 		/* 轮廓增强：只轻微加一点（金总：太黑了，稍微增强一点点就够） */
 		try { viewer.setEDLRadius(1.6); viewer.setEDLStrength(1.15); } catch (e) {}
 		viewer.setFOV(60);
-		viewer.setPointBudget(400_000);   /* 先用低点数快速出图，加载完再逐步加密（见下方 rampBudget） */
+		viewer.setPointBudget(3000000);   /* 先用低点数快速出图，加载完再逐步加密（见下方 rampBudget） */
 		viewer.setDescription('');
 
 		viewer.loadGUI(function () {
@@ -1509,7 +1509,8 @@
 				TC = {
 					box: document.getElementById('treeCard'), name: document.getElementById('tcName'),
 					latin: document.getElementById('tcLatin'), img: document.getElementById('tcImg'),
-					wrap: document.getElementById('tcWrap'), note: document.getElementById('tcNote')
+					wrap: document.getElementById('tcWrap'), meta: document.getElementById('tcMeta'),
+					note: document.getElementById('tcNote')
 				};
 			}
 			return TC;
@@ -1614,13 +1615,9 @@
 			   自动镜头期间压到 40 万（画面一直在动，压低才不卡、也少下数据）。 */
 			/* 原来每 5 秒才抬一档，要 20 秒才到满预算 —— 金总在这段时间里移动视角，
 			   就会看到"点云一直没加载完、停下来才补齐"。改成 1.5 秒一档，约 6 秒到顶。 */
-			var steps = [400000, 900000, 1600000, 2400000, 3000000], si = 0;
-			(function step() {
-				if (++si >= steps.length) return;
-				budgetWant = steps[si];
-				applyBudget();
-				setTimeout(step, 1500);
-			}());
+			/* 金总要求：取消渐进爬坡，一上来就用满 300 万点。 */
+			budgetWant = 3000000;
+			applyBudget();
 			if (_min) {
 				var dx = _max[0] - _min[0], dy = _max[1] - _min[1], dz = _max[2] - _min[2];
 				// 滚轮步长固定（Potree 默认按当前距离，远处快近处慢）
