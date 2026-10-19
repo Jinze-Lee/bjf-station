@@ -1242,6 +1242,16 @@
       tctx.arc(pt.x, pt.y, pt.r, 0, 6.2832);
       tctx.fill();
     }
+    /* 草地与石头（画在前景层，保证看得见） */
+    if (!GRASS.pts.length) { buildGroundDetail(); }
+    for (var gi = 0; gi < GRASS.pts.length; gi++) {
+      var gp = GRASS.pts[gi];
+      tctx.fillStyle = gp.c;
+      tctx.beginPath();
+      tctx.arc(gp.x, gp.y, gp.r, 0, 6.2832);
+      tctx.fill();
+    }
+
   }
 
   /* ========================================================================
