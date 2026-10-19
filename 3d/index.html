@@ -613,7 +613,7 @@
 					<span class="tc-latin" id="tcLatin"></span>
 					<div class="tc-meta" id="tcMeta"></div>
 					<div class="tc-spark">
-						<canvas id="tcSpark" width="560" height="150"></canvas>
+						<canvas id="tcSpark" width="560" height="200"></canvas>
 						<div class="cap" id="tcSparkCap"></div>
 					</div>
 				</div>
@@ -1656,7 +1656,7 @@
 			}
 			if (!isFinite(mn) || mx <= mn) { return; }
 			/* 留出坐标轴的位置 */
-			var L = 44, R = 12, T = 16, B = 26;
+			var L = 58, R = 14, T = 20, B = 28;
 			var PW = W - L - R, PH = H - T - B;
 			if (PW < 20 || PH < 20) { return; }
 			/* 纵轴上下各留 8% 余量，曲线不顶到框 */
@@ -1665,15 +1665,17 @@
 			function Y(v) { return T + PH * (1 - (v - mn) / (mx - mn)); }
 
 			/* 网格 + 纵轴刻度（3 档） */
-			g.font = '11px Raleway,"Microsoft YaHei",sans-serif';
+			g.font = '12px Raleway,"Microsoft YaHei",sans-serif';
 			g.textAlign = 'right'; g.textBaseline = 'middle';
 			for (var t = 0; t <= 2; t++) {
 				var vv = mn + (mx - mn) * t / 2, yy = Y(vv);
-				g.strokeStyle = t === 0 ? 'rgba(160,180,120,.45)' : 'rgba(160,180,120,.16)';
+				g.strokeStyle = t === 0 ? 'rgba(160,180,120,.45)' : 'rgba(160,180,120,.14)';
 				g.lineWidth = 1;
 				g.beginPath(); g.moveTo(L, yy); g.lineTo(L + PW, yy); g.stroke();
-				g.fillStyle = '#9fb08a';
-				g.fillText(vv.toFixed(3), L - 7, yy);
+				if (t !== 1) {                       /* 只标最高/最低，中间只留网格线，免得挤 */
+					g.fillStyle = '#b9c8a8';
+					g.fillText(vv.toFixed(3), L - 8, yy);
+				}
 			}
 			/* 纵轴轴线 */
 			g.strokeStyle = 'rgba(160,180,120,.45)'; g.lineWidth = 1;
@@ -1684,7 +1686,7 @@
 			g.textAlign = 'center'; g.textBaseline = 'top';
 			g.fillStyle = '#9fb08a';
 			var ds = (typeof P_DATA !== 'undefined' && P_DATA && P_DATA.dates) ? P_DATA.dates : [];
-			[0, Math.floor((n - 1) / 2), n - 1].forEach(function (k) {
+			[0, n - 1].forEach(function (k) {
 				if (ds[k]) { g.fillText(ds[k], X(k), T + PH + 6); }
 			});
 			/* 轴标题 */
@@ -3190,8 +3192,8 @@
 		}
 			/* 单木卡片里的冠层 P 反演小曲线 */
 		#treeCard .tc-spark { margin-top: 12px; padding-top: 9px; border-top: 1px solid rgba(160, 180, 120, .22); }
-		#treeCard .tc-spark canvas { display: block; width: 100%; height: 132px; }
-		#treeCard .tc-spark .cap { margin-top: 5px; font-size: 11.5px; color: #9fb08a;
+		#treeCard .tc-spark canvas { display: block; width: 100%; height: 168px; }
+		#treeCard .tc-spark .cap { margin-top: 6px; font-size: 12px; color: #9fb08a;
 			font-variant-numeric: tabular-nums; }
 		#treeCard .tc-spark .cap b { color: #cfe3b0; }
 		/* —— 覆盖：树图必须白底（前面有重复定义，旧的会把白底盖掉） —— */
