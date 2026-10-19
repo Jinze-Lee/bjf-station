@@ -91,7 +91,7 @@
     position: absolute;
     z-index: 3;
     left: 80%;
-    top: 18.0%;
+    top: 14.5%;
     height: 5.9%;
     width: auto;
     transform: translateX(-50%);
@@ -727,8 +727,8 @@
 
   /* 铁塔放在远景右侧坡上（基座 y=650，高 340），塔身被后景树冠与前景采集箱分层遮挡，
      塔顶露出林冠，上面安装 GT200 网关主站 */
-  var TOWER_POINTS = makeTower(1600, 650, 430, 34, 11, 0.34);
-  var TOWER_TOP = 650 - 430;   /* = 220 */
+  var TOWER_POINTS = makeTower(1600, 560, 365, 30, 10, 0.30);
+  var TOWER_TOP = 560 - 365;   /* = 195 */
   var GT200_POS = [1600, TOWER_TOP - 27];
 
   function drawTower() {
@@ -910,6 +910,24 @@
     bctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
     bctx.clearRect(0, 0, W, H);
 
+    /* 远山三层（越远越淡），铁塔立在山脊上 */
+    function ridge(pts, fill, alpha) {
+      bctx.save();
+      bctx.globalAlpha = alpha;
+      bctx.fillStyle = fill;
+      bctx.beginPath();
+      bctx.moveTo(-10, H);
+      bctx.lineTo(-10, pts[0][1]);
+      for (var i = 1; i < pts.length; i++) { bctx.lineTo(pts[i][0], pts[i][1]); }
+      bctx.lineTo(W + 10, H);
+      bctx.closePath();
+      bctx.fill();
+      bctx.restore();
+    }
+    ridge([[0,432],[180,358],[360,406],[560,330],[760,394],[980,316],[1200,386],[1420,330],[1620,392],[1820,338],[2000,398]], '#c9dacb', 0.62);
+    ridge([[0,502],[220,434],[460,488],[700,418],[940,480],[1180,426],[1420,488],[1660,438],[2000,496]], '#aecbb6', 0.70);
+    ridge([[0,590],[260,528],[520,568],[800,514],[1080,562],[1360,520],[1640,568],[2000,528]], '#93b89e', 0.74);
+
     /* 林坡三层景深地面色带 */
     var gg = bctx.createLinearGradient(0, 615, 0, H);
     gg.addColorStop(0, 'rgba(206, 224, 207, 0)');
@@ -994,7 +1012,7 @@
   /* ========================================================================
      5. 前景动态层：动态 WiFi 波纹 + 无线信号弧 + 随地形走线的有线数据总线
      ======================================================================== */
-  var GATEWAY_ANT = [1600, 194];   /* 铁塔顶 GT200 网关主站 */
+  var GATEWAY_ANT = [1600, 172];   /* 铁塔顶 GT200 网关主站 */
   var PC_ANT      = [1700, 476];
   var BUS_Y       = 826;
 
@@ -1159,9 +1177,24 @@
 
     drawDynamicWifi(fctx, GATEWAY_ANT[0], GATEWAY_ANT[1], el + 0.6, 0, 24, '22, 133, 122');
 
+    /* ---- 吊线：塔顶网关 -> 右侧放大子图 ---- */
+    fctx.save();
+    fctx.setLineDash([3, 4]);
+    fctx.strokeStyle = 'rgba(47, 122, 79, .55)';
+    fctx.lineWidth = 1.3;
+    fctx.beginPath();
+    fctx.moveTo(GATEWAY_ANT[0] + 26, GATEWAY_ANT[1] - 10);
+    fctx.lineTo(1660, 132);
+    fctx.stroke();
+    fctx.restore();
+    fctx.fillStyle = 'rgba(47, 122, 79, .85)';
+    fctx.beginPath();
+    fctx.arc(GATEWAY_ANT[0] + 26, GATEWAY_ANT[1] - 10, 2.6, 0, 6.2832);
+    fctx.fill();
+
     /* ---- C. 采集箱 4G 路由器 -> 铁塔顶 GT200 网关主站 -> 右侧电脑 ---- */
     var cabinetTop = [1548, 464];
-    var gtOut = [1630, 202];
+    var gtOut = [1630, 180];
 
     /* 采集箱上行到网关 */
     fctx.save();
@@ -1171,14 +1204,14 @@
     fctx.lineWidth = 1.8;
     fctx.beginPath();
     fctx.moveTo(cabinetTop[0], cabinetTop[1]);
-    fctx.quadraticCurveTo(1584, 360, GATEWAY_ANT[0] + 6, GATEWAY_ANT[1] + 26);
+    fctx.quadraticCurveTo(1580, 330, GATEWAY_ANT[0] + 6, GATEWAY_ANT[1] + 30);
     fctx.stroke();
     fctx.restore();
 
     for (var q = 0; q < 2; q++) {
       var u4 = (el * 0.34 + q * 0.5) % 1;
-      var p4 = quadPt(cabinetTop, [1584, 360], [GATEWAY_ANT[0] + 6, GATEWAY_ANT[1] + 26], u4);
-      var a4 = quadAngle(cabinetTop, [1584, 360], [GATEWAY_ANT[0] + 6, GATEWAY_ANT[1] + 26], u4);
+      var p4 = quadPt(cabinetTop, [1580, 330], [GATEWAY_ANT[0] + 6, GATEWAY_ANT[1] + 30], u4);
+      var a4 = quadAngle(cabinetTop, [1580, 330], [GATEWAY_ANT[0] + 6, GATEWAY_ANT[1] + 30], u4);
       drawWavePacket(fctx, p4[0], p4[1], a4, 0.35 + 0.65 * Math.sin(u4 * Math.PI), '36, 120, 180');
     }
 

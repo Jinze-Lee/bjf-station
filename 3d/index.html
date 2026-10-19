@@ -1125,7 +1125,7 @@
 			areas.forEach(function (a) {
 				var n = a.ring.length, ax = 0, ay = 0, az = 0;
 				for (var i = 0; i < n; i++) { ax += a.ring[i][0]; ay += a.ring[i][1]; az += a.ring[i][2]; }
-				var L = addLabel(ax / n, ay / n, az / n + 25, a.nameZh, 'log', null, a.name, '#f98422');
+				var L = addLabel(ax / n, ay / n, az / n + 25, a.nameZh, 'log', null, a.name, '#ff2d55');
 				L.group = 'big';
 				L.el.addEventListener('mousemove', function (ev) {
 					showTip(ev, '<b>' + L.el.textContent + '</b>');
@@ -1184,47 +1184,6 @@
 			return (BNDS[key] || []).map(function (o) { return o.pts; });
 		}
 
-		/* 样地周界矮墙：沿边界立一堵半透明的墙（顶边抬高），地景里一眼能认出样地边界 */
-		function drawPlotWall(ring, V, P, color) {
-			var n = ring.length;
-			if (n < 3) { return; }
-			/* 高度按样地跨度自适应：小样地 7 m、大样地 ~16 m */
-			var E0 = 1e9, E1 = -1e9, N0 = 1e9, N1 = -1e9;
-			for (var k = 0; k < n; k++) {
-				if (ring[k][0] < E0) { E0 = ring[k][0]; }
-				if (ring[k][0] > E1) { E1 = ring[k][0]; }
-				if (ring[k][1] < N0) { N0 = ring[k][1]; }
-				if (ring[k][1] > N1) { N1 = ring[k][1]; }
-			}
-			var span = Math.max(E1 - E0, N1 - N0);
-			var hgt = Math.max(6, Math.min(18, span * 0.035));
-			dctx.save();
-			dctx.globalAlpha = 0.22; dctx.fillStyle = color;
-			for (var i = 0; i < n - 1; i++) {
-				var a = ring[i], b = ring[i + 1];
-				var a0 = projXYZ(V, P, a[0], a[1], a[2]);
-				var b0 = projXYZ(V, P, b[0], b[1], b[2]);
-				var a1 = projXYZ(V, P, a[0], a[1], a[2] + hgt);
-				var b1 = projXYZ(V, P, b[0], b[1], b[2] + hgt);
-				if (!a0 || !b0 || !a1 || !b1) { continue; }
-				dctx.beginPath();
-				dctx.moveTo(a0[0], a0[1]); dctx.lineTo(b0[0], b0[1]);
-				dctx.lineTo(b1[0], b1[1]); dctx.lineTo(a1[0], a1[1]);
-				dctx.closePath(); dctx.fill();
-			}
-			/* 墙顶描一条亮线，边界更利落 */
-			dctx.globalAlpha = 0.9; dctx.strokeStyle = color; dctx.lineWidth = 1.8;
-			dctx.beginPath();
-			var st = false;
-			for (var j = 0; j < n; j++) {
-				var t = projXYZ(V, P, ring[j][0], ring[j][1], ring[j][2] + hgt);
-				if (!t) { st = false; continue; }
-				if (st) { dctx.lineTo(t[0], t[1]); } else { dctx.moveTo(t[0], t[1]); st = true; }
-			}
-			dctx.stroke();
-			dctx.restore();
-		}
-
 		/* 样地贴地透明大字：字号跟着样地在屏幕上的大小走（样地越大字越大） */
 		function drawPlotText(ring, V, P, name, color) {
 			var n = ring.length, ok = true;
@@ -1245,7 +1204,7 @@
 			var fs = Math.min(w / Math.max(3, name.length * 0.95), h * 0.62);
 			fs = Math.max(11, Math.min(110, fs));
 			dctx.save();
-			dctx.globalAlpha = 0.20;
+			dctx.globalAlpha = 0.46;                 /* 原来 0.20 太透，看不清 */
 			dctx.fillStyle = color;
 			dctx.font = '700 ' + fs.toFixed(0) + 'px Raleway,"Microsoft YaHei",sans-serif';
 			dctx.textAlign = 'center'; dctx.textBaseline = 'middle';
@@ -1258,10 +1217,9 @@
 			if (!pc || !cam || !BNDS) return;
 			var V = cam.matrixWorldInverse.elements, P = cam.projectionMatrix.elements;
 			if (BND_ON) bndRings('boundaries').forEach(function (p, bi) {
-					drawRing(p, V, P, '#f98422', '#f98422', 2.5, 0.16, true);
-					drawPlotWall(p, V, P, '#f98422');
+					drawRing(p, V, P, '#ff2d55', '#ff2d55', 3.6, 0.26, true);
 					var nm = (BNDS.boundaries[bi] && BNDS.boundaries[bi].name) || '';
-					if (nm) { drawPlotText(p, V, P, nm + '样地', '#f98422'); }
+					if (nm) { drawPlotText(p, V, P, nm + '样地', '#ff2d55'); }
 				});
 			if (G20_ON) bndRings('grid20').forEach(function (p) { drawRing(p, V, P, null, 'rgba(235,235,235,.75)', 1.1, 0, true); });
 			if (G40_ON) bndRings('grid40').forEach(function (p) { drawRing(p, V, P, null, 'rgba(255,210,127,.85)', 1.6, 0, true); });
@@ -1269,9 +1227,8 @@
 			/* 大样地 / 白桦林样地：与落叶松/油松等样地同色（金总要求统一为橙） */
 			if (BIG_ON && SITE3) {
 				SITE3.areas.forEach(function (a) {
-					drawRing(a.ring, V, P, '#f98422', '#f98422', 2.4, 0.14, true);
-					drawPlotWall(a.ring, V, P, '#f98422');
-					drawPlotText(a.ring, V, P, a.nameZh, '#f98422');
+					drawRing(a.ring, V, P, '#ff2d55', '#ff2d55', 3.6, 0.26, true);
+					drawPlotText(a.ring, V, P, a.nameZh, '#ff2d55');
 				});
 			}
 			/* 生活区 / 林场：只留标签，不画点（金总要求） */
@@ -1593,7 +1550,7 @@
 					var nm = (p.nameZh === '气象站下方样地') ? '油松样地' : p.nameZh;
 					addLabel(p.E, p.N, p.Z + 30, nm, 'log',
 						'<b>' + nm + '</b><br>' + (LANG === 'zh' ? '样点数采' : 'Plot logger'),
-						PLOT_EN[nm] || nm, '#f98422').group = 'plot';
+						PLOT_EN[nm] || nm, '#ff2d55').group = 'plot';
 				});
 				/* 103 棵 RTK 实测主树的 E/N（VIT16/T189…）—— 给「格网编号」找最近的点用 */
 				MAINT = (data.maintrees || []).filter(function (m) { return m.E != null && m.N != null; })

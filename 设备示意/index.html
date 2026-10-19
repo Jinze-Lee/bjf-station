@@ -91,34 +91,44 @@
     position: absolute;
     z-index: 3;
     left: 80%;
-    top: 18.0%;
+    top: 14.5%;
     height: 5.9%;
     width: auto;
     transform: translateX(-50%);
     filter: drop-shadow(0 3px 5px rgba(24, 52, 36, .28));
   }
-  .gt-tag {
+  /* 塔顶 GT200 的放大子图（右侧特写） */
+  .gt-inset {
     position: absolute;
-    z-index: 3;
-    left: 80%;
-    top: 14.8%;
-    transform: translateX(-50%);
-    text-align: center;
-    white-space: nowrap;
-    font-size: 11.5px;
-    font-weight: 600;
-    color: #1d4a33;
-    background: rgba(244, 248, 243, .92);
-    border: 1px solid rgba(47, 122, 79, .22);
-    border-radius: 6px;
-    padding: 2px 7px;
-    line-height: 1.3;
-    box-shadow: 0 2px 6px rgba(24, 52, 36, .12);
+    z-index: 6;
+    left: 84.2%;
+    top: 4.2%;
+    width: 14.2%;
+    background: rgba(250, 253, 249, .96);
+    border: 1px solid rgba(47, 122, 79, .28);
+    border-radius: 10px;
+    padding: 6px 6px 0;
+    box-shadow: 0 10px 24px rgba(24, 52, 36, .16);
   }
-  .gt-tag small {
+  .gt-inset img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 5px;
+  }
+  .gt-inset .cap {
+    padding: 5px 2px 6px;
+    text-align: center;
+    line-height: 1.3;
+  }
+  .gt-inset .cap b {
+    display: block;
+    font-size: 12px;
+    color: #1d4a33;
+  }
+  .gt-inset .cap span {
     display: block;
     font-size: 11px;
-    font-weight: 500;
     color: #4f685a;
   }
 
@@ -311,7 +321,11 @@
       <canvas id="fgTreeCanvas" aria-hidden="true"></canvas>
       <!-- 远景铁塔顶上的 GT200 网关主站（无线汇聚点） -->
       <img class="gt200" src="img/gt200.webp" alt="GT200 网关主站" />
-      <div class="gt-tag">GT200 网关主站<small>无线数据汇聚</small></div>
+      <!-- 塔顶网关放大子图 -->
+      <div class="gt-inset">
+        <img src="img/gt200.webp" alt="GT200 网关主站放大特写" />
+        <div class="cap"><b>GT200 网关主站</b><span>塔顶放大 · 无线数据先汇于此</span></div>
+      </div>
       <!-- 层 4：近景仪器 -->
       <div id="fgPhotoLayer"></div>
       <!-- 层 5：无线 WiFi 波纹与有线数据流动 -->
@@ -581,57 +595,53 @@
     return { canvas: off, ox: xMin - pad, oy: yMin - pad, w: cw, h: ch, pointCount: pts.length };
   }
 
+  /* 7 个真实单株点云树（从提供的 GIF 中识别树形后抠出，紫椴/山杨/五角枫/糠椴/胡桃楸/蒙古栎/青楷槭） */
+  var TREE_SRC = ['img/tree1.webp', 'img/tree2.webp', 'img/tree3.webp', 'img/tree4.webp',
+                  'img/tree5.webp', 'img/tree6.webp', 'img/tree7.webp'];
+  var TREE_IMGS = TREE_SRC.map(function (src) {
+    var im = new Image();
+    im.src = src;
+    return im;
+  });
+
   /* 后景树（画在 #backCanvas，在中远景仪器之后） */
   var BACK_TREE_SPEC = [
-    { x: 65,   base: 642, h: 275, s: 101, hz: .56, a: .74 },
-    { x: 245,  base: 648, h: 315, s: 102, hz: .50, a: .78 },
-    { x: 420,  base: 658, h: 390, s: 22,  hz: .22, a: .88 },
-    { x: 590,  base: 638, h: 295, s: 103, hz: .52, a: .76 },
-    { x: 945,  base: 642, h: 325, s: 104, hz: .48, a: .78 },
-    { x: 1120, base: 660, h: 410, s: 44,  hz: .20, a: .88 },
-    { x: 1260, base: 638, h: 285, s: 105, hz: .52, a: .75 },
-    { x: 1465, base: 646, h: 300, s: 106, hz: .46, a: .80 },
-    { x: 1745, base: 652, h: 300, s: 66,  hz: .28, a: .85 }
+    { sprite: 4, x: 70,   base: 645, h: 255, a: .58, flip: false },
+    { sprite: 1, x: 250,  base: 650, h: 285, a: .62, flip: true  },
+    { sprite: 0, x: 420,  base: 660, h: 335, a: .80, flip: false },
+    { sprite: 2, x: 590,  base: 640, h: 265, a: .60, flip: true  },
+    { sprite: 6, x: 945,  base: 645, h: 300, a: .64, flip: false },
+    { sprite: 3, x: 1120, base: 660, h: 350, a: .82, flip: true  },
+    { sprite: 5, x: 1260, base: 638, h: 260, a: .58, flip: false },
+    { sprite: 1, x: 1465, base: 646, h: 300, a: .64, flip: true  },
+    { sprite: 4, x: 1745, base: 652, h: 300, a: .68, flip: false }
   ];
 
   /* 前景遮挡树（画在 #fgTreeCanvas，位于中远景仪器之前、近景仪器之后！
      它们的主干或低垂枝叶会自然遮挡中远景仪器的局部边缘） */
   var FG_TREE_SPEC = [
-    /* 192 处的树：树干与左冠会轻微遮挡 气象环境(138) 的右侧横臂末端 */
-    { x: 202,  base: 704, h: 430, s: 11,  hz: 0,   a: .95 },
-    /* 742 处的树：树干会轻微遮挡 干湿沉降(666) 的右下角与箱体侧边 */
-    { x: 742,  base: 696, h: 415, s: 33,  hz: 0,   a: .94 },
-    /* 1058 处的树：树干在 土壤温湿盐(1015) 右前方斜穿，形成林间遮挡感 */
-    { x: 1056, base: 706, h: 440, s: 88,  hz: 0.05, a: .92 },
-    /* 1384 处的树：树干遮挡 分布式叶面积指数仪(1322) 右侧支腿的一部分 */
-    { x: 1382, base: 698, h: 415, s: 55,  hz: 0,   a: .94 }
+    /* 202 处：树干与左冠轻遮 气象环境(138) 的右侧横臂末端 */
+    { sprite: 0, x: 202,  base: 704, h: 420, a: .96, flip: true  },
+    /* 742 处：树干轻遮 干湿沉降(666) 的右下角与箱体侧边 */
+    { sprite: 2, x: 742,  base: 696, h: 405, a: .95, flip: false },
+    /* 1056 处：树干在 土壤温湿盐(1015) 右前方斜穿，形成林间遮挡 */
+    { sprite: 6, x: 1056, base: 706, h: 425, a: .93, flip: true  },
+    /* 1382 处：树干遮住 叶面积指数仪(1322) 右侧支腿的一部分 */
+    { sprite: 3, x: 1382, base: 698, h: 405, a: .95, flip: false }
   ];
 
-  var BACK_TREES = BACK_TREE_SPEC.map(function (t) {
-    var m = makeTree(t.h, t.s, t.hz);
-    m.x = t.x; m.base = t.base; m.alpha = t.a;
+  function prepTree(t, i) {
     /* 风从左往右掠过：相位随 x 递增，每棵树频率略有差别 */
-    m.phase = t.x * 0.0065 + (t.s % 11) * 0.21;
-    m.freq = 0.40 + (t.s % 6) * 0.035;
-    m.amp = 0.008 + (t.s % 4) * 0.0016;
-    return m;
-  });
-  var FG_TREES = FG_TREE_SPEC.map(function (t) {
-    var m = makeTree(t.h, t.s, t.hz);
-    m.x = t.x; m.base = t.base; m.alpha = t.a;
-    m.phase = t.x * 0.0065 + (t.s % 11) * 0.21;
-    m.freq = 0.38 + (t.s % 6) * 0.04;
-    m.amp = 0.011 + (t.s % 4) * 0.0018;
-    return m;
-  });
+    t.phase = t.x * 0.0065 + i * 0.77;
+    t.freq = 0.40 + (i % 5) * 0.042;
+    t.amp = (t.h > 330 ? 0.0115 : 0.0085) + (i % 3) * 0.0016;
+    return t;
+  }
+  var BACK_TREES = BACK_TREE_SPEC.map(prepTree);
+  var FG_TREES = FG_TREE_SPEC.map(prepTree);
 
-  /* 液流主树：从 sapflow-band.webp 顶部 (852, 488) 往上长出整冠大树 */
-  var HERO_CROWN = makeTree(425, 77, 0, 21);
-  HERO_CROWN.x = 852;
-  HERO_CROWN.base = 488;
-  HERO_CROWN.phase = 0.9;
-  HERO_CROWN.freq = 0.43;
-  HERO_CROWN.amp = 0.0105;
+  /* 液流主树：藏在树干实拍照片后面，树冠从照片上方长出 */
+  var HERO_TREE = prepTree({ sprite: 1, x: 852, base: 736, h: 500, a: .98, flip: false }, 9);
 
   /* ========================================================================
      2.5 远景点云铁塔（绘制在后景树之前，从而被后景树冠、前景树与采集箱层层遮挡）
@@ -717,8 +727,8 @@
 
   /* 铁塔放在远景右侧坡上（基座 y=650，高 340），塔身被后景树冠与前景采集箱分层遮挡，
      塔顶露出林冠，上面安装 GT200 网关主站 */
-  var TOWER_POINTS = makeTower(1600, 650, 430, 34, 11, 0.34);
-  var TOWER_TOP = 650 - 430;   /* = 220 */
+  var TOWER_POINTS = makeTower(1600, 560, 365, 30, 10, 0.30);
+  var TOWER_TOP = 560 - 365;   /* = 195 */
   var GT200_POS = [1600, TOWER_TOP - 27];
 
   function drawTower() {
@@ -738,7 +748,7 @@
   var FG_EXT_POINTS = [];
   var FG_FOLIAGE_PATCHES = [];
   var tripodPointCount = 0;
-  var heroTrunkPointCount = HERO_CROWN.pointCount;
+  var heroTrunkPointCount = 0;   /* 树干特写已由实拍照片呈现，点云只补下段 */
 
   (function buildPointExtensions() {
     var rnd = seeded(20261019);
@@ -883,9 +893,40 @@
     return (Math.sin(base) * 0.72 + Math.sin(base * 1.9 + 1.3) * 0.28) * m.amp * gust;
   }
 
+  function drawSpriteTree(ctx, m, el) {
+    var im = TREE_IMGS[m.sprite];
+    if (!im || !im.complete || !im.naturalWidth) { return; }
+    var w = m.h * im.naturalWidth / im.naturalHeight;
+    ctx.save();
+    ctx.globalAlpha = m.a;
+    ctx.translate(m.x, m.base);
+    ctx.rotate(windAngle(el, m));
+    if (m.flip) { ctx.scale(-1, 1); }
+    ctx.drawImage(im, -w / 2, -m.h, w, m.h);
+    ctx.restore();
+  }
+
   function drawBackLayer(el) {
     bctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
     bctx.clearRect(0, 0, W, H);
+
+    /* 远山三层（越远越淡），铁塔立在山脊上 */
+    function ridge(pts, fill, alpha) {
+      bctx.save();
+      bctx.globalAlpha = alpha;
+      bctx.fillStyle = fill;
+      bctx.beginPath();
+      bctx.moveTo(-10, H);
+      bctx.lineTo(-10, pts[0][1]);
+      for (var i = 1; i < pts.length; i++) { bctx.lineTo(pts[i][0], pts[i][1]); }
+      bctx.lineTo(W + 10, H);
+      bctx.closePath();
+      bctx.fill();
+      bctx.restore();
+    }
+    ridge([[0,432],[180,358],[360,406],[560,330],[760,394],[980,316],[1200,386],[1420,330],[1620,392],[1820,338],[2000,398]], '#c9dacb', 0.62);
+    ridge([[0,502],[220,434],[460,488],[700,418],[940,480],[1180,426],[1420,488],[1660,438],[2000,496]], '#aecbb6', 0.70);
+    ridge([[0,590],[260,528],[520,568],[800,514],[1080,562],[1360,520],[1640,568],[2000,528]], '#93b89e', 0.74);
 
     /* 林坡三层景深地面色带 */
     var gg = bctx.createLinearGradient(0, 615, 0, H);
@@ -915,15 +956,8 @@
     /* 远景点云铁塔：先画，随后被后景树冠遮挡 → 前景树与采集箱再遮一层 */
     drawTower();
 
-    /* 后景树 */
-    BACK_TREES.forEach(function (m, i) {
-      bctx.save();
-      bctx.globalAlpha = m.alpha;
-      bctx.translate(m.x, m.base);
-      bctx.rotate(windAngle(el, m));
-      bctx.drawImage(m.canvas, m.ox, m.oy, m.w, m.h);
-      bctx.restore();
-    });
+    /* 后景树（7 种真实树形贴图，随风轻摆） */
+    BACK_TREES.forEach(function (m) { drawSpriteTree(bctx, m, el); });
 
     /* 中远景仪器的接地阴影与点云补全结构 */
     ITEMS.filter(function (d) { return d.layer === 'mid'; }).forEach(function (d) {
@@ -944,14 +978,9 @@
     tctx.clearRect(0, 0, W, H);
 
     /* 前景遮挡树（位于 #midPhotoLayer 之上！自然遮挡中远景仪器的局部边缘） */
-    FG_TREES.forEach(function (m, i) {
+    FG_TREES.forEach(function (m) {
       shadow(tctx, m.x, m.base + 3, 76, 10, 0.11);
-      tctx.save();
-      tctx.globalAlpha = m.alpha;
-      tctx.translate(m.x, m.base);
-      tctx.rotate(windAngle(el, m));
-      tctx.drawImage(m.canvas, m.ox, m.oy, m.w, m.h);
-      tctx.restore();
+      drawSpriteTree(tctx, m, el);
     });
 
     /* 前景林下灌丛点云（局部轻遮中远景仪器侧边） */
@@ -964,11 +993,7 @@
     }
 
     /* 液流主树：从树干实拍图上沿长出的整冠点云大树（同样随风轻摆） */
-    tctx.save();
-    tctx.translate(HERO_CROWN.x, HERO_CROWN.base);
-    tctx.rotate(windAngle(el, HERO_CROWN));
-    tctx.drawImage(HERO_CROWN.canvas, HERO_CROWN.ox, HERO_CROWN.oy, HERO_CROWN.w, HERO_CROWN.h);
-    tctx.restore();
+    drawSpriteTree(tctx, HERO_TREE, el);
 
     /* 近景仪器的接地阴影与点云补全结构（主树下段、物候立杆、涡度塔腿、采集箱三脚架） */
     ITEMS.filter(function (d) { return d.layer === 'fg'; }).forEach(function (d) {
@@ -987,7 +1012,7 @@
   /* ========================================================================
      5. 前景动态层：动态 WiFi 波纹 + 无线信号弧 + 随地形走线的有线数据总线
      ======================================================================== */
-  var GATEWAY_ANT = [1600, 194];   /* 铁塔顶 GT200 网关主站 */
+  var GATEWAY_ANT = [1600, 172];   /* 铁塔顶 GT200 网关主站 */
   var PC_ANT      = [1700, 476];
   var BUS_Y       = 826;
 
@@ -1152,9 +1177,24 @@
 
     drawDynamicWifi(fctx, GATEWAY_ANT[0], GATEWAY_ANT[1], el + 0.6, 0, 24, '22, 133, 122');
 
+    /* ---- 吊线：塔顶网关 -> 右侧放大子图 ---- */
+    fctx.save();
+    fctx.setLineDash([3, 4]);
+    fctx.strokeStyle = 'rgba(47, 122, 79, .55)';
+    fctx.lineWidth = 1.3;
+    fctx.beginPath();
+    fctx.moveTo(GATEWAY_ANT[0] + 26, GATEWAY_ANT[1] - 10);
+    fctx.lineTo(1660, 132);
+    fctx.stroke();
+    fctx.restore();
+    fctx.fillStyle = 'rgba(47, 122, 79, .85)';
+    fctx.beginPath();
+    fctx.arc(GATEWAY_ANT[0] + 26, GATEWAY_ANT[1] - 10, 2.6, 0, 6.2832);
+    fctx.fill();
+
     /* ---- C. 采集箱 4G 路由器 -> 铁塔顶 GT200 网关主站 -> 右侧电脑 ---- */
     var cabinetTop = [1548, 464];
-    var gtOut = [1630, 202];
+    var gtOut = [1630, 180];
 
     /* 采集箱上行到网关 */
     fctx.save();
@@ -1164,14 +1204,14 @@
     fctx.lineWidth = 1.8;
     fctx.beginPath();
     fctx.moveTo(cabinetTop[0], cabinetTop[1]);
-    fctx.quadraticCurveTo(1584, 360, GATEWAY_ANT[0] + 6, GATEWAY_ANT[1] + 26);
+    fctx.quadraticCurveTo(1580, 330, GATEWAY_ANT[0] + 6, GATEWAY_ANT[1] + 30);
     fctx.stroke();
     fctx.restore();
 
     for (var q = 0; q < 2; q++) {
       var u4 = (el * 0.34 + q * 0.5) % 1;
-      var p4 = quadPt(cabinetTop, [1584, 360], [GATEWAY_ANT[0] + 6, GATEWAY_ANT[1] + 26], u4);
-      var a4 = quadAngle(cabinetTop, [1584, 360], [GATEWAY_ANT[0] + 6, GATEWAY_ANT[1] + 26], u4);
+      var p4 = quadPt(cabinetTop, [1580, 330], [GATEWAY_ANT[0] + 6, GATEWAY_ANT[1] + 30], u4);
+      var a4 = quadAngle(cabinetTop, [1580, 330], [GATEWAY_ANT[0] + 6, GATEWAY_ANT[1] + 30], u4);
       drawWavePacket(fctx, p4[0], p4[1], a4, 0.35 + 0.65 * Math.sin(u4 * Math.PI), '36, 120, 180');
     }
 
