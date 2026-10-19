@@ -98,6 +98,25 @@
     filter: drop-shadow(0 3px 5px rgba(24, 52, 36, .28));
   }
   /* 树种标识：树干旁编号小圆牌 + 底部完整名录 */
+  .species {
+    position: absolute;
+    z-index: 7;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    white-space: nowrap;
+    line-height: 1.15;
+    pointer-events: none;
+    padding: 4px 3px;
+    background: linear-gradient(180deg, rgba(250,253,249,0), rgba(250,253,249,.86) 14%, rgba(250,253,249,.86) 86%, rgba(250,253,249,0));
+  }
+  .species b { font-size: 11.5px; font-weight: 700; color: #24452f; }
+  .species i {
+    font-family: "Palatino Linotype", "Book Antiqua", Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 11px;
+    color: #4c6a58;
+    margin-block-start: 4px;
+  }
   .tree-badge {
     position: absolute;
     z-index: 7;
@@ -385,6 +404,10 @@
       <!-- 远景铁塔顶上的 GT200 网关主站（无线汇聚点） -->
       <img class="gt200" src="img/gt200.webp" alt="GT200 网关主站" />
       <!-- 塔顶网关放大子图 -->
+      <div class="plate" style="left: 78.6%; top: 19.2%;">
+        <div class="tri wifi"></div>
+        <div class="nm">GT200 网关主站</div>
+      </div>
       <div class="gt-inset">
         <img src="img/gt200.webp" alt="GT200 网关主站放大特写" />
         <div class="cap"><b>GT200 网关主站</b><span>塔顶放大 · 无线数据先汇于此</span></div>
@@ -932,35 +955,23 @@
   var scale = 1, dpr = Math.min(2, window.devicePixelRatio || 1);
   var t0 = performance.now();
 
-  /* 树种标识：树干旁编号牌 + 底部名录（7 个树种，各标一棵最显眼的树） */
+  /* 树种名：贴树干竖排（中文 + 拉丁名） */
   function addSpeciesLabels() {
     var reps = {};
     if (!reps[HERO_TREE.sprite]) { reps[HERO_TREE.sprite] = HERO_TREE; }
     FG_TREES.forEach(function (m) { if (!reps[m.sprite]) { reps[m.sprite] = m; } });
     BACK_TREES.forEach(function (m) { if (!reps[m.sprite]) { reps[m.sprite] = m; } });
 
-    var legendItems = [];
     Object.keys(reps).forEach(function (k) {
       var m = reps[k], sp = SPECIES[k];
       if (!sp) { return; }
-      var no = parseInt(k, 10) + 1;
-
-      var badge = document.createElement('div');
-      badge.className = 'tree-badge';
-      badge.style.left = ((m.x + 11) / W * 100).toFixed(3) + '%';
-      badge.style.top = ((m.base - m.h * 0.42) / H * 100).toFixed(3) + '%';
-      badge.textContent = no;
-      labelLayer.appendChild(badge);
-
-      legendItems.push('<span><u>' + no + '</u><b>' + sp.cn + '</b><i>' + sp.la + '</i></span>');
+      var el = document.createElement('div');
+      el.className = 'species';
+      el.style.left = ((m.x + 17) / W * 100).toFixed(3) + '%';
+      el.style.top = ((m.base - 120) / H * 100).toFixed(3) + '%';
+      el.innerHTML = '<b>' + sp.cn + '</b><i>' + sp.la + '</i>';
+      labelLayer.appendChild(el);
     });
-
-    if (legendItems.length) {
-      var legend = document.createElement('div');
-      legend.className = 'tree-legend';
-      legend.innerHTML = legendItems.join('');
-      stage.appendChild(legend);
-    }
   }
 
   function resize() {
@@ -1026,6 +1037,10 @@
       bctx.fill();
       bctx.restore();
     }
+    /* 最远一层：更低的远山剪影 */
+    ridge([[0,470],[260,442],[520,462],[820,430],[1120,458],[1420,432],[1720,460],[2000,438]], '#e2ece3', 0.55);
+    /* 更高的一层：左上方主峰 */
+    ridge([[0,300],[130,214],[250,282],[380,188],[520,300],[700,352],[900,392],[1200,418],[1500,448],[1800,462],[2000,470]], '#dfeade', 0.62);
     ridge([[0,432],[180,358],[360,406],[560,330],[760,394],[980,316],[1200,386],[1420,330],[1620,392],[1820,338],[2000,398]], '#c9dacb', 0.62);
     ridge([[0,502],[220,434],[460,488],[700,418],[940,480],[1180,426],[1420,488],[1660,438],[2000,496]], '#aecbb6', 0.70);
     ridge([[0,590],[260,528],[520,568],[800,514],[1080,562],[1360,520],[1640,568],[2000,528]], '#93b89e', 0.74);
@@ -1248,15 +1263,6 @@
     });
     fctx.globalAlpha = 1;
 
-    /* 地面上自然堆放的三段小线圈 */
-    [[982, 812, 7.5], [1214, 806, 6.0], [1448, 810, 8.0]].forEach(function (c) {
-      fctx.strokeStyle = 'rgba(38, 94, 138, .42)';
-      fctx.lineWidth = 1.8;
-      fctx.beginPath();
-      fctx.arc(c[0], c[1], c[2], 0.25, Math.PI * 1.88);
-      fctx.stroke();
-    });
-
     /* 主干沿采集箱三脚架升上去 */
     var upPath = function (u) {
       return [busRight + Math.sin(u * Math.PI * 2) * 2.4, CABLE_Y - (CABLE_Y - 612) * u];
@@ -1297,21 +1303,6 @@
     });
 
     drawDynamicWifi(fctx, GATEWAY_ANT[0], GATEWAY_ANT[1], el + 0.6, 0, 24, '22, 133, 122');
-
-    /* ---- 吊线：塔顶网关 -> 右侧放大子图 ---- */
-    fctx.save();
-    fctx.setLineDash([3, 4]);
-    fctx.strokeStyle = 'rgba(47, 122, 79, .55)';
-    fctx.lineWidth = 1.3;
-    fctx.beginPath();
-    fctx.moveTo(GATEWAY_ANT[0] + 26, GATEWAY_ANT[1] - 10);
-    fctx.lineTo(1660, 132);
-    fctx.stroke();
-    fctx.restore();
-    fctx.fillStyle = 'rgba(47, 122, 79, .85)';
-    fctx.beginPath();
-    fctx.arc(GATEWAY_ANT[0] + 26, GATEWAY_ANT[1] - 10, 2.6, 0, 6.2832);
-    fctx.fill();
 
     /* ---- C. 采集箱 4G 路由器 -> 铁塔顶 GT200 网关主站 -> 右侧电脑 ---- */
     var cabinetTop = [1548, 464];
@@ -1365,10 +1356,10 @@
   var chartSvg = document.getElementById('liveChart');
   var liveTicks = 0;
   var SERIES = [
-    { color: '#28784f', w: 2.2, dash: '',    n: 60, base: 50, amp: 26, ph: 0.00, wob: 1.4 },
-    { color: '#2478b4', w: 1.9, dash: '5 3', n: 60, base: 56, amp: 18, ph: 0.16, wob: 1.1 },
-    { color: '#c07a2a', w: 1.8, dash: '',    n: 11, base: 44, amp: 28, ph: 0.30, wob: 2.6 },
-    { color: '#875fa6', w: 1.7, dash: '2 3', n: 13, base: 62, amp: 14, ph: 0.46, wob: 2.0 }
+    { color: '#28784f', w: 2.2, dash: '',    n: 60, base: 50, amp: 26, ph: 0.00, wob: 1.4, mode: 'peak' },
+    { color: '#2478b4', w: 1.9, dash: '5 3', n: 60, base: 56, amp: 18, ph: 0.16, wob: 1.1, mode: 'trough' },
+    { color: '#c07a2a', w: 1.8, dash: '',    n: 11, base: 44, amp: 28, ph: 0.30, wob: 2.6, mode: 'peak' },
+    { color: '#875fa6', w: 1.7, dash: '2 3', n: 13, base: 62, amp: 14, ph: 0.46, wob: 2.0, mode: 'trough' }
   ];
   (function buildSeries() {
     var ns = 'http://www.w3.org/2000/svg';
@@ -1391,9 +1382,12 @@
       var sr = SERIES[i], d2 = '';
       for (var k = 0; k < sr.n; k++) {
         var u = k / (sr.n - 1);
-        var tau = (u * 1.15 + sr.ph + t * 0.035) % 1;
-        var day = Math.max(0, Math.sin(tau * Math.PI * 2));      /* 白天抬升、夜间回落 */
-        var y = sr.base - sr.amp * Math.pow(day, 1.5)
+        var tau = (u * 1.15 + sr.ph + t * 0.115) % 1;
+        var wave = Math.sin(tau * Math.PI * 2);
+        /* peak = 白天抬升；trough = 夜间下凹，形成明显波谷 */
+        var day = sr.mode === 'trough' ? Math.max(0, -wave) : Math.max(0, wave);
+        var sign = sr.mode === 'trough' ? 1 : -1;
+        var y = sr.base + sign * sr.amp * Math.pow(day, 1.5)
               + Math.sin((u + t * 0.06) * 9 + sr.ph * 7) * sr.wob;
         y = Math.max(4, Math.min(88, y));
         d2 += (k === 0 ? 'M' : 'L') + (u * 240).toFixed(1) + ' ' + y.toFixed(1);
