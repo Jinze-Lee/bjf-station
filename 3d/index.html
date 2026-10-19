@@ -1425,7 +1425,7 @@
 				fs = 24;                                    /* 小样地：固定字号，三个一样大 */
 			} else {
 				fs = Math.min(w / Math.max(3, name.length * 0.95), h * 0.62);
-				fs = Math.max(11, Math.min(110, fs));
+				fs = Math.max(11, Math.min(110, fs)) * 0.5;   /* 大样地字太大，缩到一半 */
 			}
 			dctx.save();
 			dctx.globalAlpha = 0.46;                 /* 原来 0.20 太透，看不清 */

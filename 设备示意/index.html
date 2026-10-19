@@ -31,10 +31,10 @@
     margin: 0; font-size: clamp(21px, 2vw, 27px);
     font-weight: 700; letter-spacing: .03em; color: var(--ink);
   }
-  header p { margin: 5px 0 0; color: var(--ink-soft); font-size: 13.5px; }
+  header p { margin: 6px 0 0; color: var(--ink-soft); font-size: 15px; }
   .legend {
     display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
-    font-size: 12.5px; color: var(--ink-soft);
+    font-size: 14px; color: var(--ink-soft);
   }
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
   .legend .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
@@ -113,7 +113,7 @@
   }
   .species b {
     display: block;
-    font-size: 12.5px;
+    font-size: 14.5px;
     font-weight: 700;
     color: #223d2c;
     letter-spacing: .03em;
@@ -122,7 +122,7 @@
     display: block;
     font-family: "Palatino Linotype", "Book Antiqua", Georgia, "Times New Roman", serif;
     font-style: italic;
-    font-size: 11px;
+    font-size: 12.5px;
     color: #4d6a58;
   }
   .tree-badge {
@@ -239,14 +239,15 @@
   .plate .tri.wire { border-bottom-color: var(--wire); }
   .plate .nm {
     display: inline-block;
-    padding: 0 2px;
-    background: none;
-    border: none;
-    box-shadow: none;
+    padding: 2px 11px 3px;
+    background: rgba(250, 247, 236, .70);
+    border: 1px solid rgba(122, 150, 110, .24);
+    border-radius: 8px;
+    box-shadow: 0 2px 7px rgba(24, 52, 36, .07);
     font-family: "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "SimSun", serif;
-    font-size: 18px;
+    font-size: 21px;
     font-weight: 700;
-    letter-spacing: .05em;
+    letter-spacing: .04em;
     color: #1c3b28;
     line-height: 1.3;
     text-shadow: 0 0 4px #f4f8f3, 0 0 8px #f4f8f3, 0 0 14px #f4f8f3, 0 1px 2px rgba(244,248,243,.9);
@@ -260,13 +261,34 @@
   .plate .sub.wifi-tag { color: #146e64; }
   .plate .sub.wire-tag { color: #1f6599; }
 
+  /* 左上角无人机：缓慢漂浮 */
+  .drone {
+    position: absolute;
+    z-index: 3;
+    left: 2.6%;
+    top: 2.0%;
+    width: 8%;
+    height: auto;
+    pointer-events: none;
+    filter: drop-shadow(0 8px 14px rgba(20, 44, 30, .18));
+    animation: droneFly 60s ease-in-out infinite alternate;
+  }
+  @keyframes droneFly {
+    0%   { left: 2.6%;  transform: translateY(0) rotate(0deg); }
+    20%  { left: 18%;   transform: translateY(-12px) rotate(1.2deg); }
+    40%  { left: 34%;   transform: translateY(9px) rotate(-1deg); }
+    60%  { left: 52%;   transform: translateY(-14px) rotate(0.9deg); }
+    80%  { left: 70%;   transform: translateY(7px) rotate(-0.8deg); }
+    100% { left: 84%;   transform: translateY(0) rotate(0deg); }
+  }
+
   /* 右侧线稿笔记本（参照用户提供的示意图：细边框 + 梯形底座 + 文字标注） */
   .laptop {
     position: absolute;
     z-index: 6;
-    left: 88.6%;
-    top: 57%;
-    width: 13.2%;
+    left: 90.2%;
+    top: 68.5%;
+    width: 12.6%;
     transform: translateX(-50%);
     display: flex;
     flex-direction: column;
@@ -316,21 +338,29 @@
   }
   .lap-base svg { display: block; width: 100%; height: auto; }
   .lap-caption {
-    margin-top: 7px;
+    margin-top: 6px;
     text-align: center;
-    line-height: 1.35;
+    line-height: 1.3;
   }
-  .lap-caption b {
-    display: block;
-    font-size: 13px;
+  .lap-caption .tri {
+    width: 0; height: 0; margin: 0 auto 3px;
+    border-left: 5.5px solid transparent;
+    border-right: 5.5px solid transparent;
+    border-bottom: 7.5px solid #2478b4;
+  }
+  .lap-caption .nm {
+    display: inline-block;
+    padding: 2px 11px 3px;
+    background: rgba(250, 247, 236, .70);
+    border: 1px solid rgba(122, 150, 110, .24);
+    border-radius: 8px;
+    box-shadow: 0 2px 7px rgba(24, 52, 36, .07);
+    font-family: "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "SimSun", serif;
+    font-size: 17px;
     font-weight: 700;
-    color: #33483a;
-    letter-spacing: .04em;
-  }
-  .lap-caption span {
-    display: block;
-    font-size: 11px;
-    color: #5f7565;
+    letter-spacing: .05em;
+    color: #1c3b28;
+    text-shadow: 0 0 4px #f4f8f3, 0 0 8px #f4f8f3, 0 0 12px #f4f8f3;
   }
 
   footer {
@@ -338,7 +368,7 @@
     padding-top: 11px;
     border-top: 1px solid #dce7de;
     color: var(--ink-soft);
-    font-size: 12px;
+    font-size: 13.5px;
     display: flex;
     justify-content: space-between;
     gap: 16px;
@@ -387,6 +417,9 @@
       <canvas id="fxCanvas" aria-hidden="true"></canvas>
       <!-- 层 6：随景深错落的名称牌 -->
       <div id="labelLayer"></div>
+
+      <!-- 左上角天空：无人机缓慢漂浮 -->
+      <img class="drone" src="img/drone.webp" alt="观测无人机" />
       <!-- 最右侧：线稿笔记本 + 屏幕内实时曲线 -->
       <div class="laptop" aria-label="实验室工作站实时数据">
         <div class="lap-screen">
@@ -403,7 +436,10 @@
             <path d="M34 27 H86" stroke="#8ba08a" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </div>
-        <div class="lap-caption"><b>数据接收</b><span>实验室工作站</span></div>
+        <div class="lap-caption">
+          <div class="tri"></div>
+          <div class="nm">异地实时数据接收</div>
+        </div>
       </div>
     </section>
   </div>
@@ -1003,6 +1039,8 @@
       if (!sp) { return; }
       var tint = TINTS[parseInt(p.key, 10)] || '#2f7a4f';
       var lx = 130 + slotW * (i + 1);
+      if (sp.cn === '山杨') { lx += 52; }
+      if (sp.cn === '油松') { lx = 1712; }
       var ly = (i % 2 === 0) ? 132 : 196;
 
       var el = document.createElement('div');
@@ -1297,7 +1335,7 @@
 
     ctx.lineCap = 'round';
     for (var i = 0; i < 3; i++) {
-      var phase = (t * 0.85 + i / 3) % 1;
+      var phase = (t * 0.30 + i / 3) % 1;
       var r = 6 + phase * maxR;
       var alpha = Math.sin(phase * Math.PI);
       ctx.strokeStyle = 'rgba(' + colorRGB + ',' + (alpha * 0.92).toFixed(3) + ')';
@@ -1369,7 +1407,7 @@
 
       /* 沿线流动的数据点 */
       for (var k = 0; k < 3; k++) {
-        var u = (el * 0.30 + k / 3 + idx * 0.12) % 1;
+        var u = (el * 0.10 + k / 3 + idx * 0.12) % 1;
         var pt = cubic(p0, c1, c2, p3, u);
         fctx.globalAlpha = 0.25 + 0.7 * Math.sin(u * Math.PI);
         fctx.fillStyle = '#1d6ea8';
@@ -1386,26 +1424,36 @@
     strokeCurve([CAB_X, CAB_Y + 6], [CAB_X, CAB_Y - 10], [CAB_X, 650], [CAB_X, 612],
                 2.0, 'rgba(38, 94, 138, .62)');
 
-    /* ---- 树种引线：标签 -> 树冠 ---- */
+    /* ---- 树种引线：实粗线 + 箭头 ---- */
     SPECIES_LEADS.forEach(function (lead) {
+      var midY = (lead.from[1] + lead.to[1]) / 2;
       fctx.save();
       fctx.strokeStyle = lead.color;
-      fctx.globalAlpha = 0.55;
-      fctx.lineWidth = 1.1;
-      fctx.setLineDash([3, 4]);
+      fctx.globalAlpha = 0.85;
+      fctx.lineWidth = 2.4;
+      fctx.lineCap = 'round';
       fctx.beginPath();
       fctx.moveTo(lead.from[0], lead.from[1]);
-      var midY = (lead.from[1] + lead.to[1]) / 2;
       fctx.bezierCurveTo(lead.from[0], midY, lead.to[0], midY, lead.to[0], lead.to[1]);
       fctx.stroke();
-      fctx.restore();
-      fctx.globalAlpha = 0.85;
-      fctx.fillStyle = lead.color;
+
+      /* 箭头：按曲线末端切线方向 */
+      var dx = lead.to[0] - lead.to[0];
+      var dy = lead.to[1] - midY;
+      var len = Math.hypot(dx, dy) || 1;
+      var ux = dx / len, uy = dy / len;
+      var ax = lead.to[0], ay = lead.to[1];
+      var size = 9;
       fctx.beginPath();
-      fctx.arc(lead.to[0], lead.to[1], 2.4, 0, 6.2832);
+      fctx.moveTo(ax, ay);
+      fctx.lineTo(ax - ux * size - uy * size * 0.55, ay - uy * size + ux * size * 0.55);
+      fctx.lineTo(ax - ux * size + uy * size * 0.55, ay - uy * size - ux * size * 0.55);
+      fctx.closePath();
+      fctx.fillStyle = lead.color;
       fctx.fill();
-      fctx.globalAlpha = 1;
+      fctx.restore();
     });
+    fctx.globalAlpha = 1;
 
     /* ---- B. 无线 WiFi 组 ---- */
     WIRELESS_ARCS.forEach(function (arc, idx) {
@@ -1423,7 +1471,7 @@
       drawDynamicWifi(fctx, arc.from[0], arc.from[1], el + idx * 0.35, 0.22, 22, '22, 133, 122');
 
       for (var m = 0; m < 2; m++) {
-        var u = (el * 0.18 + m * 0.5 + idx * 0.23) % 1;
+        var u = (el * 0.06 + m * 0.5 + idx * 0.23) % 1;
         var pt = quadPt(arc.from, [arc.cx, arc.cy], arc.to, u);
         var ang = quadAngle(arc.from, [arc.cx, arc.cy], arc.to, u);
         var al = 0.25 + 0.70 * Math.sin(u * Math.PI);
@@ -1450,14 +1498,14 @@
     fctx.restore();
 
     for (var q = 0; q < 2; q++) {
-      var u4 = (el * 0.34 + q * 0.5) % 1;
+      var u4 = (el * 0.10 + q * 0.5) % 1;
       var p4 = quadPt(cabinetTop, [1580, 330], [GATEWAY_ANT[0] + 6, GATEWAY_ANT[1] + 30], u4);
       var a4 = quadAngle(cabinetTop, [1580, 330], [GATEWAY_ANT[0] + 6, GATEWAY_ANT[1] + 30], u4);
       drawWavePacket(fctx, p4[0], p4[1], a4, 0.35 + 0.65 * Math.sin(u4 * Math.PI), '36, 120, 180');
     }
 
-    /* 平板处的 WiFi 接收（与塔顶 GT200 之间） */
-    drawDynamicWifi(fctx, 1706, 452, el, 0.05, 15, '22, 133, 122');
+    /* 数采上方的 WiFi（与塔顶 GT200 之间） */
+    drawDynamicWifi(fctx, 1542, 436, el, 0.05, 16, '22, 133, 122');
 
     /* 网关下发到电脑 */
     fctx.save();
@@ -1472,7 +1520,7 @@
     fctx.restore();
 
     for (var q2 = 0; q2 < 2; q2++) {
-      var u5 = (el * 0.30 + q2 * 0.5) % 1;
+      var u5 = (el * 0.09 + q2 * 0.5) % 1;
       var p5 = quadPt(gtOut, [1732, 330], PC_ANT, u5);
       var a5 = quadAngle(gtOut, [1732, 330], PC_ANT, u5);
       drawWavePacket(fctx, p5[0], p5[1], a5, 0.35 + 0.65 * Math.sin(u5 * Math.PI), '22, 133, 122');
