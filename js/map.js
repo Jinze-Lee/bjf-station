@@ -472,7 +472,7 @@
             boundLayer.addTo(map);           /* 边界默认开；网格/水系默认关 */
         }
 
-        /* --- 站点标注：定位站生活区 / 林场 / 大样地 / 白桦林样地（源 js/sites.js，
+        /* --- 站点标注：定位站（全称）/ 林场 / 大样地 / 白桦林样地（源 js/sites.js，
                由 工具/生成站点标注.py 生成）。金总要求「所有标签也加个按钮」，
                所以站点、大样地/白桦林、以及名称标注各挂一个开关。 --- */
         var siteLayer = L.layerGroup(), bigLayer = L.layerGroup(), nameLayer = L.layerGroup();

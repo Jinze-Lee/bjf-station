@@ -25,7 +25,7 @@ STEP = 10.0          # 边界加密间距（米）
 
 # (名称中文, 名称英文, 纬度, 经度, 海拔或 None)
 POINTS = [
-    ("定位站生活区", "Station living area", 39.968047, 115.431417, 1164.86),
+    ("中国科学院北京森林生态系统定位研究站", "CAS Beijing Forest Ecosystem Research Station", 39.968047, 115.431417, 1164.86),
     ("林场",         "Forestry farm",       39.964775, 115.434950, 1122.57),
 ]
 
@@ -95,7 +95,7 @@ def main():
         print("区 %-14s 面积 %.3f ha  加密 %d 点" % (name_zh, area_ha(pts), len(ring)))
 
     (ROOT / "js" / "sites.js").write_text(
-        "/* 站点标注：定位站生活区 / 林场 / 大样地 / 白桦林样地\n"
+        "/* 站点标注：中国科学院北京森林生态系统定位研究站 / 林场 / 大样地 / 白桦林样地\n"
         " * 经纬度 WGS-84，由 工具/生成站点标注.py 生成，勿手改。 */\n"
         "var SITES = " + json.dumps({"points": js_points, "areas": js_areas},
                                     ensure_ascii=False, separators=(",", ":")) + ";\n",
