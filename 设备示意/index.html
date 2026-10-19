@@ -126,7 +126,7 @@
     border-radius: 50%;
     background: #1f6b45;
     color: #fff;
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 700;
     line-height: 17px;
     text-align: center;
@@ -252,112 +252,77 @@
   .plate .sub.wifi-tag { color: #146e64; }
   .plate .sub.wire-tag { color: #1f6599; }
 
-  /* 右侧平板（屏幕 + 磁吸键盘，无底座托盘） */
-  .tablet {
+  /* 右侧线稿笔记本（参照用户提供的示意图：细边框 + 梯形底座 + 文字标注） */
+  .laptop {
     position: absolute;
     z-index: 6;
-    left: 90.8%;
-    top: 42%;
-    width: 15.4%;
+    left: 90.4%;
+    top: 40%;
+    width: 15%;
     transform: translateX(-50%);
     display: flex;
     flex-direction: column;
     align-items: center;
   }
-  .tablet-screen {
+  .lap-screen {
     width: 100%;
-    padding: 8px 8px 10px;
-    border-radius: 12px;
-    background: linear-gradient(160deg, #37433c, #151c18 76%);
-    box-shadow: 0 16px 32px rgba(20, 44, 30, .24), inset 0 1px 0 rgba(255, 255, 255, .16);
-  }
-  .screen {
-    background: #fbfdfb;
-    border-radius: 4px;
-    overflow: hidden;
-    aspect-ratio: 4 / 3;
+    border: 2px solid #8ba08a;
+    border-radius: 7px;
+    background: #f6f2e6;
+    padding: 7px 7px 5px;
+    box-shadow: 0 10px 22px rgba(24, 52, 36, .10);
     display: flex;
     flex-direction: column;
+    aspect-ratio: 4 / 3;
   }
-  .pad-bar {
-    min-height: 20px;
+  .lap-bar {
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 3px 7px;
-    background: #e9f2ea;
-    border-bottom: 1px solid #d8e5da;
-  }
-  .pad-bar i {
-    width: 4px; height: 4px; border-radius: 50%;
-    background: #8fa998;
-  }
-  .pad-bar span {
-    margin-left: 3px;
+    padding: 0 2px 4px;
     font-size: 11px;
-    color: #46604f;
+    color: #55674f;
+    letter-spacing: .02em;
   }
-  .pad-bar em {
+  .lap-bar i {
+    width: 4px; height: 4px; border-radius: 50%;
+    background: #a8b7a3;
+  }
+  .lap-bar em {
     margin-left: auto;
     font-style: normal;
     font-size: 11px;
     font-weight: 700;
+    color: #2f6f52;
     letter-spacing: .08em;
-    color: #1f6b45;
-  }
-  .pad-head {
-    padding: 4px 8px 0;
-    font-size: 11px;
-    font-weight: 700;
-    color: #1f3f2d;
   }
   .screen-chart {
     width: 100%;
     flex: 1 1 auto;
     display: block;
-    margin-top: 1px;
   }
-  .pad-foot {
-    padding: 3px 8px 4px;
+  .lap-base {
+    width: 118%;
+    height: 0;
+    margin-top: 3px;
+  }
+  .lap-base svg { display: block; width: 100%; height: auto; }
+  .lap-caption {
+    margin-top: 7px;
+    text-align: center;
+    line-height: 1.35;
+  }
+  .lap-caption b {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: #33483a;
+    letter-spacing: .04em;
+  }
+  .lap-caption span {
+    display: block;
     font-size: 11px;
-    color: #46604f;
-    border-top: 1px solid #edf3ee;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-  .pad-foot b {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: #289e5a;
-    display: inline-block;
-  }
-  /* 磁吸键盘（平板下沿） */
-  .tablet-keyboard {
-    width: 94%;
-    height: 30px;
-    margin-top: -1px;
-    border-radius: 0 0 7px 7px;
-    background: linear-gradient(180deg, #edf3ee, #dbe6dd);
-    border: 1px solid #c3d2c6;
-    border-top: none;
-    box-shadow: 0 9px 16px rgba(20, 44, 30, .16);
-    position: relative;
-  }
-  .tablet-keyboard::before {
-    content: '';
-    position: absolute;
-    left: 6%; right: 6%; top: 7px;
-    height: 1px;
-    background: #c6d4c9;
-    box-shadow: 0 7px 0 #c6d4c9, 0 14px 0 #c6d4c9;
-  }
-  .tablet-keyboard::after {
-    content: '';
-    position: absolute;
-    left: 30%; right: 30%; bottom: 4px;
-    height: 3px;
-    border-radius: 2px;
-    background: #c6d4c9;
+    color: #5f7565;
   }
 
   footer {
@@ -417,23 +382,21 @@
       <canvas id="fxCanvas" aria-hidden="true"></canvas>
       <!-- 层 6：随景深错落的名称牌 -->
       <div id="labelLayer"></div>
-      <!-- 最右侧：平板 + 键盘，屏幕内 30 路数据实时刷新 -->
-      <div class="tablet" aria-label="平板屏幕上的实时数据">
-        <div class="tablet-screen">
-          <div class="screen">
-            <div class="pad-bar">
-              <i></i><i></i><i></i>
-              <span>bjf-station / live</span>
-              <em>LIVE</em>
-            </div>
-            <div class="pad-head">森林站 · 实时数据</div>
-            <svg class="screen-chart" id="liveChart" viewBox="0 0 240 92" preserveAspectRatio="none" aria-hidden="true">
-              <path d="M0 74H240M0 48H240M0 22H240" fill="none" stroke="#e6efe8" stroke-width="0.8" />
-            </svg>
-            <div class="pad-foot"><b></b>数据实时接收</div>
-          </div>
+      <!-- 最右侧：线稿笔记本 + 屏幕内实时曲线 -->
+      <div class="laptop" aria-label="实验室工作站实时数据">
+        <div class="lap-screen">
+          <div class="lap-bar"><i></i><i></i><span>bjf-station / live</span><em>LIVE</em></div>
+          <svg class="screen-chart" id="liveChart" viewBox="0 0 240 92" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 74H240M0 48H240M0 22H240" fill="none" stroke="#e7e0cd" stroke-width="0.8" />
+          </svg>
         </div>
-        <div class="tablet-keyboard" aria-hidden="true"></div>
+        <div class="lap-base" aria-hidden="true">
+          <svg viewBox="0 0 240 18" preserveAspectRatio="none">
+            <path d="M16 1H224L240 16H0Z" fill="#f6f2e6" stroke="#8ba08a" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M96 6H144" stroke="#c3cdba" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="lap-caption"><b>数据接收</b><span>实验室工作站</span></div>
       </div>
     </section>
   </div>

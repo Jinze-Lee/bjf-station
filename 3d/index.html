@@ -1734,8 +1734,8 @@
 			}
 			e.meta.innerHTML = meta;
 			var cv = document.getElementById('tcSpark'), cap = document.getElementById('tcSparkCap');
-			var PD = (typeof window.CANOPYP !== 'undefined') ? window.CANOPYP
-			       : ((typeof CANOPYP !== 'undefined') ? CANOPYP : null);
+			/* 页面把 canopyP.json 存在 P_DATA 里（不是 CANOPYP） */
+			var PD = (typeof P_DATA !== 'undefined' && P_DATA) ? P_DATA : null;
 			if (cv && cap && PD && PD.values && tree && tree.pi != null && PD.values[tree.pi]) {
 				var ser = PD.values[tree.pi];
 				animateSpark(cv, ser);                     /* 逐点长出来 */
@@ -3161,6 +3161,10 @@
 		#treeCard .tc-spark .cap { margin-top: 5px; font-size: 11.5px; color: #9fb08a;
 			font-variant-numeric: tabular-nums; }
 		#treeCard .tc-spark .cap b { color: #cfe3b0; }
+		/* —— 覆盖：树图必须白底（前面有重复定义，旧的会把白底盖掉） —— */
+		#treeCard .tc-imgwrap { background: #ffffff !important;
+			box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .1) !important; }
+		#treeCard .tc-spark { display: block !important; }
 </style>
 </body>
 </html>
