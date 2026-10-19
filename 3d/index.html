@@ -64,6 +64,13 @@
 		#camBar .cbtn.rec.on { background: #cf4034; color: #fff; border-color: #ff9d8d; font-weight: 700; }
 
 		/* 一键隐藏所有界面：只留右上角一个恢复按钮 */
+		/* 液流/径向生长/LAI 的常显聚合标签（DOM，和微气候标签同一层级，不会被树冠盖住） */
+		.devinfo { position: fixed; z-index: 1550; pointer-events: none; display: none;
+			transform: translate(-50%, -50%); white-space: nowrap; font-size: 11.5px; font-weight: 700;
+			padding: 2px 7px; border-radius: 10px; color: #14170f;
+			box-shadow: 0 1px 4px rgba(0,0,0,.55); border: 1px solid rgba(10,13,8,.45); }
+		body.ui-off .devinfo { display: none !important; }
+
 		/* 鼠标处的三维坐标读数（左下角，指到哪读到哪） */
 		#coordBox { position: fixed; left: 12px; bottom: 14px; z-index: 1900; display: none;
 			font-size: 12px; padding: 5px 10px; border-radius: 4px; letter-spacing: .3px;
@@ -698,7 +705,7 @@
 			var V = cam.matrixWorldInverse.elements, P = cam.projectionMatrix.elements;
 			var W = innerWidth, H = innerHeight;
 			var me = cam.matrixWorld.elements, cx = me[12], cy = me[13], cz = me[14];
-			var texts = [], DEV = [];
+			var texts = [], DEV = [], LATE = [];
 			for (var i = 0; i < DOTPTS.length; i++) {
 				var p = DOTPTS[i];
 				/* 设备点：地面铺好后优先贴地面，避免源表海拔与场景基准差十几米 */
@@ -726,42 +733,54 @@
 				}
 				var lcol = '#d3a970';                      /* 该点的标签底色 */
 				if (p.kind === 'main') {
-					/* 实测主树：固定大小（原来随距离缩到 13px，远看就没了） */
+					/* 实测主树：固定大小；留到最后一遍画，免得被树冠盖住 */
 					lcol = '#8fb4d6';
-					dctx.font = '19px "Segoe UI Emoji","Noto Color Emoji",serif';
-					dctx.textAlign = 'center'; dctx.textBaseline = 'middle';
-					dctx.fillText('\uD83C\uDF33', sx, sy);
+					LATE.push({ x: sx, y: sy, emoji: true });
 				} else if (p.kind && p.kind.indexOf('dev-') === 0) {
-					/* 设备点：液流 / 径向生长 / LAI —— 颜色 + 形状都区分（圆/方/三角）。
-					   做成「立体」：从地面竖一根杆子，形状落在杆顶，竖直方向有结构、远看更显眼。 */
+					/* 设备点：液流 / 径向生长 / LAI —— 颜色 + 形状区分；
+					   标记留到最后一遍画（在树冠之上），否则远看整片被树冠盖住 */
 					if (p.kind === 'dev-sap' && !SAP_ON) continue;
 					if (p.kind === 'dev-den' && !DEN_ON) continue;
 					if (p.kind === 'dev-lai' && !LAI_ON) continue;
-					/* 液流 / 径向生长 / LAI：颜色 + 形状都区分，固定大小（原来随距离缩到 3px） */
 					var dc = p.kind === 'dev-sap' ? '#3fa9f5' : (p.kind === 'dev-den' ? '#f0a23c' : '#b07fd8');
 					var dsh = p.kind === 'dev-sap' ? 'circle' : (p.kind === 'dev-den' ? 'square' : 'hex');
 					lcol = dc;
-					var HGT = 6;                                     /* 杆高 m */
-					var top = m4apply(P, m4apply(V, [p.E, p.N, p.Z + HGT, 1]));
+					var mx = sx, my = sy;                            /* 标记落点（默认地面上） */
+					var top = m4apply(P, m4apply(V, [p.E, p.N, pz + 6, 1]));
 					if (top[3] > 0) {
-						var tx = (top[0] / top[3] * 0.5 + 0.5) * W, ty = (-top[1] / top[3] * 0.5 + 0.5) * H;
-						dctx.strokeStyle = dc; dctx.globalAlpha = 0.85; dctx.lineWidth = 1.6;
-						dctx.beginPath(); dctx.moveTo(sx, sy); dctx.lineTo(tx, ty); dctx.stroke();
-						dctx.globalAlpha = 1;
-						sx = tx; sy = ty;
+						mx = (top[0] / top[3] * 0.5 + 0.5) * W;
+						my = (-top[1] / top[3] * 0.5 + 0.5) * H;
 					}
-					drawShape(sx, sy, dsh, dc);
+					LATE.push({ x0: sx, y0: sy, x: mx, y: my, shape: dsh, col: dc, pole: true });
+					sx = mx; sy = my;
 					DOTSCREEN.push({ x: sx, y: sy, name: p.name, kind: p.kind, tree: TREE_IDS[p.name] ? p.name : null });
 					/* 设备标签不做距离门槛：远看也要有（扎堆时下面会合并成一个） */
 					DEV.push({ sx: sx, sy: sy, d2: d2, name: p.name, kind: p.kind, col: lcol });
 					continue;
 				} else {
-					/* 样方内树（RTK 实测）：固定大小的圆点（原来只有 1.7~3.2px） */
-					drawShape(sx, sy, 'circle', '#d3a970', 8);
+					/* 样方内树（RTK 实测）：固定圆点，同样留到最后一遍 */
+					LATE.push({ x: sx, y: sy, shape: 'circle', col: '#d3a970', size: 8 });
 				}
 				DOTSCREEN.push({ x: sx, y: sy, name: p.name, kind: p.kind });
 				if (d2 < LABEL_DIST * LABEL_DIST) texts.push({ sx: sx, sy: sy, d2: d2, name: p.name, col: lcol });
 			}
+
+			/* 最后一遍：把设备/主树/样方树的标记画在树冠之上 ——
+			   微气候那些是在 drawBounds 里最后画的所以一直可见，树点也得这样才不会"只有放大才看得到"。 */
+			LATE.forEach(function (m) {
+				if (m.emoji) {
+					dctx.font = '19px "Segoe UI Emoji","Noto Color Emoji",serif';
+					dctx.textAlign = 'center'; dctx.textBaseline = 'middle';
+					dctx.fillText('\uD83C\uDF33', m.x, m.y);
+					return;
+				}
+				if (m.pole) {
+					dctx.strokeStyle = m.col; dctx.globalAlpha = 0.85; dctx.lineWidth = 1.6;
+					dctx.beginPath(); dctx.moveTo(m.x0, m.y0); dctx.lineTo(m.x, m.y); dctx.stroke();
+					dctx.globalAlpha = 1;
+				}
+				drawShape(m.x, m.y, m.shape, m.col, m.size);
+			});
 
 			/* 液流 / 径向生长 / LAI：屏幕上扎堆（同类两点 ≤70px）就合并成一个
 			   「液流 ×N」；拉近散开后各自显示编号 —— 金总要的"远看一个、近看分开"。 */
@@ -782,14 +801,51 @@
 					var gx = 0, gy = 0, gd = 0;
 					grp.forEach(function (g) { gx += g.sx; gy += g.sy; gd += g.d2; });
 					gx /= grp.length; gy /= grp.length; gd /= grp.length;
-					if (grp.length > 1) {
-						texts.push({ sx: gx, sy: gy, d2: gd, big: true,
-						             name: TYPE_NAME[kind] + ' \u00d7' + grp.length, col: arr[0].col });
-					} else {
+					if (grp.length === 1) {
 						texts.push({ sx: gx, sy: gy, d2: gd, name: grp[0].name, col: grp[0].col });
 					}
+					/* 合并情况交给下面的 DOM 聚合标签（画布文字会被树冠盖住，金总一直看不到） */
 				}
 			});
+
+			/* 每类按屏幕距离聚成簇（≤70px 同簇），每个 ≥2 点的簇出一个 DOM 聚合标签。
+			   用 DOM 而不是画布文字 —— 画布会被树冠盖住，金总一直看不到。
+			   白桦林那 6 个点离主样地 700 m，会自成一簇单独出标签。 */
+			var pool = window.DEVINFO_POOL || (window.DEVINFO_POOL = []), pi = 0;
+			['dev-sap', 'dev-den', 'dev-lai'].forEach(function (kind) {
+				var arr = DEV.filter(function (d) { return d.kind === kind; });
+				if (!arr.length) { return; }
+				var used = [];
+				for (var i2 = 0; i2 < arr.length; i2++) {
+					if (used[i2]) { continue; }
+					var grp = [arr[i2]]; used[i2] = 1;
+					for (var j2 = i2 + 1; j2 < arr.length; j2++) {
+						if (used[j2]) { continue; }
+						var ax = arr[j2].sx - arr[i2].sx, ay = arr[j2].sy - arr[i2].sy;
+						if (ax * ax + ay * ay <= 70 * 70) { grp.push(arr[j2]); used[j2] = 1; }
+					}
+					if (grp.length < 2) { continue; }          /* 单点：交给逐点编号 */
+					var gx = 0, gy = 0;
+					grp.forEach(function (g) { gx += g.sx; gy += g.sy; });
+					gx /= grp.length; gy /= grp.length;
+					var el = pool[pi];
+					if (!el) {
+						el = document.createElement('div');
+						el.className = 'devinfo';
+						document.body.appendChild(el);
+						pool.push(el);
+					}
+					pi++;
+					var col = arr[0].col;
+					el.textContent = TYPE_NAME[kind] + ' \u00d7' + grp.length;
+					el.style.background = col;
+					el.style.color = fgOn(col);
+					el.style.left = Math.round(gx) + 'px';
+					el.style.top = Math.round(gy) + 'px';
+					el.style.display = 'block';
+				}
+			});
+			for (; pi < pool.length; pi++) { pool[pi].style.display = 'none'; }
 
 			// 显示名称（近的优先，重叠的跳过）
 			if (texts.length) {
