@@ -209,6 +209,16 @@
 		#legend3d .bar { display: block; height: 100%; border-radius: 3px 2px 2px 3px; }
 		#legend3d .bar-n { width: 36px; flex: none; text-align: left; padding-left: 6px;
 			color: #aeb59f; font-size: 10.5px; }
+		/* 图例可折叠：标题行固定，内容区自己滚动 */
+		#legend3d { display: flex; flex-direction: column; }
+		#legend3d .lg-head { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+			font-size: 11.5px; font-weight: 700; color: #cfd4c4; flex: none; }
+		#legend3d .lg-btn { flex: none; font: inherit; font-size: 11px; line-height: 1; padding: 2px 7px;
+			cursor: pointer; border-radius: 3px; color: #d7d2c6; background: rgba(58, 72, 40, .6);
+			border: 1px solid rgba(160, 180, 120, .35); }
+		#legend3d .lg-btn:hover { background: #6ca14a; color: #14170f; }
+		#legend3d .lg-body { overflow-y: auto; min-height: 0; }
+		#legend3d.collapsed .lg-body { display: none; }
 		@media (max-width: 640px) { #legend3d { font-size: 10.5px; padding: 6px 8px; } }
 
 		/* 操作提示（相机只有环绕一种模式：左键旋转 · 中键平移 · 滚轮缩放） */
@@ -322,7 +332,13 @@
 			</div>
 		</div>
 	<canvas id="dots"></canvas>
-	<div id="legend3d"></div>
+	<div id="legend3d">
+			<div class="lg-head">
+				<span id="legendTitle">图例</span>
+				<button type="button" class="lg-btn" id="legendBtn" title="收起 / 展开图例">▾</button>
+			</div>
+			<div class="lg-body" id="legendBody"></div>
+		</div>
 
 	<div class="potree_container">
 		<div id="potree_render_area"></div>
@@ -341,6 +357,7 @@
 			      lG20: '20 m 网格', lG40: '40 m 网格', lDrain: '水系', lNum: '格网编号（VIT/T）',
 			      lSap: '液流', lDen: '径向生长', lLai: 'LAI',
 			      camOrbit: '环绕', camFly: '低空巡航', camDolly: '推拉', camRise: '升空俯瞰', camStop: '■ 停',
+			      lgTitle: '图例',
 			      camSpeed: '速度', camLoop: '循环', lGround: '影像地面',
 			      camRec: '● 录制轨迹', camRecStop: '■ 结束录制', camMy: '我的轨迹',
 			      camKFAdd: '＋机位', camKFPlay: '▶ 关键帧', camKFClear: '✕ 机位', camKF: '关键帧轨迹',
@@ -358,6 +375,7 @@
 			      lG20: '20 m grid', lG40: '40 m grid', lDrain: 'Drainage', lNum: 'Grid IDs (VIT/T)',
 			      lSap: 'Sap flow', lDen: 'Dendrometer', lLai: 'LAI',
 			      camOrbit: 'Orbit', camFly: 'Low flyover', camDolly: 'Dolly', camRise: 'Rise & overlook', camStop: '■ Stop',
+			      lgTitle: 'Legend',
 			      camSpeed: 'Speed', camLoop: 'Loop', lGround: 'Imagery ground',
 			      camRec: '● Record path', camRecStop: '■ Stop', camMy: 'My path',
 			      camKFAdd: '＋View', camKFPlay: '▶ Keyframes', camKFClear: '✕ Views', camKF: 'Keyframe path',
@@ -400,6 +418,7 @@
 			cb = document.getElementById('camDolly'); if (cb) cb.textContent = d.camDolly;
 			cb = document.getElementById('camRise'); if (cb) cb.textContent = d.camRise;
 			cb = document.getElementById('camStop'); if (cb) cb.textContent = d.camStop;
+			cb = document.getElementById('legendTitle'); if (cb) { cb.textContent = d.lgTitle || '图例'; }
 			cb = document.getElementById('camSpdVal');
 			if (cb) { cb.textContent = (typeof camSpeedNow === 'function' ? camSpeedNow() : 1) + '×'; }
 			cb = document.getElementById('uiBtn'); if (cb) { cb.textContent = d.uiHide || '隐藏界面'; }
@@ -418,7 +437,7 @@
 		}
 		function renderLegend() {
 			var s = (LANG === 'zh');
-			var el = document.getElementById('legend3d');
+			var el = document.getElementById('legendBody');
 			if (!el) return;
 			var html =
 				'<span><i class="mon"></i>' + (s ? '监测树' : 'Monitored') + ' <b>20</b></span><br>' +
@@ -2270,6 +2289,27 @@
 			document.addEventListener('keydown', function (ev) {
 				if (ev.target && /^(INPUT|SELECT|TEXTAREA)$/.test(ev.target.tagName)) { return; }
 				if (ev.key === 'h' || ev.key === 'H') { toggle(); }
+			});
+		}());
+
+		/* ---------------- 图例折叠 ----------------
+		 * 图例（树种条形图）最占地方，给个 ▾/▸ 收起；状态记在本地存储。 */
+		(function bindLegend() {
+			var box = document.getElementById('legend3d'), btn = document.getElementById('legendBtn');
+			if (!box || !btn) { return; }
+			function apply() {
+				var off = box.classList.contains('collapsed');
+				btn.textContent = off ? '▸' : '▾';
+				btn.title = off ? '展开图例' : '收起图例';
+			}
+			try {
+				if (localStorage.getItem('bfers-3d-legend-collapsed') === '1') { box.classList.add('collapsed'); }
+			} catch (e) {}
+			apply();
+			btn.addEventListener('click', function () {
+				box.classList.toggle('collapsed');
+				apply();
+				try { localStorage.setItem('bfers-3d-legend-collapsed', box.classList.contains('collapsed') ? '1' : '0'); } catch (e) {}
 			});
 		}());
 
