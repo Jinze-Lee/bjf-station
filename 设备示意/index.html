@@ -101,21 +101,29 @@
   .species {
     position: absolute;
     z-index: 7;
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
+    transform: translateX(-50%);
     white-space: nowrap;
-    line-height: 1.15;
+    line-height: 1.25;
     pointer-events: none;
-    padding: 4px 3px;
-    background: linear-gradient(180deg, rgba(250,253,249,0), rgba(250,253,249,.86) 14%, rgba(250,253,249,.86) 86%, rgba(250,253,249,0));
+    padding: 4px 10px 4px 9px;
+    border-radius: 7px;
+    border-left: 3px solid #2f7a4f;
+    background: rgba(252, 255, 251, .95);
+    box-shadow: 0 3px 10px rgba(24, 52, 36, .10);
   }
-  .species b { font-size: 11.5px; font-weight: 700; color: #24452f; }
+  .species b {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #223d2c;
+    letter-spacing: .03em;
+  }
   .species i {
+    display: block;
     font-family: "Palatino Linotype", "Book Antiqua", Georgia, "Times New Roman", serif;
     font-style: italic;
     font-size: 11px;
-    color: #4c6a58;
-    margin-block-start: 4px;
+    color: #4d6a58;
   }
   .tree-badge {
     position: absolute;
@@ -256,9 +264,9 @@
   .laptop {
     position: absolute;
     z-index: 6;
-    left: 90.4%;
-    top: 40%;
-    width: 15%;
+    left: 88.6%;
+    top: 57%;
+    width: 13.2%;
     transform: translateX(-50%);
     display: flex;
     flex-direction: column;
@@ -644,7 +652,7 @@
   });
 
   /* 每个树种的专属色（叶冠染色 + 名称牌底色） */
-  var TINTS = ['#8a9a3a', '#4f7f4a', '#9aae4e', '#b2703a', '#3f8f74', '#2f6b45', '#6a7f36'];
+  var TINTS = ['#b5b83a', '#3f7f4a', '#86b85a', '#c07038', '#2f8f86', '#1f5a3c', '#7a8a30'];
 
   /* 7 个树种的中文名与拉丁名 */
   var SPECIES = [
@@ -966,7 +974,8 @@
   var scale = 1, dpr = Math.min(2, window.devicePixelRatio || 1);
   var t0 = performance.now();
 
-  /* 树种名：在同类树里挑"离仪器远 + 彼此不挤"的一棵挂牌，竖排贴树干外侧 */
+  /* 树种标签：放在天空里（两排），用细线连到各自树冠 */
+  var SPECIES_LEADS = [];
   function addSpeciesLabels() {
     var all = [HERO_TREE].concat(FG_TREES, BACK_TREES);
     var bySprite = {};
@@ -977,34 +986,39 @@
       (bySprite[m.sprite] = bySprite[m.sprite] || []).push(m);
     });
 
-    var placed = [];
-    Object.keys(bySprite).sort().forEach(function (k) {
-      var sp = SPECIES[k];
-      if (!sp) { return; }
-      var cands = bySprite[k].slice().sort(function (a, b) { return b.clear - a.clear; });
-      var pick = null;
-      for (var i = 0; i < cands.length; i++) {
-        var ok = placed.every(function (px) { return Math.abs(px - cands[i].x) >= 118; });
-        if (ok) { pick = cands[i]; break; }
-      }
-      if (!pick) { pick = cands[0]; }
-      placed.push(pick.x);
+    var keys = Object.keys(bySprite).sort(function (a, b) {
+      var ax = bySprite[a][0].x, bx = bySprite[b][0].x;
+      return ax - bx;
+    });
 
-      var nearestX = pick.x;
-      ITEMS.forEach(function (d) {
-        if (Math.abs(d.cx - pick.x) < Math.abs(nearestX - pick.x)) { nearestX = d.cx; }
-      });
-      var side = (nearestX >= pick.x) ? -1 : 1;
+    /* 按树的横向位置排序，标签从左到右排在天空里，引线不会交叉 */
+    var picks = keys.map(function (k) {
+      var cands = bySprite[k].slice().sort(function (a, b) { return b.clear - a.clear; });
+      return { key: k, tree: cands[0] };
+    }).sort(function (a, b) { return a.tree.x - b.tree.x; });
+
+    var slotW = (W - 430) / (picks.length + 1);
+    picks.forEach(function (p, i) {
+      var sp = SPECIES[p.key];
+      if (!sp) { return; }
+      var tint = TINTS[parseInt(p.key, 10)] || '#2f7a4f';
+      var lx = 130 + slotW * (i + 1);
+      var ly = (i % 2 === 0) ? 132 : 196;
 
       var el = document.createElement('div');
       el.className = 'species';
-      var tint = TINTS[parseInt(k, 10)] || '#2f7a4f';
-      el.style.left = ((pick.x + side * 13) / W * 100).toFixed(3) + '%';
-      el.style.top = ((pick.base - pick.h * 0.70) / H * 100).toFixed(3) + '%';
-      el.style.background = 'linear-gradient(180deg, rgba(255,255,255,0), ' + tint + '33 12%, ' + tint + '33 88%, rgba(255,255,255,0))';
-      el.style.borderLeft = '3px solid ' + tint;
+      el.style.left = (lx / W * 100).toFixed(3) + '%';
+      el.style.top = (ly / H * 100).toFixed(3) + '%';
+      el.style.borderLeftColor = tint;
+      el.style.background = 'linear-gradient(90deg, ' + tint + '22, rgba(252,255,251,.96) 55%)';
       el.innerHTML = '<b>' + sp.cn + '</b><i>' + sp.la + '</i>';
       labelLayer.appendChild(el);
+
+      SPECIES_LEADS.push({
+        from: [lx, ly + 34],
+        to: [p.tree.x, p.tree.base - p.tree.h * 0.96],
+        color: tint
+      });
     });
   }
 
@@ -1074,37 +1088,47 @@
   var GRASS = { pts: [] };
   function buildGroundDetail() {
     var rnd = seeded(20261019);
-    /* 草丛：每丛 18~30 个小点，沿地面铺开 */
-    for (var i = 0; i < 240; i++) {
-      var gx = 40 + rnd() * 1900;
-      var gy = 700 + rnd() * 34;
-      var n = 16 + Math.floor(rnd() * 14);
-      var baseC = [58 + rnd() * 26, 118 + rnd() * 40, 62 + rnd() * 24];
-      for (var j = 0; j < n; j++) {
-        var a = -Math.PI / 2 + (rnd() - 0.5) * 1.5;
-        var len = 4 + rnd() * 9;
-        GRASS.pts.push({
-          x: gx + Math.cos(a) * len * 0.5 + (rnd() - .5) * 5,
-          y: gy - Math.abs(Math.sin(a)) * len - rnd() * 2,
-          r: 0.7 + rnd() * 0.6,
-          c: 'rgb(' + (baseC[0] | 0) + ',' + (baseC[1] | 0) + ',' + (baseC[2] | 0) + ')'
-        });
+
+    /* 草丛：每丛 30~50 个点，草叶更明显，深浅两色 */
+    for (var i = 0; i < 260; i++) {
+      var gx = 30 + rnd() * 1920;
+      var gy = 700 + rnd() * 46;
+      var blades = 5 + Math.floor(rnd() * 5);
+      for (var b = 0; b < blades; b++) {
+        var bx = gx + (rnd() - .5) * 16;
+        var tall = 10 + rnd() * 16;
+        var lean = (rnd() - .5) * 0.9;
+        var dark = rnd() > .45;
+        for (var t = 0; t < tall; t += 1.1) {
+          var k = t / tall;
+          GRASS.pts.push({
+            x: bx + lean * t,
+            y: gy - t,
+            r: 0.85 + rnd() * 0.5,
+            c: dark
+              ? 'rgb(' + (44 + rnd() * 16 | 0) + ',' + (92 + rnd() * 22 | 0) + ',' + (50 + rnd() * 14 | 0) + ')'
+              : 'rgb(' + (104 + rnd() * 34 | 0) + ',' + (150 + rnd() * 40 | 0) + ',' + (74 + rnd() * 24 | 0) + ')'
+          });
+        }
       }
     }
-    /* 石头：若干灰色小圆点簇 */
-    for (var k = 0; k < 60; k++) {
-      var rx = 60 + rnd() * 1860;
-      var ry = 706 + rnd() * 30;
-      var rw = 4 + rnd() * 7;
-      var cnt = 10 + Math.floor(rnd() * 10);
-      for (var m = 0; m < cnt; m++) {
-        var ang = rnd() * 6.2832, rr = Math.pow(rnd(), .6) * rw;
-        var g = 118 + rnd() * 44;
+
+    /* 石头：浅色顶 + 深色底，做出体积 */
+    for (var r = 0; r < 70; r++) {
+      var rx = 40 + rnd() * 1900;
+      var ry = 706 + rnd() * 40;
+      var rw = 6 + rnd() * 12;
+      var rh = rw * (0.45 + rnd() * 0.3);
+      for (var n = 0; n < 46; n++) {
+        var a = rnd() * 6.2832, rr = Math.pow(rnd(), .55);
+        var px = rx + Math.cos(a) * rr * rw;
+        var py = ry + Math.sin(a) * rr * rh;
+        var up = (ry - py) / rh;
+        var g = up > 0 ? 168 + rnd() * 42 : 108 + rnd() * 30;
         GRASS.pts.push({
-          x: rx + Math.cos(ang) * rr,
-          y: ry + Math.sin(ang) * rr * 0.55,
-          r: 0.8 + rnd() * 0.8,
-          c: 'rgb(' + (g | 0) + ',' + ((g + 6) | 0) + ',' + ((g - 4) | 0) + ')'
+          x: px, y: py,
+          r: 0.9 + rnd() * 0.9,
+          c: 'rgb(' + (g | 0) + ',' + ((g + 4) | 0) + ',' + ((g - 6) | 0) + ')'
         });
       }
     }
@@ -1351,6 +1375,27 @@
                 4.6, 'rgba(248, 252, 248, .92)');
     strokeCurve([CAB_X, CAB_Y + 6], [CAB_X, CAB_Y - 10], [CAB_X, 650], [CAB_X, 612],
                 2.0, 'rgba(38, 94, 138, .62)');
+
+    /* ---- 树种引线：标签 -> 树冠 ---- */
+    SPECIES_LEADS.forEach(function (lead) {
+      fctx.save();
+      fctx.strokeStyle = lead.color;
+      fctx.globalAlpha = 0.55;
+      fctx.lineWidth = 1.1;
+      fctx.setLineDash([3, 4]);
+      fctx.beginPath();
+      fctx.moveTo(lead.from[0], lead.from[1]);
+      var midY = (lead.from[1] + lead.to[1]) / 2;
+      fctx.bezierCurveTo(lead.from[0], midY, lead.to[0], midY, lead.to[0], lead.to[1]);
+      fctx.stroke();
+      fctx.restore();
+      fctx.globalAlpha = 0.85;
+      fctx.fillStyle = lead.color;
+      fctx.beginPath();
+      fctx.arc(lead.to[0], lead.to[1], 2.4, 0, 6.2832);
+      fctx.fill();
+      fctx.globalAlpha = 1;
+    });
 
     /* ---- B. 无线 WiFi 组 ---- */
     WIRELESS_ARCS.forEach(function (arc, idx) {
