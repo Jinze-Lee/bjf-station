@@ -308,28 +308,9 @@
 			background: rgba(20,24,15,.95); color: #ddd7cd; border: 1px solid rgba(160,180,120,.4);
 			border-radius: 6px; padding: 7px 10px; font-size: 12px; line-height: 1.5; }
 
-		/* 点单木弹出的树种卡片：左侧竖直居中，深色底衬 + 大图 + 下方名称与坐标 */
-		#treeCard { position: fixed; left: 26px; top: 50%; transform: translateY(-50%);
-			display: none; z-index: 2050; pointer-events: none; width: 400px;
-			padding: 18px 20px 15px; border-radius: 14px;
-			background: linear-gradient(165deg, rgba(24, 29, 18, .93), rgba(11, 14, 8, .97));
-			border: 1px solid rgba(160, 180, 120, .38);
-			box-shadow: 0 14px 44px rgba(0, 0, 0, .68), inset 0 1px 0 rgba(255, 255, 255, .05); }
-		#treeCard.open { display: block; }
-		#treeCard .tc-imgwrap { position: relative; overflow: hidden; margin: 0 auto; border-radius: 10px;
-			background: radial-gradient(ellipse at 50% 62%, rgba(126, 158, 92, .22), rgba(0, 0, 0, 0) 72%); }
-		#treeCard .tc-imgwrap img { position: absolute; max-width: none; }
-		#treeCard .tc-names { margin-top: 12px; text-align: center; }
-		#treeCard .tc-name { display: block; font-size: 30px; font-weight: 700; color: #fff;
-			letter-spacing: 2px; line-height: 1.15; }
-		#treeCard .tc-latin { display: block; margin-top: 5px; font-size: 15px; font-style: italic;
-			font-family: Georgia, "Palatino Linotype", "Times New Roman", serif;
-			color: #cfe3b0; letter-spacing: .3px; }
-		#treeCard .tc-meta { margin-top: 12px; padding-top: 10px; font-size: 12.5px; color: #a9b898;
-			line-height: 1.85; border-top: 1px solid rgba(160, 180, 120, .22); text-align: center;
-			font-variant-numeric: tabular-nums; }
-		#treeCard .tc-meta b { color: #e8f0d8; font-weight: 600; }
-		body.ui-off #treeCard { display: none !important; }
+		/* （旧的 #treeCard 样式块已删除 —— 它和上面的重复，会覆盖新布局，
+		     表现为卡片被撑大、右栏被挤成一条、曲线挤在角落） */
+
 
 		/* 鼠标处的三维坐标读数（左下角，指到哪读到哪） */
 		#coordBox { position: fixed; left: 12px; bottom: 14px; z-index: 1900; display: none;
@@ -425,19 +406,8 @@
 			background: rgba(20,24,15,.95); color: #ddd7cd; border: 1px solid rgba(160,180,120,.4);
 			border-radius: 6px; padding: 7px 10px; font-size: 12px; line-height: 1.5; }
 
-		/* 点单木浮出的树种动图：动图本身抠过背景，所以**不加任何底衬/边框**，
-		   直接叠在三维场景上（透明处透出场景），旁边写中文名与拉丁名。
-		   pointer-events:none —— 点画面任意处即可收起，不挡操作。 */
-		#treeCard { position: fixed; z-index: 2050; display: none; align-items: center; gap: 16px;
-			pointer-events: none; }
-		#treeCard.open { display: flex; }
-		#treeCard .tc-imgwrap { position: relative; overflow: hidden; flex: none; }
-		#treeCard .tc-imgwrap img { position: absolute; max-width: none; }
-		#treeCard .tc-names { flex: none; max-width: 300px;
-			text-shadow: 0 1px 5px rgba(0,0,0,.95), 0 0 14px rgba(0,0,0,.75); }
-		#treeCard .tc-name { display: block; font-size: 27px; font-weight: 700; color: #fff; line-height: 1.15; }
-		#treeCard .tc-latin { display: block; font-size: 13px; font-style: italic; color: #dfe8cd; margin-top: 3px; }
-		#treeCard .tc-note { display: block; font-size: 12.5px; color: #e6cf8f; margin-top: 7px; }
+		/* （旧的"透明卡片"样式块已删除 —— 它把 #treeCard.open 设成 display:flex，
+		     会让卡片内的两栏和曲线排成一行，曲线被挤到右边缘） */
 
 		/* 实测点（主树/样方内树）画布圆点 */
 		#dots { position: fixed; inset: 0; z-index: 1400; pointer-events: none; }
