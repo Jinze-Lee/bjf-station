@@ -253,8 +253,32 @@
             /* 时间轴（rangeSelector 按钮 + navigator + scrollbar）全部在上方图表，
              * 这里一概不重复 —— 两套控件会让人不确定该操作哪一个。 */
             rangeSelector: { enabled: false },
-            navigator: { enabled: false },
-            scrollbar: { enabled: false },
+            /* 导航条挂在这里 —— 它在环境图底部，正好在环境变量标签上方 */
+            navigator: {
+                handles: { backgroundColor: C.surface || '#2a2a2a', borderColor: '#9a9287' },
+                outlineColor: C.ruleHi || C.rule,
+                maskFill: 'rgba(0, 0, 0, 0.22)',
+                series: { color: 'rgba(200, 200, 200, 0.45)', lineColor: C.soft || '#999' },
+                xAxis: {
+                    gridLineColor: C.rule,
+                    labels: { style: { color: C.faint || '#888' }, opacity: 1 },
+                    dateTimeLabelFormats: {
+                        day: t('chart.navDay'), week: t('chart.navDay'), month: t('chart.navDay')
+                    }
+                }
+            },
+            scrollbar: {
+                buttonsEnabled: true,
+                barBackgroundColor: '#5a5a5a',
+                barBorderColor: '#5a5a5a',
+                barBorderRadius: 3,
+                buttonArrowColor: C.soft || '#ccc',
+                buttonBackgroundColor: C.surface || '#2a2a2a',
+                buttonBorderColor: C.ruleHi || C.rule,
+                rifleColor: C.surface || '#2a2a2a',
+                trackBackgroundColor: C.surface2 || '#1e1e1e',
+                trackBorderColor: C.rule
+            },
 
             xAxis: {
                 lineColor: C.rule,

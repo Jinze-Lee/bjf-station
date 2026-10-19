@@ -391,38 +391,10 @@
              * 整页只有这一条，位置在两张图**中间**（即本图底部）。
              * 下方环境图不再重复挂 —— 两条 navigator 会让人不确定该拖哪个。
              * 拖它两张图一起走，联动见 chart-env.js。 */
-            navigator: {
-                handles: { backgroundColor: C.surface, borderColor: '#9a9287' },
-                outlineColor: C.ruleHi,
-                /* 浅底上遮罩要用深色半透明；沿用深色版的白色遮罩会让
-                 * 「选中区」比「未选中区」更亮，视觉上正好反了 */
-                maskFill: 'rgba(45, 42, 38, 0.09)',
-                series: { color: Highcharts.color(C.fd).setOpacity(0.45).get('rgba'),
-                          lineColor: C.fd },
-                xAxis: {
-                    gridLineColor: C.rule,
-                    labels: { style: { color: C.faint }, opacity: 1 },
-                    /* 不设的话中文月份名会被默认格式拆成 "14 7月" 这种错乱写法 */
-                    dateTimeLabelFormats: {
-                        day:   t('chart.navDay'),
-                        week:  t('chart.navDay'),
-                        month: t('chart.navDay')
-                    }
-                }
-            },
-
-            scrollbar: {
-                buttonsEnabled: true,
-                barBackgroundColor: '#c3bbb0',
-                barBorderColor: '#c3bbb0',
-                barBorderRadius: 3,
-                buttonArrowColor: C.soft,
-                buttonBackgroundColor: C.surface,
-                buttonBorderColor: C.ruleHi,
-                rifleColor: C.surface,
-                trackBackgroundColor: C.surface2,
-                trackBorderColor: C.rule
-            }
+            /* 导航条 + 滚动条已搬到下方环境图底部（金总：放到环境变量标签上方，
+             * 不要夹在两张图中间）。这里不再重复挂。 */
+            navigator: { enabled: false },
+            scrollbar: { enabled: false }
         });
 
         window.SiteChart = {
