@@ -91,7 +91,7 @@
     position: absolute;
     z-index: 3;
     left: 80%;
-    top: 14.5%;
+    top: 13.6%;
     height: 5.9%;
     width: auto;
     transform: translateX(-50%);
@@ -174,14 +174,17 @@
   .plate .tri.wire { border-bottom-color: var(--wire); }
   .plate .nm {
     display: inline-block;
-    padding: 1px 6px;
-    border-radius: 5px;
-    background: rgba(244, 248, 243, .90);
-    font-size: 11.5px;
-    font-weight: 600;
-    color: #243b2e;
-    line-height: 1.32;
-    box-shadow: 0 1px 4px rgba(24, 52, 36, .10);
+    padding: 0 2px;
+    background: none;
+    border: none;
+    box-shadow: none;
+    font-family: "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "SimSun", serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    color: #1c3b28;
+    line-height: 1.3;
+    text-shadow: 0 0 4px #f4f8f3, 0 0 8px #f4f8f3, 0 0 14px #f4f8f3, 0 1px 2px rgba(244,248,243,.9);
   }
   .plate .sub {
     display: block;
@@ -234,13 +237,13 @@
   }
   .pad-bar span {
     margin-left: 3px;
-    font-size: 9.5px;
+    font-size: 11px;
     color: #46604f;
   }
   .pad-bar em {
     margin-left: auto;
     font-style: normal;
-    font-size: 9.5px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: .08em;
     color: #1f6b45;
@@ -259,7 +262,7 @@
   }
   .pad-foot {
     padding: 3px 8px 4px;
-    font-size: 10.5px;
+    font-size: 11px;
     color: #46604f;
     border-top: 1px solid #edf3ee;
     display: flex;
@@ -514,7 +517,7 @@
     var subCls = d.mode === 'wireless' ? 'sub wifi-tag' : (d.mode === 'wired' ? 'sub wire-tag' : 'sub');
     pl.innerHTML =
       '<div class="' + triCls + '"></div>' +
-      '<div class="nm">' + d.name + '<span class="' + subCls + '">' + d.sub + '</span></div>';
+      '<div class="nm">' + d.name + '</div>';
     labelLayer.appendChild(pl);
   });
 
@@ -752,8 +755,8 @@
 
   /* 铁塔放在远景右侧坡上（基座 y=650，高 340），塔身被后景树冠与前景采集箱分层遮挡，
      塔顶露出林冠，上面安装 GT200 网关主站 */
-  var TOWER_POINTS = makeTower(1600, 560, 365, 30, 10, 0.30);
-  var TOWER_TOP = 560 - 365;   /* = 195 */
+  var TOWER_POINTS = makeTower(1600, 552, 372, 30, 10, 0.30);
+  var TOWER_TOP = 552 - 372;   /* = 180 */
   var GT200_POS = [1600, TOWER_TOP - 27];
 
   function drawTower() {
@@ -1002,11 +1005,11 @@
     bctx.bezierCurveTo(600, 720, 1240, 752, 1960, 736);
     bctx.stroke();
 
-    /* 远景点云铁塔：先画，随后被后景树冠遮挡 → 前景树与采集箱再遮一层 */
-    drawTower();
-
     /* 后景树（7 种真实树形贴图，随风轻摆） */
     BACK_TREES.forEach(function (m) { drawSpriteTree(bctx, m, el); });
+
+    /* 远景点云铁塔：立在山脊上，整座塔完整露出 */
+    drawTower();
 
     /* 中远景仪器的接地阴影与点云补全结构 */
     ITEMS.filter(function (d) { return d.layer === 'mid'; }).forEach(function (d) {
@@ -1061,7 +1064,7 @@
   /* ========================================================================
      5. 前景动态层：动态 WiFi 波纹 + 无线信号弧 + 随地形走线的有线数据总线
      ======================================================================== */
-  var GATEWAY_ANT = [1600, 172];   /* 铁塔顶 GT200 网关主站 */
+  var GATEWAY_ANT = [1600, 152];   /* 铁塔顶 GT200 网关主站 */
   var PC_ANT      = [1700, 476];
   var BUS_Y       = 826;
 
@@ -1139,65 +1142,84 @@
     fctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
     fctx.clearRect(0, 0, W, H);
 
-    /* ---- A. 有线数据总线（从不同景深 baseY 汇入底部主干，再沿三脚架升入采集箱） ---- */
-    var busLeft = WIRED_LIST[0].wireX;
-    var busRight = 1542;
+    /* ---- A. 有线电缆：从设备垂落、贴地缠绕，最后沿三脚架升入采集箱 ---- */
+    var CABLE_Y = 806;
+    var busLeft = 640, busRight = 1542;
+
+    function bundleY(x) {
+      return CABLE_Y
+        + Math.sin((x - busLeft) * 0.013) * 3.4
+        + Math.sin((x - busLeft) * 0.033) * 1.5;
+    }
+    function strokeCable(pathFn, width, color) {
+      fctx.beginPath();
+      for (var i = 0; i <= 90; i++) {
+        var u = i / 90, p = pathFn(u);
+        if (i === 0) { fctx.moveTo(p[0], p[1]); } else { fctx.lineTo(p[0], p[1]); }
+      }
+      fctx.strokeStyle = color;
+      fctx.lineWidth = width;
+      fctx.stroke();
+    }
 
     fctx.lineCap = 'round';
     fctx.lineJoin = 'round';
-    fctx.strokeStyle = 'rgba(244, 248, 243, 0.88)';
-    fctx.lineWidth = 4.4;
-    fctx.beginPath();
-    fctx.moveTo(busLeft, BUS_Y);
-    fctx.lineTo(busRight, BUS_Y);
-    fctx.lineTo(busRight, 612);
-    WIRED_LIST.forEach(function (d) {
-      fctx.moveTo(d.wireX, d.wireY0);
-      fctx.lineTo(d.wireX, BUS_Y);
-    });
-    fctx.stroke();
 
-    fctx.strokeStyle = 'rgba(36, 120, 180, 0.52)';
-    fctx.lineWidth = 1.9;
-    fctx.beginPath();
-    fctx.moveTo(busLeft, BUS_Y);
-    fctx.lineTo(busRight, BUS_Y);
-    fctx.lineTo(busRight, 612);
-    WIRED_LIST.forEach(function (d) {
-      fctx.moveTo(d.wireX, d.wireY0);
-      fctx.lineTo(d.wireX, BUS_Y);
-    });
-    fctx.stroke();
+    /* 贴地主干：一条有起伏的电缆 */
+    strokeCable(function (u) {
+      var x = busLeft + (busRight - busLeft) * u;
+      return [x, bundleY(x)];
+    }, 5.4, 'rgba(247, 251, 247, .94)');
+    strokeCable(function (u) {
+      var x = busLeft + (busRight - busLeft) * u;
+      return [x, bundleY(x)];
+    }, 2.3, 'rgba(38, 94, 138, .64)');
 
-    WIRED_LIST.forEach(function (d) {
-      fctx.fillStyle = '#2478b4';
-      fctx.beginPath();
-      fctx.arc(d.wireX, BUS_Y, 2.8, 0, 6.2832);
-      fctx.fill();
+    /* 每个设备的支线：从底部垂落，带弧度和轻微摆动 */
+    WIRED_LIST.forEach(function (d, idx) {
+      var x0 = d.wireX, y0 = d.wireY0;
+      var x1 = d.wireX + (idx % 2 ? 9 : -11);
+      var y1 = bundleY(x1);
+      var drop = function (u) {
+        var x = x0 + (x1 - x0) * u + Math.sin(u * Math.PI * 2.2 + idx) * 2.4;
+        var y = y0 + (y1 - y0) * u + Math.sin(u * Math.PI) * 10;
+        return [x, y];
+      };
+      strokeCable(drop, 4.8, 'rgba(247, 251, 247, .92)');
+      strokeCable(drop, 2.1, 'rgba(38, 94, 138, .56)');
 
-      var u = (el * 0.42 + d.wireX * 0.003) % 1;
-      var py = d.wireY0 + (BUS_Y - d.wireY0) * u;
-      fctx.fillStyle = 'rgba(36, 120, 180,' + (0.35 + 0.65 * Math.sin(u * Math.PI)).toFixed(2) + ')';
-      fctx.beginPath();
-      fctx.arc(d.wireX, py, 2.7, 0, 6.2832);
-      fctx.fill();
-    });
-
-    var totalBus = (busRight - busLeft) + (BUS_Y - 612);
-    for (var k = 0; k < 16; k++) {
-      var dist = ((el * 0.14 + k / 16) % 1) * totalBus;
-      var px, py;
-      if (dist <= busRight - busLeft) {
-        px = busLeft + dist;
-        py = BUS_Y;
-      } else {
-        px = busRight;
-        py = BUS_Y - (dist - (busRight - busLeft));
+      for (var k2 = 0; k2 < 2; k2++) {
+        var u2 = (el * 0.5 + k2 * 0.5 + idx * 0.13) % 1;
+        var p2 = drop(u2);
+        fctx.globalAlpha = 0.3 + 0.6 * Math.sin(u2 * Math.PI);
+        fctx.fillStyle = '#1d6ea8';
+        fctx.beginPath(); fctx.arc(p2[0], p2[1], 2.5, 0, 6.2832); fctx.fill();
       }
-      fctx.fillStyle = '#196ca8';
+    });
+    fctx.globalAlpha = 1;
+
+    /* 地面上自然堆放的三段小线圈 */
+    [[982, 812, 7.5], [1214, 806, 6.0], [1448, 810, 8.0]].forEach(function (c) {
+      fctx.strokeStyle = 'rgba(38, 94, 138, .42)';
+      fctx.lineWidth = 1.8;
       fctx.beginPath();
-      fctx.arc(px, py, 3.0, 0, 6.2832);
-      fctx.fill();
+      fctx.arc(c[0], c[1], c[2], 0.25, Math.PI * 1.88);
+      fctx.stroke();
+    });
+
+    /* 主干沿采集箱三脚架升上去 */
+    var upPath = function (u) {
+      return [busRight + Math.sin(u * Math.PI * 2) * 2.4, CABLE_Y - (CABLE_Y - 612) * u];
+    };
+    strokeCable(upPath, 4.8, 'rgba(247, 251, 247, .92)');
+    strokeCable(upPath, 2.1, 'rgba(38, 94, 138, .56)');
+
+    /* 主干上向右爬行的数据点 */
+    for (var k = 0; k < 14; k++) {
+      var u3 = (el * 0.12 + k / 14) % 1;
+      var xb = busLeft + (busRight - busLeft) * u3;
+      fctx.fillStyle = '#1d6ea8';
+      fctx.beginPath(); fctx.arc(xb, bundleY(xb), 2.6, 0, 6.2832); fctx.fill();
     }
 
     /* ---- B. 无线 WiFi 组 ---- */
@@ -1243,7 +1265,7 @@
 
     /* ---- C. 采集箱 4G 路由器 -> 铁塔顶 GT200 网关主站 -> 右侧电脑 ---- */
     var cabinetTop = [1548, 464];
-    var gtOut = [1630, 180];
+    var gtOut = [1630, 160];
 
     /* 采集箱上行到网关 */
     fctx.save();

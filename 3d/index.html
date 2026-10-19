@@ -1612,12 +1612,14 @@
 			viewer.fitToScreen();
 			/* 渐进加密：首屏先用 40 万点快出图，之后每隔几秒抬高预算。
 			   自动镜头期间压到 40 万（画面一直在动，压低才不卡、也少下数据）。 */
+			/* 原来每 5 秒才抬一档，要 20 秒才到满预算 —— 金总在这段时间里移动视角，
+			   就会看到"点云一直没加载完、停下来才补齐"。改成 1.5 秒一档，约 6 秒到顶。 */
 			var steps = [400000, 900000, 1600000, 2400000, 3000000], si = 0;
 			(function step() {
 				if (++si >= steps.length) return;
 				budgetWant = steps[si];
 				applyBudget();
-				setTimeout(step, 5000);
+				setTimeout(step, 1500);
 			}());
 			if (_min) {
 				var dx = _max[0] - _min[0], dy = _max[1] - _min[1], dz = _max[2] - _min[2];
