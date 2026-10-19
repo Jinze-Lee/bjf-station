@@ -291,6 +291,7 @@
 				<label><input type="checkbox" id="chkBnd" checked> <span id="lblBnd">样地边界</span></label>
 				<label><input type="checkbox" id="chkBig" checked> <span id="lblBig">大样地·白桦林</span></label>
 				<label><input type="checkbox" id="chkSite" checked> <span id="lblSite">生活区·林场</span></label>
+				<label><input type="checkbox" id="chkDevAll" checked> <span id="lblDevAll">设备点（全部）</span></label>
 				<label><input type="checkbox" id="chkMicro" checked> <span id="lblMicro">微气候点</span></label>
 				<label><input type="checkbox" id="chkFac" checked> <span id="lblFac">土壤温室气体·呼吸</span></label>
 				<label><input type="checkbox" id="chkName" checked> <span id="lblName">名称标注</span></label>
@@ -389,6 +390,7 @@
 			      back: '← 返回网站', lang: 'EN',
 			      layers: '图层', lLayers: '图层', lDet: '单木覆盖', lBnd: '样地边界',
 			      lPC: '点云', lBig: '大样地·白桦林', lSite: '生活区·林场', lName: '名称标注',
+			      lDevAll: '设备点（全部）',
 			      lMicro: '微气候点', lFac: '土壤温室气体·呼吸',
 			      lP: '冠层 P',
 			      lG20: '20 m 网格', lG40: '40 m 网格', lDrain: '水系', lNum: '格网编号（VIT/T）',
@@ -408,6 +410,7 @@
 			      back: '← Back to site', lang: '中文',
 			      layers: 'Layers', lLayers: 'Layers', lDet: 'Tree cover', lBnd: 'Plot boundaries',
 			      lPC: 'Point cloud', lBig: '20 ha / birch plots', lSite: 'Station · forestry farm', lName: 'Labels',
+			      lDevAll: 'All device points',
 			      lMicro: 'Microclimate', lFac: 'Soil GHG · respiration',
 			      lP: 'Canopy P',
 			      lG20: '20 m grid', lG40: '40 m grid', lDrain: 'Drainage', lNum: 'Grid IDs (VIT/T)',
@@ -443,6 +446,7 @@
 			lb = document.getElementById('lblSite'); if (lb) lb.textContent = d.lSite;
 			lb = document.getElementById('lblName'); if (lb) lb.textContent = d.lName;
 			lb = document.getElementById('lblP'); if (lb) lb.textContent = d.lP;
+			lb = document.getElementById('lblDevAll'); if (lb) lb.textContent = d.lDevAll || '设备点（全部）';
 			lb = document.getElementById('lblMicro'); if (lb) lb.textContent = d.lMicro;
 			lb = document.getElementById('lblFac'); if (lb) lb.textContent = d.lFac;
 			lb = document.getElementById('lblG20'); if (lb) lb.textContent = d.lG20;
@@ -606,6 +610,42 @@
 		bindChk('chkBig', function (v) { LBL_ON.big = v; BIG_ON = v; });
 		bindChk('chkSite', function (v) { LBL_ON.site = v; SITE_ON = v; });
 		bindChk('chkMicro', function (v) { LBL_ON.micro = v; MICRO_ON = v; });
+		/* 设备点总开关：直接驱动下面 5 个子勾选框（它们各自的处理逻辑照常执行） */
+		(function bindDevAll() {
+			var all = document.getElementById('chkDevAll');
+			if (!all) { return; }
+			var subs = ['chkMicro', 'chkFac', 'chkSap', 'chkDen', 'chkLai'];
+			function sync() {
+				var on = 0, total = 0;
+				subs.forEach(function (id) {
+					var e = document.getElementById(id);
+					if (!e) { return; }
+					total++;
+					if (e.checked) { on++; }
+				});
+				all.checked = (on === total);
+				all.indeterminate = (on > 0 && on < total);
+			}
+			all.addEventListener('change', function () {
+				/* 先把目标值存下来：子框 change 会触发 sync() 改 all.checked，
+				   直接在循环里读会中途变值，后几个子框就开不到（实测只开到第 3 个） */
+				var want = all.checked;
+				subs.forEach(function (id) {
+					var e = document.getElementById(id);
+					if (!e) { return; }
+					if (e.checked !== want) {
+						e.checked = want;
+						e.dispatchEvent(new Event('change', { bubbles: true }));
+					}
+				});
+				sync();
+			});
+			subs.forEach(function (id) {
+				var e = document.getElementById(id);
+				if (e) { e.addEventListener('change', sync); }
+			});
+			sync();
+		}());
 		bindChk('chkFac', function (v) { LBL_ON.fac = v; FAC_ON = v; });		bindChk('chkName', function (v) {
 			NAME_ON = v;
 			var el = document.getElementById('labels');
@@ -833,6 +873,7 @@
 			/* 最后一遍：把设备/主树/样方树的标记画在树冠之上 ——
 			   微气候那些是在 drawBounds 里最后画的所以一直可见，树点也得这样才不会"只有放大才看得到"。 */
 			LATE.forEach(function (m) {
+				if (!m.pole) { drawPin(m.x, m.y, m.col || '#d3a970'); }   /* 设备已有 6m 杆 */
 				if (m.emoji) {
 					dctx.font = '19px "Segoe UI Emoji","Noto Color Emoji",serif';
 					dctx.textAlign = 'center'; dctx.textBaseline = 'middle';
@@ -988,6 +1029,19 @@
 			dctx.fill(); dctx.stroke();
 			dctx.restore();
 		}
+		/* 散点下面那根小柱子：把标记"插"到地面上，不然平铺在坡上会显得悬空 */
+		function drawPin(x, y, color, len) {
+			var L = len || 13;
+			dctx.save();
+			dctx.globalAlpha = 0.9; dctx.strokeStyle = color; dctx.lineWidth = 1.8;
+			dctx.beginPath(); dctx.moveTo(x, y + 1); dctx.lineTo(x, y + L); dctx.stroke();
+			dctx.globalAlpha = 0.55; dctx.fillStyle = color;
+			dctx.beginPath();
+			dctx.ellipse(x, y + L, 2.8, 1.4, 0, 0, 6.2832);
+			dctx.fill();
+			dctx.restore();
+		}
+
 		/* 标签底色用对应散点的颜色；亮色底自动配深字 */
 		function fgOn(bg) {
 			var m = /^#?([0-9a-f]{6})$/i.exec(bg || '');
@@ -1131,14 +1185,14 @@
 			if (FAC_ON && FAC3) {
 				FAC3.forEach(function (p) {
 					var s2 = projXYZ(V, P, p.E, p.N, p.Z);
-					if (s2) { drawShape(s2[0], s2[1], p.shape || 'triangle', p.col || '#bed2ff'); }
+					if (s2) { drawPin(s2[0], s2[1], p.col || '#bed2ff'); drawShape(s2[0], s2[1], p.shape || 'triangle', p.col || '#bed2ff'); }
 				});
 			}
 			/* 微气候观测点：青色菱形（高程按地形取，见 ensureMicroZ） */
 			if (MICRO_ON && MICRO3) {
 				MICRO3.forEach(function (p) {
 					var s = projXYZ(V, P, p.E, p.N, p.Z);
-					if (s) { drawShape(s[0], s[1], 'diamond', p.col || '#00d1d1'); }
+					if (s) { drawPin(s[0], s[1], p.col || '#00d1d1'); drawShape(s[0], s[1], 'diamond', p.col || '#00d1d1'); }
 				});
 			}
 			/* 其他台站（小五台 / 驼梁）的样方框：切过去才画 */
