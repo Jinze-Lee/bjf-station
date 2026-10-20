@@ -90,8 +90,8 @@
   .gt200 {
     position: absolute;
     z-index: 9;
-    left: 80%;
-    top: 13.6%;
+    left: 91.5%;
+    top: 5.2%;
     height: 5.9%;
     width: auto;
     transform: translateX(-50%);
@@ -420,7 +420,7 @@
       <!-- 远景铁塔顶上的 GT200 网关主站（无线汇聚点） -->
       <img class="gt200" src="img/gt200.webp" alt="GT200 网关主站" />
       <!-- 塔顶网关放大子图 -->
-      <div class="plate" style="left: 78.6%; top: 19.2%; z-index: 9;">
+      <div class="plate" style="left: 88.2%; top: 12.4%; z-index: 9;">
         <div class="tri wifi"></div>
         <div class="nm">GT200 网关主站</div>
       </div>
@@ -884,9 +884,9 @@
 
   /* 铁塔放在远景右侧坡上（基座 y=650，高 340），塔身被后景树冠与前景采集箱分层遮挡，
      塔顶露出林冠，上面安装 GT200 网关主站 */
-  var TOWER_POINTS = makeTower(1600, 552, 372, 30, 10, 0.30);
-  var TOWER_TOP = 552 - 372;   /* = 180 */
-  var GT200_POS = [1600, TOWER_TOP - 27];
+  var TOWER_POINTS = makeTower(1830, 352, 246, 24, 8, 0.28);
+  var TOWER_TOP = 352 - 246;   /* = 106 */
+  var GT200_POS = [1830, TOWER_TOP - 27];
 
   function drawTower() {
     for (var i = 0; i < TOWER_POINTS.length; i++) {
@@ -1286,7 +1286,8 @@
     /* 最远一层：更低的远山剪影 */
     ridge([[0,470],[260,442],[520,462],[820,430],[1120,458],[1420,432],[1720,460],[2000,438]], '#e2ece3', 0.55);
     /* 更高的一层：左上方主峰 */
-    ridge([[0,300],[130,214],[250,282],[380,188],[520,300],[700,352],[900,392],[1200,418],[1500,448],[1800,462],[2000,470]], '#dfeade', 0.62);
+    /* 第四层：右上方主峰（铁塔就立在这座山上） */
+    ridge([[0,430],[280,414],[560,392],[860,404],[1120,376],[1380,336],[1600,286],[1760,244],[1900,300],[2000,340]], '#dfeade', 0.62);
     ridge([[0,432],[180,358],[360,406],[560,330],[760,394],[980,316],[1200,386],[1420,330],[1620,392],[1820,338],[2000,398]], '#c9dacb', 0.62);
     ridge([[0,502],[220,434],[460,488],[700,418],[940,480],[1180,426],[1420,488],[1660,438],[2000,496]], '#aecbb6', 0.70);
     ridge([[0,590],[260,528],[520,568],[800,514],[1080,562],[1360,520],[1640,568],[2000,528]], '#93b89e', 0.74);
@@ -1402,9 +1403,9 @@
   var BUS_Y       = 826;
 
   var WIRELESS_ARCS = [
-    { id: 'climate',   from: [152, 388], cx: 640,  cy: 150, to: GATEWAY_ANT },
-    { id: 'phenology', from: [334, 448], cx: 860,  cy: 210, to: GATEWAY_ANT },
-    { id: 'flux',      from: [488, 382], cx: 1040, cy: 205, to: GATEWAY_ANT }
+    { id: 'climate',   from: [152, 388], cx: 760,  cy: 150, to: GATEWAY_ANT },
+    { id: 'phenology', from: [334, 448], cx: 1020, cy: 190, to: GATEWAY_ANT },
+    { id: 'flux',      from: [488, 382], cx: 1300, cy: 170, to: GATEWAY_ANT }
   ];
 
   var WIRED_LIST = ITEMS.filter(function (d) { return d.mode === 'wired'; });
@@ -1617,8 +1618,8 @@
     fctx.globalAlpha = 1;
 
     /* ---- D. GT200 网关主站 -> 异地实时数据接收（无线，虚线） ---- */
-    var gwOut = [1616, 208], pcTop = [1750, 624];
-    var gwC1 = [1700, 300], gwC2 = [1780, 520];
+    var gwOut = [1852, 116], pcTop = [1790, 620];
+    var gwC1 = [1930, 260], gwC2 = [1900, 470];
 
     fctx.save();
     fctx.setLineDash([6, 5]);
@@ -1651,7 +1652,7 @@
     { color: '#28784f', kind: 'line', w: 2.2, dash: '5 3', n: 60, base: 50, amp: 24, ph: 0.00, wob: 1.2, mode: 'peak' },
     { color: '#2478b4', kind: 'line', w: 2.0, dash: '',    n: 60, base: 56, amp: 16, ph: 0.16, wob: 1.0, mode: 'trough' },
     { color: '#c07a2a', kind: 'poly', w: 2.4, dash: '',    n: 7,  base: 46, amp: 40, ph: 0.30, wob: 0,   mode: 'peak' },
-    { color: '#875fa6', kind: 'bars', w: 0,   dash: '',    n: 0,  base: 66, amp: 26, ph: 0.46, wob: 0,   mode: 'peak' }
+    { color: '#7cb8dc', kind: 'bars', w: 0,   dash: '',    n: 0,  base: 66, amp: 26, ph: 0.46, wob: 0,   mode: 'peak' }
   ];
 
   var BAR_COUNT = 14;
@@ -1663,7 +1664,7 @@
         sr.vals = [];
         sr.lastShift = -1;
         for (var v0 = 0; v0 < BAR_COUNT; v0++) {
-          sr.vals.push(0.22 + Math.random() * 0.72);
+          sr.vals.push(Math.random() < 0.18 ? 0.55 + Math.random() * 0.40 : 0.03 + Math.random() * 0.13);
         }
         for (var i = 0; i < BAR_COUNT; i++) {
           var r = document.createElementNS(ns, 'rect');
@@ -1698,7 +1699,11 @@
         if (step !== sr.lastShift) {
           sr.lastShift = step;
           sr.vals.shift();
-          sr.vals.push(Math.max(0.12, Math.min(0.95, 0.28 + Math.random() * 0.66)));
+          /* 模拟降雨：多数是很低的柱子，偶尔来一个高的 */
+          var rain = (Math.random() < 0.18)
+            ? 0.55 + Math.random() * 0.40
+            : 0.03 + Math.random() * 0.13;
+          sr.vals.push(rain);
         }
         var bw = 240 / BAR_COUNT;
         for (var b = 0; b < BAR_COUNT; b++) {
@@ -1719,9 +1724,24 @@
         var uu = k / (pts - 1);
         var y;
         if (sr.kind === 'poly') {
-          /* 大幅折线：顶到底来回折 */
-          var flip = (k % 2 === 0) ? 1 : 0;
-          y = 8 + (1 - flip) * 76 + Math.sin(t * 0.6 + k) * 3;
+          /* 大幅折线：每个顶点高度都不同，峰高谷深各不相同 */
+          if (!sr.pat) {
+            sr.pat = [];
+            for (var q0 = 0; q0 < 7; q0++) {
+              sr.pat.push(q0 % 2 === 0
+                ? 4 + Math.random() * 26        /* 峰：4~30（越高越靠上） */
+                : 56 + Math.random() * 32);     /* 谷：56~88（越深越靠下） */
+            }
+          }
+          if (Math.floor(t * 0.35) !== sr.patTick) {
+            sr.patTick = Math.floor(t * 0.35);
+            for (var q1 = 0; q1 < 7; q1++) {
+              sr.pat[q1] = q1 % 2 === 0
+                ? 4 + Math.random() * 26
+                : 56 + Math.random() * 32;
+            }
+          }
+          y = sr.pat[k];
         } else {
           var tau = (uu * 1.15 + sr.ph + t * 0.03) % 1;
           var wave = Math.sin(tau * Math.PI * 2);
