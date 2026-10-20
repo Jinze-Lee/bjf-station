@@ -2957,3 +2957,7 @@ html.embed footer { display: none !important; }
 .video-widget:hover .vw-kill { opacity: 1; }
 .video-widget .vw-kill:hover { background: #d9534f; color: #fff; border-color: #c9302c; }
 /* 内嵌模式：内容已压缩到一屏内，不需要滚动 */
+/* 内嵌模式：清掉两张图的最小高度（否则压下来也留一大块空白） */
+html.embed #chartDIASF,
+html.embed #chartEnv,
+html.embed #navStrip { min-height: 0 !important; height: auto !important; }
