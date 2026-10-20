@@ -2895,3 +2895,32 @@ body.vm-lock { overflow: hidden; }
     justify-content: flex-end;
     margin-top: 8px;
 }
+
+/* ── 树木选择器：自绘下拉（为了让拉丁名单独斜体；<option> 做不到） ── */
+.tree-dd { position: relative; display: inline-block; min-width: 320px; max-width: 100%; }
+.tree-dd-btn {
+    width: 100%; text-align: left; font: inherit; font-size: 15px; padding: 8px 34px 8px 12px;
+    border: 1px solid var(--rule, #cfc7b8); border-radius: 4px; background: var(--surface, #fff);
+    color: inherit; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tree-dd-btn::after {
+    content: '\25BE'; position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    font-size: 11px; opacity: .6; pointer-events: none;
+}
+.tree-dd-list {
+    display: none; position: absolute; left: 0; top: calc(100% + 4px); z-index: 60;
+    min-width: 100%; width: max-content; max-width: min(760px, 90vw); max-height: 420px; overflow-y: auto;
+    background: var(--surface, #fff); border: 1px solid var(--rule, #cfc7b8); border-radius: 4px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .18); padding: 4px 0;
+}
+.tree-dd-list.open { display: block; }
+.tree-dd-group {
+    padding: 6px 12px 4px; font-size: 13px; font-weight: 700; color: #6b6257;
+    background: rgba(0, 0, 0, .035); position: sticky; top: 0;
+}
+.tree-dd-item {
+    padding: 7px 14px; font-size: 14.5px; cursor: pointer; white-space: nowrap;
+}
+.tree-dd-item:hover { background: rgba(108, 161, 74, .14); }
+.tree-dd-item.on { background: rgba(0, 0, 0, .10); }
+.tree-dd-item i { font-style: italic; font-family: Georgia, "Palatino Linotype", "Times New Roman", serif; }
