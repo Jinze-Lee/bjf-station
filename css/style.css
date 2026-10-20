@@ -2884,3 +2884,14 @@ body.vm-lock { overflow: hidden; }
     .video-modal { padding: 56px 14px 24px; }
     .vm-close { top: -40px; width: 36px; height: 36px; font-size: 22px; }
 }
+
+/* ── 环境变量操作按钮（全选/清空/实时演示/速度）单独占一行，放在标签下面 ──
+   原来和标签挤在同一行右侧，金总要求分开。 */
+.env-bar {
+    flex-wrap: wrap;
+}
+.env-actions {
+    flex: 1 0 100%;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
