@@ -2955,3 +2955,5 @@ html.embed footer { display: none !important; }
 }
 .video-widget:hover .vw-kill { opacity: 1; }
 .video-widget .vw-kill:hover { background: #d9534f; color: #fff; border-color: #c9302c; }
+/* 内嵌模式：整页固定、不滚动 */
+html.embed, html.embed body { overflow: hidden !important; height: auto !important; }
