@@ -678,10 +678,17 @@
          * 金总要求：标签在最下面、导航条再在它下面。Highcharts 的 navigator
          * 只能挂在某张图里，所以单独建一张"只有导航条"的迷你图来承载。 */
         var navChart = null;
-        function buildNavStrip() {
+        function buildNavStrip(force) {
             var host = document.getElementById('navStrip');
             var CP = palette();
-            if (!host || !window.Highcharts || navChart) { return; }
+            if (!host || !window.Highcharts) { return; }
+            if (navChart && !force) { return; }
+            /* 强制重建：解锁完整数据后跨度变了，旧导航条手里是 7 天数据，窗口对不上会失灵 */
+            if (navChart) {
+                try { navChart.destroy(); } catch (e) {}
+                navChart = null;
+                host.innerHTML = '';
+            }
             var main = (window.SiteChart && SiteChart.chart) || null;
             var data = (main && main.series && main.series[0] && main.series[0].options.data) || [];
             navChart = Highcharts.stockChart(host, {
@@ -748,6 +755,7 @@
                     finally { syncing = false; }
                 }
                 rebuild();
+                buildNavStrip(true);   /* 数据换了，导航条跟着重建，否则拖动失灵 */
             }
         };
     }
