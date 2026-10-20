@@ -236,6 +236,19 @@
         btn.className = 'video-fab';
         btn.innerHTML = '<span class="vw-play" aria-hidden="true"></span>';
 
+        /* 删除按钮：把它彻底关掉（记在本地，刷新也不再出现） */
+        var kill = document.createElement('button');
+        kill.type = 'button';
+        kill.className = 'vw-kill';
+        kill.innerHTML = '\u2715';
+        kill.title = '不再显示';
+        kill.addEventListener('click', function (e) {
+            e.stopPropagation();
+            root.style.display = 'none';
+            try { localStorage.setItem('bfers-video-widget-hidden', '1'); } catch (e2) {}
+        });
+        root.appendChild(kill);
+
         root.appendChild(bubbleEl);
         root.appendChild(btn);
         document.body.appendChild(root);
@@ -261,6 +274,8 @@
     }
 
     function init() {
+        /* 用户点过"删除"就不再出现 */
+        try { if (localStorage.getItem('bfers-video-widget-hidden') === '1') { return; } } catch (e) {}
         reduceMotion = !!(window.matchMedia &&
                           window.matchMedia('(prefers-reduced-motion: reduce)').matches);
         build();

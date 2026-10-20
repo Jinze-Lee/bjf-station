@@ -2945,3 +2945,14 @@ html.embed section { margin-top: 0 !important; }
 html.embed section:not(#treedata),
 html.embed #treedata ~ *,
 html.embed footer { display: none !important; }
+
+/* 悬浮视频按钮上的"删除"小叉（悬停时才显示，避免挡视线） */
+.video-widget .vw-kill {
+    position: absolute; right: -7px; top: -7px; width: 20px; height: 20px; padding: 0;
+    border-radius: 50%; border: 1px solid rgba(0, 0, 0, .22); background: #fff; color: #777;
+    font-size: 12px; line-height: 18px; text-align: center; cursor: pointer; z-index: 5;
+    display: block; opacity: .55; box-shadow: 0 1px 4px rgba(0, 0, 0, .25);
+    transition: opacity .15s;
+}
+.video-widget:hover .vw-kill { opacity: 1; }
+.video-widget .vw-kill:hover { background: #d9534f; color: #fff; border-color: #c9302c; }
