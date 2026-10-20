@@ -2924,3 +2924,24 @@ body.vm-lock { overflow: hidden; }
 .tree-dd-item:hover { background: rgba(108, 161, 74, .14); }
 .tree-dd-item.on { background: rgba(0, 0, 0, .10); }
 .tree-dd-item i { font-style: italic; font-family: Georgia, "Palatino Linotype", "Times New Roman", serif; }
+
+/* ── 内嵌模式（三维页弹出的树木数据窗口用 ?embed=1）：只留图表区 ── */
+html.embed #header-container,
+html.embed .primary-menu,
+html.embed #treedata > h3,
+html.embed #treedata > p,
+html.embed #unlockBar,
+html.embed .chart-note,
+html.embed #envScaleNote,
+html.embed #treeInfo,
+html.embed #treeTrend,
+html.embed #contact {
+    display: none !important;
+}
+html.embed body, html.embed main, html.embed { padding-top: 0 !important; margin-top: 0 !important; }
+html.embed #treedata { padding-top: 14px !important; }
+html.embed section { margin-top: 0 !important; }
+/* 内嵌模式：除「树木数据」外的所有区块一律不显示，避免出现滚动条 */
+html.embed section:not(#treedata),
+html.embed #treedata ~ *,
+html.embed footer { display: none !important; }

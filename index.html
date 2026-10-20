@@ -33,6 +33,8 @@
 	</script>
 </head>
 <body data-lang="en">
+<script>/* 被三维页以 ?embed=1 内嵌时，只显示图表区（隐藏页头/导航/说明文字） */
+if (/[?&]embed=1/.test(location.search)) { document.documentElement.classList.add('embed'); }</script>
 
 <!-- =========================================================================
      文案统一走 js/i18n.js：
