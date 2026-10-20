@@ -49,7 +49,7 @@
     function heights() {
         /* 内嵌模式（三维页弹出的固定框）：两张图压矮，整块正好塞满、不出现滚动条 */
         if (document.documentElement.classList.contains('embed')) {
-            return { main: 300, env: 240 };
+            return { main: 260, env: 200 };
         }
         if (isTiny())   { return { main: 290, env: 230 }; }
         if (isNarrow()) { return { main: 330, env: 260 }; }

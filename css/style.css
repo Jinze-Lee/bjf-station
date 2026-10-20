@@ -2930,6 +2930,7 @@ html.embed #header-container,
 html.embed .primary-menu,
 html.embed #treedata > h3,
 html.embed #treedata > p,
+html.embed .env-block,
 html.embed .chart-note,
 html.embed #envScaleNote,
 html.embed #treeInfo,
@@ -2955,5 +2956,4 @@ html.embed footer { display: none !important; }
 }
 .video-widget:hover .vw-kill { opacity: 1; }
 .video-widget .vw-kill:hover { background: #d9534f; color: #fff; border-color: #c9302c; }
-/* 内嵌模式：整页固定、不滚动 */
-html.embed, html.embed body { overflow: hidden !important; height: auto !important; }
+/* 内嵌模式：内容已压缩到一屏内，不需要滚动 */
