@@ -253,32 +253,11 @@
             /* 时间轴（rangeSelector 按钮 + navigator + scrollbar）全部在上方图表，
              * 这里一概不重复 —— 两套控件会让人不确定该操作哪一个。 */
             rangeSelector: { enabled: false },
-            /* 导航条挂在这里 —— 它在环境图底部，正好在环境变量标签上方 */
-            navigator: {
-                handles: { backgroundColor: C.surface || '#2a2a2a', borderColor: '#9a9287' },
-                outlineColor: C.ruleHi || C.rule,
-                maskFill: 'rgba(0, 0, 0, 0.22)',
-                series: { color: 'rgba(200, 200, 200, 0.45)', lineColor: C.soft || '#999' },
-                xAxis: {
-                    gridLineColor: C.rule,
-                    labels: { style: { color: C.faint || '#888' }, opacity: 1 },
-                    dateTimeLabelFormats: {
-                        day: t('chart.navDay'), week: t('chart.navDay'), month: t('chart.navDay')
-                    }
-                }
-            },
-            scrollbar: {
-                buttonsEnabled: true,
-                barBackgroundColor: '#5a5a5a',
-                barBorderColor: '#5a5a5a',
-                barBorderRadius: 3,
-                buttonArrowColor: C.soft || '#ccc',
-                buttonBackgroundColor: C.surface || '#2a2a2a',
-                buttonBorderColor: C.ruleHi || C.rule,
-                rifleColor: C.surface || '#2a2a2a',
-                trackBackgroundColor: C.surface2 || '#1e1e1e',
-                trackBorderColor: C.rule
-            },
+            /* 导航条已移到页面最下方独立的迷你图（#navStrip）里 —— 金总要求
+               标签在最下面、导航条再在它下面。Highcharts 的导航条必须挂在一张图里，
+               所以单独建了一张只有导航条的图，见文件末尾。 */
+            navigator: { enabled: false },
+            scrollbar: { enabled: false },
 
             xAxis: {
                 lineColor: C.rule,
@@ -694,6 +673,52 @@
          * 这样顺序是确定的 —— 主图先就位，这里的 linkMain() 才挂得上。
          * 边距必须两张图同时变，只变一张就错位了。 */
         document.addEventListener('charts:breakpoint', rebuild);
+
+        /* ---- 页面最下方的独立导航条 ----------------------------------------
+         * 金总要求：标签在最下面、导航条再在它下面。Highcharts 的 navigator
+         * 只能挂在某张图里，所以单独建一张"只有导航条"的迷你图来承载。 */
+        var navChart = null;
+        function buildNavStrip() {
+            var host = document.getElementById('navStrip');
+            var CP = palette();
+            if (!host || !window.Highcharts || navChart) { return; }
+            var main = (window.SiteChart && SiteChart.chart) || null;
+            var data = (main && main.series && main.series[0] && main.series[0].options.data) || [];
+            navChart = Highcharts.stockChart(host, {
+                chart: {
+                    height: 84, backgroundColor: CP.bg, spacingTop: 2, spacingBottom: 0,
+                    marginLeft: plotMargin(), marginRight: plotMargin(),
+                    style: { fontFamily: 'inherit' }
+                },
+                credits: { enabled: false },
+                rangeSelector: { enabled: false },
+                navigator: {
+                    enabled: true, height: 28,
+                    maskFill: 'rgba(0, 0, 0, .22)',
+                    series: { color: 'rgba(63, 143, 214, .5)', lineColor: '#3f8fd6' },
+                    xAxis: { gridLineColor: CP.rule, labels: { style: { color: CP.faint } } }
+                },
+                scrollbar: { enabled: true, height: 12 },
+                xAxis: {
+                    lineColor: CP.rule, tickColor: CP.rule, ordinal: false,
+                    labels: { enabled: false },
+                    events: {
+                        afterSetExtremes: function (e) {
+                            if (syncing) { return; }
+                            syncing = true;
+                            try {
+                                if (main) { main.xAxis[0].setExtremes(e.min, e.max, true, false); }
+                                if (chart) { chart.xAxis[0].setExtremes(e.min, e.max, true, false); }
+                            } finally { syncing = false; }
+                        }
+                    }
+                },
+                yAxis: { visible: false },
+                series: [{ data: data, color: '#3f8fd6', lineWidth: 1, name: '' }]
+            });
+        }
+
+        buildNavStrip();
 
         window.EnvChart = {
             chart: function () { return chart; },

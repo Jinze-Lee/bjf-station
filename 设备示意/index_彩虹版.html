@@ -1398,7 +1398,7 @@
   /* ========================================================================
      5. 前景动态层：动态 WiFi 波纹 + 无线信号弧 + 随地形走线的有线数据总线
      ======================================================================== */
-  var GATEWAY_ANT = [1600, 152];   /* 铁塔顶 GT200 网关主站 */
+  var GATEWAY_ANT = [1830, 72];   /* 铁塔顶 GT200 网关主站 */
   var PC_ANT      = [1700, 476];
   var BUS_Y       = 826;
 
@@ -1664,8 +1664,17 @@
         sr.vals = [];
         sr.lastShift = -1;
         for (var v0 = 0; v0 < BAR_COUNT; v0++) {
-          sr.vals.push(Math.random() < 0.18 ? 0.55 + Math.random() * 0.40 : 0.03 + Math.random() * 0.13);
+          var r0 = Math.random();
+          sr.vals.push(r0 > 0.955 ? 0.62 + Math.random() * 0.33
+                     : (r0 > 0.88 ? 0.10 + Math.random() * 0.22 : 0));
         }
+        /* 保证画面里至少有 1 根高柱、2 根矮柱 */
+        sr.vals[2] = 0.72 + Math.random() * 0.20;
+        sr.vals[9] = 0;
+        sr.vals[12] = 0;
+        sr.vals = sr.vals.slice(0, BAR_COUNT);
+        for (var fx = sr.vals.length; fx < BAR_COUNT; fx++) { sr.vals.push(0); }
+        sr.vals = sr.vals.map(function (v) { return v; });
         for (var i = 0; i < BAR_COUNT; i++) {
           var r = document.createElementNS(ns, 'rect');
           r.setAttribute('fill', sr.color);
@@ -1700,9 +1709,12 @@
           sr.lastShift = step;
           sr.vals.shift();
           /* 模拟降雨：多数是很低的柱子，偶尔来一个高的 */
-          var rain = (Math.random() < 0.18)
-            ? 0.55 + Math.random() * 0.40
-            : 0.03 + Math.random() * 0.13;
+          var roll = Math.random();
+          var rain = 0;
+          if (roll > 0.955) { rain = 0.62 + Math.random() * 0.33; }     /* 极少数很高 */
+          else if (roll > 0.88) { rain = 0.10 + Math.random() * 0.22; } /* 少量矮柱 */
+          /* 其余全部为 0：空柱 */
+          /* 其余 0 = 没有柱子 */
           sr.vals.push(rain);
         }
         var bw = 240 / BAR_COUNT;
@@ -1729,16 +1741,16 @@
             sr.pat = [];
             for (var q0 = 0; q0 < 7; q0++) {
               sr.pat.push(q0 % 2 === 0
-                ? 4 + Math.random() * 26        /* 峰：4~30（越高越靠上） */
-                : 56 + Math.random() * 32);     /* 谷：56~88（越深越靠下） */
+                ? 20 + Math.random() * 18       /* 峰：20~38 */
+                : 48 + Math.random() * 20);     /* 谷：48~68 */
             }
           }
           if (Math.floor(t * 0.35) !== sr.patTick) {
             sr.patTick = Math.floor(t * 0.35);
             for (var q1 = 0; q1 < 7; q1++) {
               sr.pat[q1] = q1 % 2 === 0
-                ? 4 + Math.random() * 26
-                : 56 + Math.random() * 32;
+                ? 20 + Math.random() * 18
+                : 48 + Math.random() * 20;
             }
           }
           y = sr.pat[k];

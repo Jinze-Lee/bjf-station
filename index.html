@@ -12,7 +12,7 @@
 	     详见 css/fonts.css 顶部说明。 -->
 	<link rel="stylesheet" href="css/fonts.css" />
 	<link rel="stylesheet" href="css/leaflet.css" />
-	<link rel="stylesheet" href="css/style.css?v=20261020c" />
+	<link rel="stylesheet" href="css/style.css?v=20261020d" />
 
 	<!-- 主题必须在首屏绘制**之前**定下来。
 	     放到 js/theme.js 里就晚了 —— 那时页面已经按默认的深色画了一帧，
@@ -452,7 +452,9 @@
 			<div class="chart-stack">
 				<div id="chartDIASF"></div>
 
-				<!-- 标签栏放在两张图之间：这样导航条（长在环境图底部）就落在标签**下面** -->
+				<div id="chartEnv"></div>
+				<p id="envEmpty" class="env-empty" data-i18n="env.empty" style="display:none"></p>
+				<!-- 环境变量标签 + 实时演示：放在两张图下面（金总要求） -->
 				<div class="env-bar">
 					<div id="envTags" class="env-tags"></div>
 					<div class="env-actions">
@@ -464,8 +466,8 @@
 					</div>
 				</div>
 
-				<div id="chartEnv"></div>
-				<p id="envEmpty" class="env-empty" data-i18n="env.empty" style="display:none"></p>
+				<!-- 导航条：单独一个迷你图，放在标签下面（Highcharts 的导航条只能挂在图里） -->
+				<div id="navStrip"></div>
 			</div>
 
 			<!-- 完整数据集解锁条。内容由 js/unlock.js 生成 ——
