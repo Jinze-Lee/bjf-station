@@ -1824,9 +1824,27 @@
 			var ti = document.getElementById('tpTitle');
 			if (!box || !fr) { return; }
 			if (ti) { ti.innerHTML = '<b>' + id + '</b>　' + (LANG === 'zh' ? '液流 / 径向 · 环境' : 'Sap flow / growth · environment'); }
-			var url = '../index.html?tree=' + encodeURIComponent(id) + '&embed=1&v=20261020i#treedata';
-			if (fr.getAttribute('src') !== url) { fr.setAttribute('src', url); }
-			box.classList.add('open');
+			/* 已经打开过就直接在页面里换树，**不重新加载** ——
+			   否则每换一个点都要重新输一遍管理员密码。 */
+			if (!fr.getAttribute('src')) {
+				fr.setAttribute('src', '../index.html?tree=' + encodeURIComponent(id) +
+					'&embed=1&v=20261020w#treedata');
+			} else {
+				var swap = function () {
+					try {
+						var w = fr.contentWindow;
+						if (w && w.SiteChart && typeof w.SiteChart.setTree === 'function') {
+							w.SiteChart.setTree(id);
+							return true;
+						}
+					} catch (e) {}
+					return false;
+				};
+				if (!swap()) {
+					var once = function () { fr.removeEventListener('load', once); swap(); };
+					fr.addEventListener('load', once);
+				}
+			}
 		}
 		(function bindTreePop() {
 			var x = document.getElementById('tpClose');
