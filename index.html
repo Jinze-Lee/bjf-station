@@ -12,7 +12,7 @@
 	     详见 css/fonts.css 顶部说明。 -->
 	<link rel="stylesheet" href="css/fonts.css" />
 	<link rel="stylesheet" href="css/leaflet.css" />
-	<link rel="stylesheet" href="css/style.css?v=20261020b" />
+	<link rel="stylesheet" href="css/style.css?v=20261020c" />
 
 	<!-- 主题必须在首屏绘制**之前**定下来。
 	     放到 js/theme.js 里就晚了 —— 那时页面已经按默认的深色画了一帧，
@@ -451,12 +451,8 @@
 			     两张图的绘图区左右边距写死成同一个值，同一时刻才在同一条竖线上。 -->
 			<div class="chart-stack">
 				<div id="chartDIASF"></div>
-				<div id="chartEnv"></div>
-				<p id="envEmpty" class="env-empty" data-i18n="env.empty" style="display:none"></p>
 
-				<!-- 标签栏放在**时间轴下面**。
-				     原先夹在两张图中间，拖 navigator 手柄时 Highcharts 会在手柄
-				     上方弹出日期气泡，正好被标签挡住，看不见自己拖到了哪一天。 -->
+				<!-- 标签栏放在两张图之间：这样导航条（长在环境图底部）就落在标签**下面** -->
 				<div class="env-bar">
 					<div id="envTags" class="env-tags"></div>
 					<div class="env-actions">
@@ -467,6 +463,9 @@
 						<button type="button" id="demoSpeed" class="env-btn"></button>
 					</div>
 				</div>
+
+				<div id="chartEnv"></div>
+				<p id="envEmpty" class="env-empty" data-i18n="env.empty" style="display:none"></p>
 			</div>
 
 			<!-- 完整数据集解锁条。内容由 js/unlock.js 生成 ——
