@@ -592,6 +592,11 @@
 			</div>
 		</div>
 	<canvas id="dots"></canvas>
+	<!-- 点液流/径向点 → 内嵌主站的树木数据（曲线） -->
+	<div id="treePop">
+		<div class="tp-head"><span id="tpTitle"></span><button type="button" class="tp-x" id="tpClose">✕</button></div>
+		<iframe id="tpFrame" title="tree data"></iframe>
+	</div>
 	<div id="legend3d">
 			<div class="lg-head">
 				<span id="legendTitle">图例</span>
@@ -1782,6 +1787,25 @@
 				location.href = '../index.html?tree=' + encodeURIComponent(id) + '#treedata';
 			}
 		}
+		/* 点液流/径向点 → 在三维页里弹出该树的数据（内嵌主站 #treedata） */
+		function showTreePopup(id) {
+			var box = document.getElementById('treePop');
+			var fr = document.getElementById('tpFrame');
+			var ti = document.getElementById('tpTitle');
+			if (!box || !fr) { return; }
+			if (ti) { ti.innerHTML = '<b>' + id + '</b>　' + (LANG === 'zh' ? '液流 / 径向 · 环境' : 'Sap flow / growth · environment'); }
+			var url = '../index.html?tree=' + encodeURIComponent(id) + '&embed=1&v=20261020i#treedata';
+			if (fr.getAttribute('src') !== url) { fr.setAttribute('src', url); }
+			box.classList.add('open');
+		}
+		(function bindTreePop() {
+			var x = document.getElementById('tpClose');
+			if (x) { x.addEventListener('click', function () {
+				var b = document.getElementById('treePop');
+				if (b) { b.classList.remove('open'); }
+			}); }
+		}());
+
 		canvasEl2.addEventListener('click', function (ev) {
 			var best = null, bd = 144;
 			for (var i = 0; i < DOTSCREEN.length; i++) {
@@ -1791,7 +1815,7 @@
 			}
 			if (best && best.kind === 'det') { showTreeCard(best.sp, ev, best); return; }
 			hideTreeCard();
-			if (best && best.tree) { jumpToTree(best.tree); }
+			if (best && best.tree) { showTreePopup(best.tree); }
 		});
 
 		/* 点云按空间切成 9 块（整块八叉树 274 MB 超 GitHub 单文件 100 MB 上限），
@@ -3184,6 +3208,21 @@
 		#treeCard .tc-imgwrap { background: #ffffff !important;
 			box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .1) !important; }
 		#treeCard .tc-spark { display: block !important; }
+
+		/* 点液流/径向点弹出的「该树数据」窗口：内嵌主站的树木数据区 */
+		#treePop { position: fixed; right: 18px; top: 58px; z-index: 2600; display: none;
+			width: min(780px, calc(100vw - 36px)); height: min(660px, calc(100vh - 96px));
+			background: #14170f; border: 1px solid rgba(160, 180, 120, .45); border-radius: 10px;
+			box-shadow: 0 18px 56px rgba(0, 0, 0, .7); overflow: hidden; }
+		#treePop.open { display: flex; flex-direction: column; }
+		#treePop .tp-head { flex: none; display: flex; align-items: center; justify-content: space-between;
+			padding: 8px 12px; background: rgba(28, 33, 22, .96); color: #e7e3d8; font-size: 13px;
+			border-bottom: 1px solid rgba(160, 180, 120, .25); }
+		#treePop .tp-head b { font-weight: 700; }
+		#treePop .tp-x { background: none; border: none; color: #9aa08c; font-size: 15px; cursor: pointer; }
+		#treePop .tp-x:hover { color: #fff; }
+		#treePop iframe { flex: 1 1 auto; width: 100%; border: 0; background: #fff; }
+		body.ui-off #treePop { display: none !important; }
 </style>
 </body>
 </html>
