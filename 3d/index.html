@@ -490,6 +490,7 @@
 	<script src="./libs/plasio/js/laslaz.js"></script>
 	<script src="../js/leaflet.js"></script>
 	<script src="../js/devices.js"></script>
+<script src="../js/trees.js"></script>	<!-- 树木物种名（悬浮提示 + 单木卡片共用） -->
 <script src="../js/stations.js"></script>	<!-- 小五台 / 驼梁样地（与二维同一份） -->
 
 	<div id="topbar">
@@ -1100,7 +1101,8 @@
 					}
 					LATE.push({ x0: sx, y0: sy, x: mx, y: my, shape: dsh, col: dc, pole: true });
 					sx = mx; sy = my;
-					DOTSCREEN.push({ x: sx, y: sy, name: p.name, kind: p.kind, tree: TREE_IDS[p.name] ? p.name : null });
+					DOTSCREEN.push({ x: sx, y: sy, name: p.name, kind: p.kind, tree: TREE_IDS[p.name] ? p.name : null,
+						E: p.E, N: p.N, Z: p.Z });
 					/* 设备标签不做距离门槛：远看也要有（扎堆时下面会合并成一个） */
 					DEV.push({ sx: sx, sy: sy, d2: d2, name: p.name, kind: p.kind, col: lcol });
 					continue;
@@ -1573,7 +1575,9 @@
 					var dn = best.kind === 'dev-sap' ? (LANG === 'zh' ? '液流' : 'Sap flow')
 					       : (best.kind === 'dev-den' ? (LANG === 'zh' ? '径向生长仪' : 'Dendrometer')
 					       : 'LAI');
+					var spp = best.tree ? treeById3d(best.tree) : null;
 					tip.innerHTML = '<b>' + best.name + '</b><br>' + dn +
+						(spp && spp.speciesZh ? '<br>' + spp.speciesZh + ' <i style="opacity:.8">' + (spp.species || '') + '</i>' : '') +
 						(best.tree ? '<br><span style="opacity:.8">' + (LANG === 'zh' ? '点击查看该树数据' : 'Click for tree data') + '</span>' : '');
 				} else {
 					tip.innerHTML = '<b>' + best.name + '</b><br>' +
@@ -1788,6 +1792,28 @@
 			}
 		}
 		/* 点液流/径向点 → 在三维页里弹出该树的数据（内嵌主站 #treedata） */
+		/* 树木数据是数组（TREES = [{id, speciesZh, species, ...}]），这里建个 id 索引 */
+		var TREE_BY_ID = null;
+		function treeById3d(id) {
+			if (!TREE_BY_ID) {
+				TREE_BY_ID = {};
+				(typeof TREES !== 'undefined' ? TREES : []).forEach(function (t) { if (t && t.id) { TREE_BY_ID[t.id] = t; } });
+			}
+			return TREE_BY_ID[id] || null;
+		}
+
+		/* 找离 (E,N) 最近的树冠序号，给卡片里的冠层 P 小曲线用 */
+		function nearestCrownIdx(E, N) {
+			var best = null, bd = 1e18;
+			for (var i = 0; i < DOTPTS.length; i++) {
+				var q = DOTPTS[i];
+				if (q.kind !== 'det') { continue; }
+				var dx = q.E - E, dy = q.N - N, d2 = dx * dx + dy * dy;
+				if (d2 < bd) { bd = d2; best = q.pi; }
+			}
+			return (bd < 30 * 30) ? best : null;      /* 30 m 内才算同一棵树 */
+		}
+
 		function showTreePopup(id) {
 			var box = document.getElementById('treePop');
 			var fr = document.getElementById('tpFrame');
@@ -1815,7 +1841,21 @@
 			}
 			if (best && best.kind === 'det') { showTreeCard(best.sp, ev, best); return; }
 			hideTreeCard();
-			if (best && best.tree) { showTreePopup(best.tree); }
+			if (best && best.tree) {
+				showTreePopup(best.tree);
+				/* 左侧同时显示物种卡片（与单木识别一致）——物种从树数据里匹配 */
+				var tt = treeById3d(best.tree);
+				if (tt && tt.speciesZh) {
+					var sid = null;
+					Object.keys(SPECIES || {}).forEach(function (k) {
+						if (SPECIES[k] && SPECIES[k].zh === tt.speciesZh) { sid = k; }
+					});
+					if (sid != null) {
+						showTreeCard(sid, ev, { E: best.E, N: best.N, Z: best.Z,
+							pi: nearestCrownIdx(best.E, best.N) });
+					}
+				}
+			}
 		});
 
 		/* 点云按空间切成 9 块（整块八叉树 274 MB 超 GitHub 单文件 100 MB 上限），
