@@ -504,6 +504,7 @@
 				<div class="lp-cap"><span id="lblLayers">图层</span><button type="button" class="lpzoom" id="lpZoom" title="图层面板大小">100%</button></div>
 				<label><input type="checkbox" id="chkPC" checked> <span id="lblPC">点云</span></label>
 				<label><input type="checkbox" id="chkDet" checked> <span id="lblDet">单木覆盖</span></label>
+				<label><input type="checkbox" id="chkMain" checked> <span id="lblMain">实测主树</span></label>
 				<label><input type="checkbox" id="chkBnd" checked> <span id="lblBnd">样地边界</span></label>
 				<label><input type="checkbox" id="chkBig" checked> <span id="lblBig">大样地·白桦林</span></label>
 				<label><input type="checkbox" id="chkSite" checked> <span id="lblSite">生活区·林场</span></label>
@@ -616,7 +617,7 @@
 			zh: { title: '北京森林生态系统定位研究站 · 三维林相',
 			      sub: '无人机 LiDAR 彩色点云 · 高德卫星底图 · 20 棵监测树 / 3 台数采',
 			      back: '← 返回网站', lang: 'EN',
-			      layers: '图层', lLayers: '图层', lDet: '单木覆盖', lBnd: '样地边界',
+			      layers: '图层', lLayers: '图层', lDet: '单木覆盖', lMain: '实测主树', lBnd: '样地边界',
 			      lPC: '点云', lBig: '大样地·白桦林', lSite: '生活区·林场', lName: '名称标注',
 			      lDevAll: '设备点（全部）',
 			      lMicro: '微气候点', lFac: '土壤温室气体·呼吸',
@@ -636,7 +637,7 @@
 			en: { title: 'Beijing Forest Ecosystem Research Station · 3D Canopy',
 			      sub: 'UAV LiDAR colour point cloud · AMap satellite · 20 monitored trees / 3 loggers',
 			      back: '← Back to site', lang: '中文',
-			      layers: 'Layers', lLayers: 'Layers', lDet: 'Tree cover', lBnd: 'Plot boundaries',
+			      layers: 'Layers', lLayers: 'Layers', lDet: 'Tree cover', lMain: 'Main trees', lBnd: 'Plot boundaries',
 			      lPC: 'Point cloud', lBig: '20 ha / birch plots', lSite: 'Station · forestry farm', lName: 'Labels',
 			      lDevAll: 'All device points',
 			      lMicro: 'Microclimate', lFac: 'Soil GHG · respiration',
@@ -675,6 +676,7 @@
 			lb = document.getElementById('lblName'); if (lb) lb.textContent = d.lName;
 			lb = document.getElementById('lblP'); if (lb) lb.textContent = d.lP;
 			lb = document.getElementById('lblDevAll'); if (lb) lb.textContent = d.lDevAll || '设备点（全部）';
+			lb = document.getElementById('lblMain'); if (lb) lb.textContent = d.lMain || '实测主树';
 			lb = document.getElementById('lblMicro'); if (lb) lb.textContent = d.lMicro;
 			lb = document.getElementById('lblFac'); if (lb) lb.textContent = d.lFac;
 			lb = document.getElementById('lblG20'); if (lb) lb.textContent = d.lG20;
@@ -837,6 +839,7 @@
 		bindChk('chkPC', function (v) { PC_ON = v; setPointClouds(v); });
 		bindChk('chkBig', function (v) { LBL_ON.big = v; BIG_ON = v; });
 		bindChk('chkSite', function (v) { LBL_ON.site = v; SITE_ON = v; });
+		bindChk('chkMain', function (v) { MAIN_ON = v; });
 		bindChk('chkMicro', function (v) { LBL_ON.micro = v; MICRO_ON = v; });
 		/* 设备点总开关：直接驱动下面 5 个子勾选框（它们各自的处理逻辑照常执行） */
 		(function bindDevAll() {
@@ -909,7 +912,7 @@
 
 		var ANNOT = null, MAIN_N = 0, TREE_N = 0, SPECIES = {}, DET_ON = true, DET_N = 0,
 		    BNDS = null, BND_ON = true,
-		    G20_ON = false, G40_ON = false, DRAIN_ON = false, NUM_ON = false,
+		    G20_ON = false, G40_ON = false, DRAIN_ON = false, NUM_ON = false, MAIN_ON = true,
 		    SAP_ON = false, DEN_ON = false, LAI_ON = false, MAINT = [], TREE_IDS = {},
 		    GROUND_ON = true, GROUND = null,
 		    PC_ON = true, BIG_ON = true, SITE_ON = true, NAME_ON = true, SITES = null,
@@ -1081,7 +1084,8 @@
 				}
 				var lcol = '#d3a970';                      /* 该点的标签底色 */
 				if (p.kind === 'main') {
-					/* 实测主树（VIT…/T…）：和其他点同一套样式 —— 菱形 + 深描边 + 小柱子 */
+					if (!MAIN_ON) { continue; }                 /* 「实测主树」开关 */
+					/* 实测主树（VIT…/T…）：和其他点同一套样式 —— 圆形 + 深描边 + 小柱子 */
 					lcol = '#8fb4d6';
 					LATE.push({ x: sx, y: sy, shape: 'circle', col: '#2ecc71', size: 9 });
 				} else if (p.kind && p.kind.indexOf('dev-') === 0) {
