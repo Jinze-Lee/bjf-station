@@ -30,6 +30,14 @@
     function mainChart() { return pick(window.SiteChart); }
     function envChart() { return pick(window.EnvChart); }
 
+    /* 当前可见区间（用户此刻正在看的那一段） */
+    function currentExtremes() {
+        var ch = mainChart();
+        if (!ch || !ch.xAxis || !ch.xAxis[0]) { return null; }
+        var x = ch.xAxis[0].getExtremes();
+        return (x && x.min != null && x.max != null) ? { min: x.min, max: x.max } : null;
+    }
+
     function dataSpan() {
         var ch = mainChart();
         if (!ch || !ch.xAxis || !ch.xAxis[0]) { return null; }
@@ -41,7 +49,8 @@
     /* 对数插值：p=0 -> 约 6 小时的小窗；p=1 -> 全时段 */
     function windowEnd(sp, p) {
         var total = sp.max - sp.min;
-        var w0 = Math.min(6 * 3600 * 1000, total / 20);
+        var w0 = sp.w0 || Math.min(6 * 3600 * 1000, total / 20);
+        if (w0 >= total) { return sp.max; }
         return sp.min + w0 * Math.pow(total / w0, p);
     }
 
@@ -66,7 +75,16 @@
     function start() {
         var sp = dataSpan();
         if (!sp) { return false; }                           // 没有数据就别装样子
-        span = sp;
+        /* 金总要求：从**当前看到的位置**开始演，而不是每次都跳回最早的数据。
+           取当前可见区间作为起点：左边界不动、窗口从当前宽度继续往右拉宽，
+           一直拉到该起点之后的所有数据。
+           如果当前已经是全时段（没得可拉），就退回原来的"从最早开始"逻辑。 */
+        var cur = currentExtremes();
+        if (cur && cur.min != null && cur.max != null && cur.min > sp.min + 1) {
+            span = { min: cur.min, max: sp.max, w0: Math.max(cur.max - cur.min, 60 * 1000) };
+        } else {
+            span = sp;
+        }
         running = true;
         t0 = Date.now();
         apply(span.min, windowEnd(span, 0));
