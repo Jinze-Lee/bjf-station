@@ -1617,6 +1617,15 @@
 			var e = treeCard();
 			if (e.box) { e.box.classList.remove('open'); }
 		}
+		/* "09-11" → DOY 254（一年中的第几天，非闰年） */
+		function doyOf(mmdd) {
+			if (!mmdd || mmdd.length < 5) { return ''; }
+			var m = parseInt(mmdd.slice(0, 2), 10), d = parseInt(mmdd.slice(3), 10);
+			var cum = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+			if (!(m >= 1 && m <= 12)) { return ''; }
+			return cum[m - 1] + d;
+		}
+
 		/* 冠层 P 反演小曲线：progress 0~1 控制画到第几个点（做"逐渐长出来"的动画） */
 		function drawSpark(cv, series, prog) {
 			var g = cv.getContext('2d'), W = cv.width, H = cv.height, i, n = series.length;
@@ -1659,7 +1668,7 @@
 			g.fillStyle = '#9fb08a';
 			var ds = (typeof P_DATA !== 'undefined' && P_DATA && P_DATA.dates) ? P_DATA.dates : [];
 			[0, n - 1].forEach(function (k) {
-				if (ds[k]) { g.fillText(ds[k], X(k), T + PH + 6); }
+				if (ds[k]) { g.fillText('DOY ' + doyOf(ds[k]), X(k), T + PH + 6); }
 			});
 			/* 轴标题 */
 			g.textAlign = 'left'; g.fillStyle = '#cfe3b0';
@@ -1747,9 +1756,12 @@
 				var ser = PD.values[tree.pi];
 				animateSpark(cv, ser);                     /* 逐点长出来 */
 				var d0 = (PD.dates && PD.dates[0]) || '', d1 = (PD.dates && PD.dates[PD.dates.length - 1]) || '';
-				cap.innerHTML = (LANG === 'zh' ? '冠层磷 P 反演　' : 'Canopy P　') +
-					'<b>' + d0 + ' → ' + d1 + '</b>　' +
-					(LANG === 'zh' ? '末值 ' : 'last ') + '<b>' + (Math.round(ser[ser.length - 1] * 1000) / 1000) + '</b>';
+				/* 用 DOY（一年中的第几天）表示观测期 —— 只写月日会让人以为
+				   "今天还没到 10-27，怎么会有 10-27 的数据"。 */
+				cap.innerHTML = (LANG === 'zh' ? '冠层磷 P 反演 · DOY ' : 'Canopy P · DOY ') +
+					'<b>' + doyOf(d0) + ' → ' + doyOf(d1) + '</b>　' +
+					(LANG === 'zh' ? '末值 ' : 'last ') +
+					'<b>' + (Math.round(ser[ser.length - 1] * 1000) / 1000) + '</b>';
 			} else if (cap) { cap.textContent = ''; }
 			e.box.classList.add('open');
 		}
