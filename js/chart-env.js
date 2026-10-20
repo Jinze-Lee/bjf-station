@@ -716,6 +716,18 @@
                 yAxis: { visible: false },
                 series: [{ data: data, color: '#3f8fd6', lineWidth: 1, name: '' }]
             });
+
+            /* 反向联动：在上方两张图里缩放/拖动时，把最下面这条导航条的窗口也同步过去。
+               用轮询实现（Highcharts 没有"外部 chart 变了"的事件），300ms 一次、开销可忽略。 */
+            setInterval(function () {
+                if (!navChart || !main || !main.xAxis || !main.xAxis[0]) { return; }
+                var a = main.xAxis[0].getExtremes(), b = navChart.xAxis[0].getExtremes();
+                if (a.min == null || b.min == null) { return; }
+                if (Math.abs(a.min - b.min) < 1e-6 && Math.abs(a.max - b.max) < 1e-6) { return; }
+                syncing = true;
+                try { navChart.xAxis[0].setExtremes(a.min, a.max, true, false); }
+                finally { syncing = false; }
+            }, 300);
         }
 
         buildNavStrip();
