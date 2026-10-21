@@ -100,7 +100,7 @@
         return new Promise(function (resolve, reject) {
             var el = document.createElement('script');
             /* 版本戳：改了 JS 但浏览器缓存住旧文件会让人以为没改（本地实测踩过两次） */
-            el.src = src + (src.indexOf('?') >= 0 ? '&' : '?') + 'v=20261020w';
+            el.src = src + (src.indexOf('?') >= 0 ? '&' : '?') + 'v=20261021-alarm112';
             el.async = false;          /* 保险：即使被并发插入也按顺序执行 */
             el.onload = function () { resolve(); };
             el.onerror = function () { reject(new Error('加载失败: ' + src)); };
@@ -148,7 +148,7 @@
                 if (!frame.getAttribute('src')) {
                     /* 加版本戳：iframe 里的 HTML 也会被浏览器缓存，改了看不到（实测踩到过） */
                     var ds = frame.getAttribute('data-src') || '';
-                    frame.setAttribute('src', ds + (ds.indexOf('?') >= 0 ? '&' : '?') + 'v=20261020w');
+                    frame.setAttribute('src', ds + (ds.indexOf('?') >= 0 ? '&' : '?') + 'v=20261021-alarm112');
                     /* 别死等 iframe 的 load 事件：资源慢时它可能很久不触发，看起来就像「点了没反应」。
                        点下去就先把占位层收起来，另加 8 秒兜底；load 事件到了仍然再兜一次。 */
                     var ph0 = document.getElementById('canopyPlaceholder');

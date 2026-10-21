@@ -1,0 +1,502 @@
+{
+  "schemaVersion": 1,
+  "source": "measured",
+  "sourceGeneratedAt": "2026-10-13T02:49:10+08:00",
+  "span": [
+    1789459200000,
+    1790064000000
+  ],
+  "asOf": 1790064000000,
+  "timezoneOffsetMin": 480,
+  "rules": {
+    "sampleMinutes": 30,
+    "consecutiveMissing": 2,
+    "reference": "batchEnd",
+    "correctedEventsAreActive": false
+  },
+  "provenance": [
+    "js/obs-meta.js",
+    "js/observations.js",
+    "js/trees.js",
+    "工具/预处理raw数据.py:STEM_RADIUS_DROP_FROM",
+    "工具/预处理raw数据.py:STEM_RADIUS_JUMP_FIXES"
+  ],
+  "summary": {
+    "points": 20,
+    "channels": 40,
+    "activePoints": 1,
+    "historyPoints": 7
+  },
+  "points": [
+    {
+      "id": "DT1-BH1-1137",
+      "status": "ok",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        },
+        "radial": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        }
+      }
+    },
+    {
+      "id": "DT1-BH2-1132",
+      "status": "ok",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        },
+        "radial": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        }
+      }
+    },
+    {
+      "id": "DT1-HH1-1140",
+      "status": "ok",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        },
+        "radial": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        }
+      }
+    },
+    {
+      "id": "DT1-LDL1-1155",
+      "status": "ok",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        },
+        "radial": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        }
+      }
+    },
+    {
+      "id": "DT1-LDL2-1134",
+      "status": "ok",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        },
+        "radial": {
+          "status": "ok",
+          "samples": 329,
+          "lastValid": 1790064000000,
+          "events": []
+        }
+      }
+    },
+    {
+      "id": "DT1-MD1-1149",
+      "status": "ok",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        },
+        "radial": {
+          "status": "ok",
+          "samples": 335,
+          "lastValid": 1790064000000,
+          "events": []
+        }
+      }
+    },
+    {
+      "id": "DT1-WJF1-1135",
+      "status": "ok",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        },
+        "radial": {
+          "status": "ok",
+          "samples": 334,
+          "lastValid": 1790064000000,
+          "events": []
+        }
+      }
+    },
+    {
+      "id": "DT2-HTQ1-1248",
+      "status": "ok",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 334,
+          "lastValid": 1790062200000,
+          "events": [
+            {
+              "kind": "gap",
+              "state": "recovered",
+              "severity": "warning",
+              "start": 1789968600000,
+              "end": 1789972200000,
+              "missing": 2
+            }
+          ]
+        },
+        "radial": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        }
+      }
+    },
+    {
+      "id": "DT2-HTQ2-1157",
+      "status": "ok",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 334,
+          "lastValid": 1790062200000,
+          "events": [
+            {
+              "kind": "gap",
+              "state": "recovered",
+              "severity": "warning",
+              "start": 1789968600000,
+              "end": 1789972200000,
+              "missing": 2
+            }
+          ]
+        },
+        "radial": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        }
+      }
+    },
+    {
+      "id": "DT2-LYS1-1144",
+      "status": "ok",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 334,
+          "lastValid": 1790062200000,
+          "events": [
+            {
+              "kind": "gap",
+              "state": "recovered",
+              "severity": "warning",
+              "start": 1789968600000,
+              "end": 1789972200000,
+              "missing": 2
+            }
+          ]
+        },
+        "radial": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        }
+      }
+    },
+    {
+      "id": "DT2-LYS2-1151",
+      "status": "ok",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 334,
+          "lastValid": 1790062200000,
+          "events": [
+            {
+              "kind": "gap",
+              "state": "recovered",
+              "severity": "warning",
+              "start": 1789968600000,
+              "end": 1789972200000,
+              "missing": 2
+            }
+          ]
+        },
+        "radial": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        }
+      }
+    },
+    {
+      "id": "DT2-MD1-1131",
+      "status": "ok",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 334,
+          "lastValid": 1790062200000,
+          "events": [
+            {
+              "kind": "gap",
+              "state": "recovered",
+              "severity": "warning",
+              "start": 1789968600000,
+              "end": 1789972200000,
+              "missing": 2
+            }
+          ]
+        },
+        "radial": {
+          "status": "ok",
+          "samples": 336,
+          "lastValid": 1790064000000,
+          "events": []
+        }
+      }
+    },
+    {
+      "id": "DT2-MD2-1249",
+      "status": "ok",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 334,
+          "lastValid": 1790062200000,
+          "events": [
+            {
+              "kind": "gap",
+              "state": "recovered",
+              "severity": "warning",
+              "start": 1789968600000,
+              "end": 1789972200000,
+              "missing": 2
+            }
+          ]
+        },
+        "radial": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": [
+            {
+              "kind": "correctedStep",
+              "state": "corrected",
+              "severity": "info",
+              "start": 1788062464000,
+              "end": 1788062464000,
+              "offsetUm": 8182.3,
+              "source": "STEM_RADIUS_JUMP_FIXES"
+            },
+            {
+              "kind": "correctedStep",
+              "state": "corrected",
+              "severity": "info",
+              "start": 1788064263000,
+              "end": 1788064263000,
+              "offsetUm": 2851.0,
+              "source": "STEM_RADIUS_JUMP_FIXES"
+            },
+            {
+              "kind": "correctedStep",
+              "state": "corrected",
+              "severity": "info",
+              "start": 1788598863000,
+              "end": 1788598863000,
+              "offsetUm": 160039.2,
+              "source": "STEM_RADIUS_JUMP_FIXES"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DT2-WJF1-1141",
+      "status": "ok",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 334,
+          "lastValid": 1790062200000,
+          "events": [
+            {
+              "kind": "gap",
+              "state": "recovered",
+              "severity": "warning",
+              "start": 1789968600000,
+              "end": 1789972200000,
+              "missing": 2
+            }
+          ]
+        },
+        "radial": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": [
+            {
+              "kind": "correctedStep",
+              "state": "corrected",
+              "severity": "info",
+              "start": 1784597463000,
+              "end": 1784597463000,
+              "offsetUm": 5073.7,
+              "source": "STEM_RADIUS_JUMP_FIXES"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DT3-HH1-1142",
+      "status": "ok",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        },
+        "radial": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        }
+      }
+    },
+    {
+      "id": "DT3-HTQ1-1153",
+      "status": "ok",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        },
+        "radial": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        }
+      }
+    },
+    {
+      "id": "DT3-HTQ2-1139",
+      "status": "ok",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        },
+        "radial": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        }
+      }
+    },
+    {
+      "id": "DT3-LYS1-1150",
+      "status": "critical",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        },
+        "radial": {
+          "status": "critical",
+          "samples": 0,
+          "lastValid": null,
+          "events": [
+            {
+              "kind": "confirmedFault",
+              "state": "active",
+              "severity": "critical",
+              "start": 1789372800000,
+              "end": null,
+              "source": "STEM_RADIUS_DROP_FROM"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DT3-SY1-1152",
+      "status": "ok",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        },
+        "radial": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        }
+      }
+    },
+    {
+      "id": "DT3-SY2-1138",
+      "status": "ok",
+      "channels": {
+        "sapflow": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        },
+        "radial": {
+          "status": "ok",
+          "samples": 337,
+          "lastValid": 1790064000000,
+          "events": []
+        }
+      }
+    }
+  ]
+}

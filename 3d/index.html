@@ -11,6 +11,8 @@
 	<link rel="stylesheet" type="text/css" href="./libs/spectrum/spectrum.css">
 	<link rel="stylesheet" type="text/css" href="./libs/jstree/themes/mixed/style.css">
 	<link rel="stylesheet" type="text/css" href="../css/leaflet.css">
+	<link rel="stylesheet" href="./alarms.css?v=20261021-alarm112">
+	<link rel="stylesheet" href="./alarms-hud.css?v=20261021-alarm112">
 
 	<style>
 		html, body { margin: 0; height: 100%; overflow: hidden; background: #14170f;
@@ -497,6 +499,10 @@
 		<div class="brand"><span id="bt">北京森林生态系统定位研究站 · 三维林相</span>
 			<small id="bs">无人机 LiDAR 彩色点云 · 高德卫星底图 · 20 棵监测树 / 3 台数采</small></div>
 		<div class="spacer"></div>
+		<button type="button" class="btn" id="alarmBtn" aria-expanded="false" aria-controls="alarmPanel">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 22 21H2Z"/><path d="M12 9v5m0 3v1"/></svg>
+			<span id="alarmLabel">设备报警</span><span id="alarmCount" role="status" aria-label="异常点位数量">…</span>
+		</button>
 		<div class="layers" id="layersBox">
 			<!-- 窄屏折叠按钮：桌面端隐藏（面板常开），手机上跟二维地图一样默认收起来 -->
 			<button class="btn lbtn" id="layersBtn" aria-expanded="false">图层</button>
@@ -576,6 +582,15 @@
 	</div>
 
 	<div id="labels"></div>
+	<aside id="alarmPanel" class="alarm-panel" aria-labelledby="alarmTitle" hidden>
+		<div class="alarm-head">
+			<div class="alarm-emblem" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="8.5"/><path d="M12 1v4m0 14v4M1 12h4m14 0h4M12 7v6m0 3v1"/></svg></div>
+			<div class="alarm-heading"><p id="alarmEyebrow">森林观测 · 设备状态</p><h2 id="alarmTitle">设备报警</h2></div>
+			<button type="button" id="alarmClose" class="alarm-close" aria-label="关闭设备报警">×</button>
+		</div>
+		<div id="alarmBatch" class="alarm-batch"></div>
+		<div id="alarmContent" class="alarm-content"></div>
+	</aside>
 	<div id="tip"></div>
 		<!-- 点单木浮出的树种动图（透明底，直接叠在场景上；内容由 showTreeCard 填） -->
 		<div id="treeCard">
@@ -711,6 +726,8 @@
 			(NAME_LABELS || []).forEach(function (L) { L.el.textContent = (LANG === 'zh') ? L.zh : L.en; });
 			renderStaBar();
 			renderLegend();
+			if (window.DeviceAlarms) { DeviceAlarms.refreshLanguage(); }
+			if (window.AlarmVisuals) { AlarmVisuals.refreshLanguage(); }
 		}
 		function renderLegend() {
 			var s = (LANG === 'zh');
@@ -1862,6 +1879,7 @@
 				var dd = (s.x - ev.clientX) * (s.x - ev.clientX) + (s.y - ev.clientY) * (s.y - ev.clientY);
 				if (dd < bd) { bd = dd; best = s; }
 			}
+			if (window.DeviceAlarms && DeviceAlarms.handleDeviceClick(best)) { return; }
 			if (best && best.kind === 'det') { showTreeCard(best.sp, ev, best); return; }
 			hideTreeCard();
 			if (best && best.tree) {
@@ -3236,6 +3254,8 @@
 			flyStep(now);
 			recStep(now);
 			ensureGround(); project(); drawDots(); ensureSiteZ(); ensureMicroZ(); ensureFacZ(); drawBounds(); drawCells();
+			if (window.DeviceAlarms) { DeviceAlarms.update(now); }
+			if (window.AlarmVisuals) { AlarmVisuals.update(now); }
 			requestAnimationFrame(loop);
 		})();
 	</script>
@@ -3287,5 +3307,7 @@
 		#treePop iframe { flex: 1 1 auto; width: 100%; border: 0; background: #fff; }
 		body.ui-off #treePop { display: none !important; }
 </style>
+<script src="./alarms.js?v=20261021-alarm112"></script>
+<script src="./alarms-hud.js?v=20261021-alarm112"></script>
 </body>
 </html>

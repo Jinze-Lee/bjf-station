@@ -1,0 +1,87 @@
+/* v112 增强层。所有面板覆盖限定在 .alarms-boost，经典版继续使用原 alarms.css。 */
+.alarm-visual-bar {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    margin: -5px 18px 12px; color: #aebeb2; font-size: 10px; flex: none;
+}
+.alarm-visual-bar > div { display: flex; border: 1px solid #adccac2c; border-radius: 5px; padding: 2px; gap: 2px; }
+.alarm-visual-bar button {
+    min-height: 28px; padding: 4px 9px; border: 0; border-radius: 3px;
+    background: transparent; color: #acbcae; font: inherit; font-size: 10px; cursor: pointer;
+}
+.alarm-visual-bar button[aria-pressed="true"] { color: #e7eddb; background: #bedbb21c; }
+body.alarms-boost .alarm-panel {
+    --ap-mint: #b0f5da; --ap-hot: #ffc39a;
+    background: radial-gradient(ellipse 240px 220px at var(--alarm-glow-x, 85%) var(--alarm-glow-y, 5%), #90f0c31a, transparent 80%),
+        radial-gradient(ellipse at 0 100%, #b6925010, transparent 50%), linear-gradient(155deg, #10251ff7, #071612f7 70%);
+    border-color: #abd4b75c;
+    box-shadow: inset 0 1px #edffe324, inset 0 0 36px #a8ffd706, 0 22px 64px #000a, 0 0 28px #a6e0b60b;
+}
+body.alarms-boost .alarm-panel::before {
+    inset: 0; height: auto; pointer-events: none; z-index: 2;
+    background:
+        linear-gradient(#ceebcf, #ceebcf) left 0 top 0 / 23px 2px no-repeat,
+        linear-gradient(#ceebcf, #ceebcf) left 0 top 0 / 2px 23px no-repeat,
+        linear-gradient(#ceebcf99, #ceebcf99) right 0 top 0 / 23px 2px no-repeat,
+        linear-gradient(#ceebcf99, #ceebcf99) right 0 top 0 / 2px 23px no-repeat,
+        linear-gradient(#b4cba56b, #b4cba56b) left 0 bottom 0 / 18px 1px no-repeat,
+        linear-gradient(#b4cba56b, #b4cba56b) right 0 bottom 0 / 18px 1px no-repeat;
+}
+body.alarms-boost .alarm-emblem { border-color: #e9ba8270; box-shadow: inset 0 0 18px #d6a65f12, 0 0 17px #e8bc7020; }
+body.alarms-boost .alarm-head h2 { text-shadow: 0 0 20px #b8d8a622; }
+body.alarms-boost .alarm-visual-bar button[aria-pressed="true"] { background: #bce8b625; color: #e9f5da; box-shadow: inset 0 0 0 1px #b4d99d35; }
+body.alarms-boost .alarm-summary div { border-color: #c3e6bf33; background: linear-gradient(145deg, #b2d6ac12, #b8e8c003); }
+body.alarms-boost .alarm-summary div:first-child { border-color: #f5aa7c73; box-shadow: inset 0 0 24px #d8a26708; }
+body.alarms-boost .alarm-summary div:first-child b { text-shadow: 0 0 21px #ffb47b66; }
+body.alarms-boost .alarm-segments i.ok { background: #a8dbb7; opacity: .72; }
+body.alarms-boost .alarm-point.critical, body.alarms-boost .alarm-channel.critical {
+    border-color: #eab28080;
+    background: linear-gradient(130deg, #a9673c24, #ccc78f06);
+    box-shadow: inset 0 0 24px #f3be7905, 0 0 18px #e8ad610a;
+}
+body.alarms-boost .alarm-point.critical:hover { border-color: #ffd7a8; box-shadow: inset 0 0 28px #f5c7800d, 0 0 24px #d6aa6c20; }
+body.alarms-boost .alarm-action { border-color: #b8dbb258; background: linear-gradient(135deg, #b0ddb72b, #b2d5ab0b); }
+body.alarms-boost .alarm-action svg { filter: drop-shadow(0 0 4px #bce4ac50); }
+body.alarms-boost .alarm-pin.selected span { box-shadow: inset 0 0 12px #ffd39d35, 0 0 30px #ffc07980, 0 0 3px #f2d39d, 0 3px 10px #000b; }
+/* 所有空间效果仍位于 #labels 内，鼠标穿透，跟随真实设备投影。 */
+#labels .alarm-field {
+    position: fixed; inset: 0; width: 100%; height: 100%; z-index: 8; pointer-events: none;
+    visibility: visible; overflow: hidden;
+}
+.alarm-field path { vector-effect: non-scaling-stroke; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.alarm-floor-fill { fill: #f1c28f0b !important; stroke: none; }
+.alarm-floor-outline { stroke: #e8c99c; stroke-width: 1; opacity: .4; }
+.alarm-floor-scan { stroke: #ffe0ae; stroke-width: 2; stroke-dasharray: 95 145 7 145 95 145 7 361; animation: alarm-floor-trace 12s linear infinite; filter: drop-shadow(0 0 4px #e9b47f); }
+.alarm-floor-inner { stroke: #b6d7af; stroke-width: 1; stroke-dasharray: 5 18; opacity: .65; }
+.alarm-floor-ticks { stroke: #f7d8ac; stroke-width: 1.5; opacity: .65; }
+.alarm-beam-soft { stroke: #ffd6a2; stroke-width: 9; opacity: .09; filter: blur(3px); }
+.alarm-beam { stroke: url(#alarmBeamGradient); stroke-width: 1.4; filter: drop-shadow(0 0 4px #ffb66c); }
+.alarm-beam-flow { stroke: #ffddb4; stroke-width: 2; stroke-dasharray: 3 22; opacity: .7; animation: alarm-beam-trace 4s linear infinite; }
+.alarm-target { stroke: #f8ddab; stroke-width: 1.5; opacity: .9; filter: drop-shadow(0 0 3px #dab777); }
+.alarm-link { stroke: #bad8b9; stroke-width: 1; opacity: .23; }
+.alarm-link-flow { stroke: #d6ebc3; stroke-width: 1.2; opacity: .8; stroke-dasharray: 22 260; animation: alarm-link-trace 8s linear infinite; }
+.alarm-link-terminal { fill: #e8dfb1; opacity: .7; }
+#labels .alarm-tracker {
+    position: fixed; z-index: 10; pointer-events: none; visibility: visible; width: 190px;
+    padding: 8px 10px; border-left: 2px solid #e7c99b8a; color: #edebcd;
+    background: linear-gradient(90deg, #10221ced, #10221c88 80%, transparent); font: 11px/1.6 Consolas, "Microsoft YaHei", monospace;
+}
+.alarm-track-cap { display: block; font-size: 9px; color: #c0cfb4; letter-spacing: 1.6px; }
+.alarm-tracker strong { display: block; font-size: 12px; color: #f1e3c5; font-weight: 500; margin: 2px 0; }
+.alarm-track-state { display: block; color: #f1c796; font-size: 10px; }
+.alarm-field.history .alarm-floor-scan, .alarm-field.history .alarm-link-flow, .alarm-field.history .alarm-beam-flow { animation: none; }
+.alarm-field.history .alarm-beam, .alarm-field.history .alarm-beam-soft { opacity: .35; }
+body.ui-off .alarm-tracker { display: none !important; }
+@keyframes alarm-floor-trace { to { stroke-dashoffset: -1000; } }
+@keyframes alarm-link-trace { to { stroke-dashoffset: -1000; } }
+@keyframes alarm-beam-trace { to { stroke-dashoffset: -100; } }
+@media (prefers-reduced-motion: reduce) {
+    .alarm-field .alarm-floor-scan, .alarm-field .alarm-link-flow, .alarm-field .alarm-beam-flow { animation: none; }
+}
+@media (max-width: 700px) {
+    .alarm-visual-bar { margin: -2px 13px 9px; font-size: 10px; }
+    .alarm-visual-bar button { padding: 5px 8px; min-height: 32px; }
+    body.alarms-boost .alarm-panel { max-height: 55vh; max-height: 55dvh; }
+    #labels .alarm-tracker { display: none !important; }
+    .alarm-link { opacity: .15; }
+    .alarm-link-flow { opacity: .45; }
+}
