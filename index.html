@@ -7,12 +7,18 @@
 	<meta name="description" content="中国科学院北京森林生态系统定位研究站（北京门头沟东灵山）20 棵树木的液流通量密度与树干直径变化监测。" />
 
 	<link rel="icon" href="images/logo-bfers.webp" />
+	<!-- 线上暂时隐藏首页三维区域与入口；本地预览保留完整版本。 -->
+	<script>
+		if (location.hostname === 'jinze-lee.github.io') {
+			document.documentElement.classList.add('online-canopy-hidden');
+		}
+	</script>
 
 	<!-- 字体自托管，不引 fonts.googleapis.com —— 国内加载不到，会卡到超时。
 	     详见 css/fonts.css 顶部说明。 -->
 	<link rel="stylesheet" href="css/fonts.css" />
 	<link rel="stylesheet" href="css/leaflet.css" />
-	<link rel="stylesheet" href="css/style.css?v=20261020d" />
+	<link rel="stylesheet" href="css/style.css?v=20261026-canopy113" />
 
 	<!-- 主题必须在首屏绘制**之前**定下来。
 	     放到 js/theme.js 里就晚了 —— 那时页面已经按默认的深色画了一帧，
@@ -65,7 +71,7 @@ if (/[?&]embed=1/.test(location.search)) { document.documentElement.classList.ad
 				<li><a href="#trees" data-i18n="nav.trees">监测树木</a></li>
 				<li><a href="#methods" data-i18n="nav.methods">观测方法</a></li>
 				<li><a href="#network" data-i18n="nav.network">数据传输</a></li>
-				<li><a href="#canopy" data-i18n="nav.canopy">三维</a></li>
+				<li data-canopy-entry><a href="#canopy" data-i18n="nav.canopy">三维</a></li>
 				<li><a href="#treedata" data-i18n="nav.treedata">树木数据</a></li>
 				<li><a href="#contact" data-i18n="nav.contact">联系我们</a></li>
 			</ul>
@@ -405,7 +411,7 @@ if (/[?&]embed=1/.test(location.search)) { document.documentElement.classList.ad
 		<section id="location">
 			<h3 data-i18n="location.h3"></h3>
 			<p data-i18n-html="location.p"></p>
-			<p class="view3d-link"><a href="#canopy" data-i18n="location.view3d"></a></p>
+			<p class="view3d-link" data-canopy-entry><a href="#canopy" data-i18n="location.view3d"></a></p>
 		</section>
 	</div>
 </div>
@@ -606,7 +612,7 @@ if (/[?&]embed=1/.test(location.search)) { document.documentElement.classList.ad
 <script src="js/video-widget.js"></script>
 
 <!-- 放最后：它要等上面这些就位后，再按滚动位置去取地图与图表 -->
-<script src="js/lazy-load.js?v=20261021-alarm112"></script>
+<script src="js/lazy-load.js?v=20261026-canopy113"></script>
 
 </body>
 </html>

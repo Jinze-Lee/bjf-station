@@ -28,6 +28,12 @@
      --svg-*                               示意图专用的中间色阶
    ========================================================================== */
 
+/* 仅 GitHub Pages 首页生效：连同入口容器一起收起，避免空白和隐藏焦点。 */
+html.online-canopy-hidden #canopy,
+html.online-canopy-hidden [data-canopy-entry] {
+    display: none !important;
+}
+
 :root {
     /* --- 底色：三层 --------------------------------------------------- */
     --bg:            #202020;   /* 页面底 */
