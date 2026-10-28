@@ -190,12 +190,16 @@
             '<form class="ub-form" id="unlockForm" autocomplete="off">' +
                 '<input type="password" class="ub-input" id="unlockInput"' +
                     ' placeholder="' + esc(t('unlock.placeholder')) + '"' +
-                    ' autocomplete="off" spellcheck="false" />' +
+                    ' autocomplete="new-password" readonly spellcheck="false" />' +
                 '<button type="submit" class="ub-btn" id="unlockGo">' +
                     esc(t('unlock.go')) + '</button>' +
             '</form>' +
             '<p class="ub-msg" id="unlockMsg" role="status"></p>';
 
+        var input = document.getElementById('unlockInput');
+        function enableInput() { input.readOnly = false; }
+        input.addEventListener('pointerdown', enableInput, {once: true});
+        input.addEventListener('keydown', enableInput, {once: true});
         document.getElementById('unlockForm')
                 .addEventListener('submit', function (e) {
             e.preventDefault();

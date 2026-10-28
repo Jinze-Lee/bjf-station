@@ -8,7 +8,7 @@
 
 	<link rel="icon" href="images/logo-bfers.webp" />
 	<link rel="stylesheet" href="css/canopy-access.css?v=20261028-device114" />
-	<script src="js/canopy-access.js?v=20261028-device114"></script>
+	<script src="js/canopy-access.js?v=20261028-password115"></script>
 
 	<!-- 字体自托管，不引 fonts.googleapis.com —— 国内加载不到，会卡到超时。
 	     详见 css/fonts.css 顶部说明。 -->
@@ -447,7 +447,7 @@ if (/[?&]embed=1/.test(location.search)) { document.documentElement.classList.ad
 				<iframe id="canopyFrame" data-src="3d/index.html?embed=1" title="3D canopy" allowfullscreen></iframe>
 			</div>
 			<p class="canopy-open">
-				<a href="3d/index.html?v=20261028-device114" target="_blank" rel="noopener" data-i18n="canopy.open"></a>
+				<a href="3d/index.html?v=20261028-password115" target="_blank" rel="noopener" data-i18n="canopy.open"></a>
 				<button type="button" id="canopyFull" class="canopy-linkbtn" data-i18n="canopy.fullscreen"></button>
 			</p>
 			</div>
@@ -587,7 +587,7 @@ if (/[?&]embed=1/.test(location.search)) { document.documentElement.classList.ad
      ========================================================================= -->
 
 <!-- i18n 必须最先：其余模块初始化时要读当前语言 -->
-<script src="js/i18n.js?v=20261028-device114"></script>
+<script src="js/i18n.js?v=20261028-password115"></script>
 
 <!-- theme 要在 chart.js / map.js 之前：它们初始化时会调 Theme.onChange 注册重绘回调。
      注意首屏主题不是这里定的，是 <head> 里那段内联脚本 —— 见该文件顶部说明。 -->
@@ -619,7 +619,7 @@ if (/[?&]embed=1/.test(location.search)) { document.documentElement.classList.ad
 <script src="js/network.js"></script>
 <script src="js/data-source.js"></script>
 <script src="js/footer-composition.js"></script>
-<script src="js/changelog.js"></script>
+<script src="js/changelog.js?v=20261028-password115"></script>
 <script src="js/nav.js"></script>
 <script src="js/tree-jump.js"></script>	<!-- 三维页点液流点跳过来看该树数据 -->
 
@@ -628,7 +628,7 @@ if (/[?&]embed=1/.test(location.search)) { document.documentElement.classList.ad
 <script src="js/device-overview.js?v=20261028-device114"></script>
 
 <!-- 放最后：它要等上面这些就位后，再按滚动位置去取地图与图表 -->
-<script src="js/lazy-load.js?v=20261028-device114"></script>
+<script src="js/lazy-load.js?v=20261028-password115"></script>
 
 </body>
 </html>

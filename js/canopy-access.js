@@ -67,7 +67,7 @@
         if (!box) { return; }
         box.innerHTML = '<span class="canopy-gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5z"/><path d="M12 14v3"/></svg></span>' +
             '<div class="canopy-gate-copy"><h4 data-access-text="title"></h4><p data-access-text="body"></p>' +
-            '<form id="canopyAccessForm"><label for="canopyPassword" data-access-text="label"></label><div class="canopy-gate-fields"><input id="canopyPassword" type="password" autocomplete="off" required aria-describedby="canopyAccessStatus"><button type="submit"></button></div>' +
+            '<form id="canopyAccessForm" autocomplete="off"><label for="canopyPassword" data-access-text="label"></label><div class="canopy-gate-fields"><input id="canopyPassword" type="password" autocomplete="new-password" readonly required aria-describedby="canopyAccessStatus"><button type="submit"></button></div>' +
             '<label class="canopy-password-show"><input type="checkbox" id="canopyShowPassword"><span data-access-text="show"></span></label><p id="canopyAccessStatus" role="status" aria-live="polite"></p></form></div>';
         if (document.getElementById('canopyScene')) {
             var back = document.createElement('a');
@@ -75,6 +75,10 @@
             box.querySelector('.canopy-gate-copy').appendChild(back);
         }
         box.querySelector('form').addEventListener('submit', submit);
+        var password = box.querySelector('#canopyPassword');
+        function enableInput() { password.readOnly = false; }
+        password.addEventListener('pointerdown', enableInput, {once: true});
+        password.addEventListener('keydown', enableInput, {once: true});
         box.querySelector('#canopyShowPassword').addEventListener('change', function (e) { box.querySelector('#canopyPassword').type = e.target.checked ? 'text' : 'password'; });
         paint();
         if (window.Lang) { Lang.onChange(paint); }

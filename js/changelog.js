@@ -25,6 +25,44 @@
     /* 倒序：最新的在最前面 */
     var LOG = [
         {
+            v: '2.3', date: '2026-10-28', kind: 'feat',
+            zh: {
+                title: '森林观测设备总览与三维访问',
+                items: [
+                    '数据传输区新增彩虹设备总览，展示林间观测设备和数据传输路径；支持暂停动画、打开大图及手机横向浏览。动画曲线仅用于流程示意。',
+                    '三维林相恢复主页入口，线上输入访问密码后打开；三维访问和完整数据的密码框需要手动输入。',
+                    '原液流与径向生长采集链路仍可展开查看。'
+                ]
+            },
+            en: {
+                title: 'Forest equipment overview and 3D access',
+                items: [
+                    'A colourful equipment overview in the data-flow section shows forest instruments and transmission paths. The animation can be paused, opened at full size, and browsed horizontally on mobile. Animated curves illustrate the workflow.',
+                    'The 3D canopy entrance is available again on the home page; an access password opens it online. Passwords for 3D access and the full dataset are entered manually.',
+                    'The original sap-flow and radial-growth data paths remain available in an expandable diagram.'
+                ]
+            }
+        },
+        {
+            v: '2.2', date: '2026-10-21', kind: 'feat',
+            zh: {
+                title: '三维设备报警',
+                items: [
+                    '三维林相新增设备报警入口，覆盖 20 个监测点位的液流与径向生长通道，可定位异常设备并查看报警详情。',
+                    '报警依据截至 2026-09-22 16:00 的实测数据快照和已有核实记录；历史事件与当前异常分别显示。',
+                    '场景支持呼吸标记以及经典、增强两种视觉模式。'
+                ]
+            },
+            en: {
+                title: '3D device alerts',
+                items: [
+                    'Device alerts in the 3D canopy cover sap-flow and radial-growth channels at 20 monitoring locations, with device positioning and alert details.',
+                    'Alerts use the measured-data snapshot through 2026-09-22 16:00 and previously verified records; historical events are shown separately from active alerts.',
+                    'The scene includes animated markers and a choice of classic or enhanced visual modes.'
+                ]
+            }
+        },
+        {
             v: '2.1', date: '2026-10-13', kind: 'feat',
             zh: {
                 title: '三维林相整合进主页',
