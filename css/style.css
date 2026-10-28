@@ -28,12 +28,6 @@
      --svg-*                               示意图专用的中间色阶
    ========================================================================== */
 
-/* 仅 GitHub Pages 首页生效：连同入口容器一起收起，避免空白和隐藏焦点。 */
-html.online-canopy-hidden #canopy,
-html.online-canopy-hidden [data-canopy-entry] {
-    display: none !important;
-}
-
 :root {
     /* --- 底色：三层 --------------------------------------------------- */
     --bg:            #202020;   /* 页面底 */
@@ -2019,6 +2013,24 @@ body[data-lang="zh"] .net-detail { font-size: 13.5px; font-weight: 400; }
 .view3d-link a:hover { background: var(--heading); color: var(--bg); }
 
 /* 三维林相区块（内嵌 iframe） */
+.device-overview { box-sizing: border-box; width: min(1680px, calc(100vw - 48px)); margin: 28px 0 24px; margin-left: calc((100% - min(1680px, calc(100vw - 48px))) / 2); overflow: hidden; border: 1px solid var(--rule-strong); border-radius: 14px; background: var(--surface); }
+.device-overview-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 12px 20px; }
+.device-overview-kicker { color: var(--heading); font-size: 14px; font-weight: 600; }
+.device-overview-actions { display: flex; align-items: center; gap: 20px; }
+.device-overview-actions button, .device-overview-actions a { display: inline-flex; align-items: center; min-height: 44px; box-sizing: border-box; color: var(--text-soft); font: inherit; font-size: 13px; }
+.device-overview-actions button { padding: 6px 12px; background: var(--surface-2); border: 1px solid var(--rule-strong); border-radius: 6px; cursor: pointer; }
+.device-overview iframe { display: block; width: 100%; height: 620px; border: 0; background: #f4f8f3; }
+.device-overview figcaption { padding: 14px 20px; color: var(--text-soft); font-size: 13px; line-height: 1.7; }
+.network-detail { margin: 20px 0 32px; padding: 0 18px; border: 1px solid var(--rule); border-radius: 10px; }
+.network-detail > summary { padding: 16px 0; color: var(--heading); font-size: 14px; cursor: pointer; }
+.network-detail .net-wrap { margin-top: 8px; }
+@media (max-width: 640px) {
+    .device-overview { width: calc(100vw - 24px); margin-left: calc((100% - (100vw - 24px)) / 2); }
+    .device-overview-toolbar { padding: 10px 14px; }
+    .device-overview-actions { gap: 14px; }
+    .device-overview figcaption { padding: 12px 14px; }
+}
+
 #canopy { padding-top: 40px; }
 .canopy-frame { position: relative; width: 100%; height: 78vh; min-height: 420px;
     border: 1px solid var(--rule-strong); border-radius: 8px; overflow: hidden; background: #14170f; }

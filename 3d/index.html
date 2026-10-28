@@ -4,6 +4,8 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 	<title>北京森林站 · 三维林相</title>
+	<link rel="stylesheet" href="../css/canopy-access.css?v=20261028-device114">
+	<script src="../js/canopy-access.js?v=20261028-device114"></script>
 
 	<link rel="stylesheet" type="text/css" href="./libs/potree/potree.css">
 	<link rel="stylesheet" type="text/css" href="./libs/jquery-ui/jquery-ui.min.css">
@@ -477,7 +479,11 @@
 	</style>
 </head>
 
-<body>
+<body class="canopy-standalone">
+	<div id="canopyGate" class="canopy-gate" hidden></div>
+	<noscript><p class="canopy-gate-back">请启用 JavaScript 并输入访问密码后查看三维林相。</p></noscript>
+	<p id="canopySceneStatus" class="canopy-scene-status" role="status" hidden></p>
+	<template id="canopyScene">
 	<script src="./libs/jquery/jquery-3.1.1.min.js"></script>
 	<script src="./libs/spectrum/spectrum.js"></script>
 	<script src="./libs/jquery-ui/jquery-ui.min.js"></script>
@@ -3309,5 +3315,7 @@
 </style>
 <script src="./alarms.js?v=20261021-alarm112"></script>
 <script src="./alarms-hud.js?v=20261021-alarm112"></script>
+	</template>
+	<script>CanopyAccess.mountScene();</script>
 </body>
 </html>

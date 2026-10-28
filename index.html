@@ -7,18 +7,14 @@
 	<meta name="description" content="中国科学院北京森林生态系统定位研究站（北京门头沟东灵山）20 棵树木的液流通量密度与树干直径变化监测。" />
 
 	<link rel="icon" href="images/logo-bfers.webp" />
-	<!-- 线上暂时隐藏首页三维区域与入口；本地预览保留完整版本。 -->
-	<script>
-		if (location.hostname === 'jinze-lee.github.io') {
-			document.documentElement.classList.add('online-canopy-hidden');
-		}
-	</script>
+	<link rel="stylesheet" href="css/canopy-access.css?v=20261028-device114" />
+	<script src="js/canopy-access.js?v=20261028-device114"></script>
 
 	<!-- 字体自托管，不引 fonts.googleapis.com —— 国内加载不到，会卡到超时。
 	     详见 css/fonts.css 顶部说明。 -->
 	<link rel="stylesheet" href="css/fonts.css" />
 	<link rel="stylesheet" href="css/leaflet.css" />
-	<link rel="stylesheet" href="css/style.css?v=20261026-canopy113" />
+	<link rel="stylesheet" href="css/style.css?v=20261028-device114" />
 
 	<!-- 主题必须在首屏绘制**之前**定下来。
 	     放到 js/theme.js 里就晚了 —— 那时页面已经按默认的深色画了一帧，
@@ -212,8 +208,22 @@ if (/[?&]embed=1/.test(location.search)) { document.documentElement.classList.ad
 		<!-- ---------------------- 数据传输 ---------------------- -->
 		<section id="network">
 			<h3 data-i18n="net.h3"></h3>
-			<p data-i18n-html="net.p"></p>
+			<p data-i18n="overview.intro"></p>
 
+			<figure class="device-overview" id="deviceOverview">
+				<div class="device-overview-toolbar">
+					<span class="device-overview-kicker" data-i18n="overview.title">森林观测设备总览</span>
+					<div class="device-overview-actions">
+						<button type="button" id="deviceOverviewToggle" aria-pressed="false" data-i18n="overview.pause">暂停动画</button>
+						<a href="设备示意/overview.html" target="_blank" rel="noopener" data-i18n="overview.open">打开大图 ↗</a>
+					</div>
+				</div>
+				<iframe id="deviceOverviewFrame" data-src="设备示意/overview.html?embed=1" title="森林观测设备与数据传输示意图" loading="lazy"></iframe>
+				<figcaption data-i18n="overview.caption">示意动画：数据流与屏幕曲线用于说明观测流程，并非实时监测值。手机可左右滑动查看全图。</figcaption>
+			</figure>
+			<details class="network-detail" id="networkDetail">
+				<summary data-i18n="overview.detail">液流与径向生长采集链路 · 展开查看</summary>
+				<p data-i18n-html="net.p"></p>
 			<div class="net-wrap">
 				<div class="net-toolbar">
 					<button type="button" id="netToggle" class="net-btn" aria-pressed="false">
@@ -405,6 +415,7 @@ if (/[?&]embed=1/.test(location.search)) { document.documentElement.classList.ad
 
 				<div id="netDetail" class="net-detail" role="status"></div>
 			</div>
+			</details>
 		</section>
 
 		<!-- ---------------------- 树木位置 ---------------------- -->
@@ -424,6 +435,9 @@ if (/[?&]embed=1/.test(location.search)) { document.documentElement.classList.ad
 		<div class="row">
 			<h3 data-i18n="canopy.h3"></h3>
 			<p data-i18n="canopy.p"></p>
+			<div id="canopyGate" class="canopy-gate" hidden></div>
+			<noscript>请启用 JavaScript 并输入访问密码后查看三维林相。</noscript>
+			<div class="canopy-content">
 			<div class="canopy-frame">
 				<div class="canopy-placeholder" id="canopyPlaceholder">
 					<img class="canopy-preview" src="images/3d-preview.webp" alt="" loading="lazy" decoding="async">
@@ -433,9 +447,10 @@ if (/[?&]embed=1/.test(location.search)) { document.documentElement.classList.ad
 				<iframe id="canopyFrame" data-src="3d/index.html?embed=1" title="3D canopy" allowfullscreen></iframe>
 			</div>
 			<p class="canopy-open">
-				<a href="3d/index.html" target="_blank" rel="noopener" data-i18n="canopy.open"></a>
+				<a href="3d/index.html?v=20261028-device114" target="_blank" rel="noopener" data-i18n="canopy.open"></a>
 				<button type="button" id="canopyFull" class="canopy-linkbtn" data-i18n="canopy.fullscreen"></button>
 			</p>
+			</div>
 		</div>
 	</div>
 </section>
@@ -572,7 +587,7 @@ if (/[?&]embed=1/.test(location.search)) { document.documentElement.classList.ad
      ========================================================================= -->
 
 <!-- i18n 必须最先：其余模块初始化时要读当前语言 -->
-<script src="js/i18n.js"></script>
+<script src="js/i18n.js?v=20261028-device114"></script>
 
 <!-- theme 要在 chart.js / map.js 之前：它们初始化时会调 Theme.onChange 注册重绘回调。
      注意首屏主题不是这里定的，是 <head> 里那段内联脚本 —— 见该文件顶部说明。 -->
@@ -610,9 +625,10 @@ if (/[?&]embed=1/.test(location.search)) { document.documentElement.classList.ad
 
 <!-- 悬浮视频按钮：一进页面就要能看见/能拖动，不像地图图表那样按需加载 -->
 <script src="js/video-widget.js"></script>
+<script src="js/device-overview.js?v=20261028-device114"></script>
 
 <!-- 放最后：它要等上面这些就位后，再按滚动位置去取地图与图表 -->
-<script src="js/lazy-load.js?v=20261026-canopy113"></script>
+<script src="js/lazy-load.js?v=20261028-device114"></script>
 
 </body>
 </html>
