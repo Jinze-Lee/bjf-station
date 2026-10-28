@@ -25,6 +25,23 @@
     /* 倒序：最新的在最前面 */
     var LOG = [
         {
+            v: '2.3.1', date: '2026-10-28', kind: 'data',
+            zh: {
+                title: '更新观测数据与径向订正',
+                items: [
+                    '更新液流、径向和气象观测数据；按共同时间范围对齐至 2026-10-27 23:30。',
+                    '1150 号设备的异常跳变按 175.926 mm 回绕推定订正并标注待核查，原始数据保留，设备报警继续保留；1138 号径向记录缺测，状态标为待核查。'
+                ]
+            },
+            en: {
+                title: 'Observation update and radial correction',
+                items: [
+                    'Updated sap-flow, radial and weather observations, aligned to their shared period through 2026-10-27 23:30.',
+                    'Device 1150’s jumps are adjusted using an inferred 175.926 mm wrap and flagged for review; original readings and the alert are retained. Missing radial records for device 1138 are marked for review.'
+                ]
+            }
+        },
+        {
             v: '2.3', date: '2026-10-28', kind: 'feat',
             zh: {
                 title: '森林观测设备总览与三维访问',

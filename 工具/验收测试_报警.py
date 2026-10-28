@@ -25,13 +25,16 @@ class AlarmDataTests(unittest.TestCase):
     def test_real_batch_and_scope(self):
         data = gen.build_snapshot()
         self.assertEqual(data["source"], "measured")
-        self.assertEqual(data["asOf"], 1790064000000)
+        self.assertEqual(data["asOf"], 1793115000000)
         self.assertEqual(data["summary"]["points"], 20)
         self.assertEqual(data["summary"]["channels"], 40)
         active = [p for p in data["points"] if p["status"] != "ok"]
-        self.assertEqual([p["id"] for p in active], ["DT3-LYS1-1150"])
-        self.assertEqual(active[0]["channels"]["sapflow"]["status"], "ok")
-        self.assertEqual(active[0]["channels"]["radial"]["status"], "critical")
+        self.assertEqual({p["id"] for p in active}, {"DT3-LYS1-1150", "DT3-SY2-1138"})
+        fault = next(p for p in active if p["id"] == "DT3-LYS1-1150")
+        self.assertEqual(fault["channels"]["sapflow"]["status"], "ok")
+        self.assertEqual(fault["channels"]["radial"]["status"], "critical")
+        self.assertGreater(fault["channels"]["radial"]["suspectSamples"], 0)
+        self.assertEqual(fault["channels"]["radial"]["samples"], 0)
 
     def test_single_missing_sample_is_not_alarm(self):
         p = gen.assess([[0, 0], [2 * gen.STEP, 1]], 0, 2 * gen.STEP)
@@ -65,9 +68,11 @@ class AlarmDataTests(unittest.TestCase):
         p = gen.assess([], 0, 4 * gen.STEP, 2 * gen.STEP)
         self.assertEqual(p["status"], "critical")
 
-    def test_valid_recovery_clears_old_fault(self):
+    def test_fault_readings_do_not_imply_recovery(self):
         p = gen.assess([[i * gen.STEP, 2] for i in range(5)], 0, 4 * gen.STEP, gen.STEP)
-        self.assertEqual(p["status"], "ok")
+        self.assertEqual(p["status"], "critical")
+        self.assertEqual(p["samples"], 1)
+        self.assertEqual(p["suspectSamples"], 4)
 
     def test_corrected_steps_are_history(self):
         data = gen.build_snapshot()
@@ -125,24 +130,25 @@ def browser_tests():
 
         page.route("**/3d/pointclouds/**/*.bin", binary)
         page.goto(url, wait_until="domcontentloaded")
-        page.wait_for_function("window.DeviceAlarms && document.getElementById('alarmCount').textContent==='1'")
+        page.wait_for_function("window.DeviceAlarms && document.getElementById('alarmCount').textContent==='2'")
         page.evaluate("LANG='zh';applyLang()")
-        check("报警入口计数为 1，初始面板收起", page.locator("#alarmCount").inner_text() == "1" and not page.locator("#alarmPanel").is_visible())
+        check("报警入口计数为 2，初始面板收起", page.locator("#alarmCount").inner_text() == "2" and not page.locator("#alarmPanel").is_visible())
         check("首屏不加载图表观测大文件", page.evaluate("!performance.getEntriesByType('resource').some(e=>/observations.js|highstock.js/.test(e.name))"))
         page.locator("#alarmBtn").click()
         check("打开列表并避让图层面板", page.locator("#alarmPanel").is_visible() and not page.locator("#layersPanel").is_visible())
         check("默认启用增强版并保留经典切换", page.locator("#alarmBoost").get_attribute("aria-pressed") == "true" and page.locator("#alarmClassic").is_visible())
-        check("标注批次末时间与 20 点 40 路范围", "2026-09-22 16:00" in page.locator("#alarmBatch").inner_text() and page.locator(".alarm-summary b").all_text_contents() == ["1", "20", "40"])
-        check("通道状态条准确显示 39 路未报警与 1 路故障",
+        check("标注批次末时间与 20 点 40 路范围", "2026-10-27 23:30" in page.locator("#alarmBatch").inner_text() and page.locator(".alarm-summary b").all_text_contents() == ["2", "20", "40"])
+        check("通道状态条准确显示 38 路未报警、1 路待核查与 1 路故障",
               page.locator(".alarm-segments i").count() == 40 and
-              page.locator(".alarm-segments .ok").count() == 39 and
+              page.locator(".alarm-segments .ok").count() == 38 and
+              page.locator(".alarm-segments .warning").count() == 1 and
               page.locator(".alarm-segments .critical").count() == 1)
-        check("只有真实故障进入异常列表", page.locator(".alarm-point").count() == 1 and "DT3-LYS1-1150" in page.locator(".alarm-point").inner_text())
-        page.locator(".alarm-point").click()
+        check("异常列表包含故障和待核查设备", page.locator(".alarm-point").count() == 2 and page.locator('[data-point="DT3-LYS1-1150"]').count() == 1 and page.locator('[data-point="DT3-SY2-1138"]').count() == 1)
+        page.locator('[data-point="DT3-LYS1-1150"]').click()
         page.wait_for_timeout(1600)
         check("详情区分正常液流与故障径向", page.locator(".alarm-channel.critical").count() == 1 and "175.926" in page.locator("#alarmContent").inner_text())
         check("缺失有效记录不捏造最后数据时间", "本批无有效记录" in page.locator("#alarmContent").inner_text())
-        check("DOM 感叹号存在且保持可点击", page.locator("#labels .alarm-pin:visible").count() == 1)
+        check("DOM 感叹号存在且保持可点击", page.locator("#labels .alarm-pin.critical:visible").count() == 1)
         page.wait_for_function("document.getElementById('alarmField').style.display==='block'")
         check("定位光环使用有效投影且引导线连至面板",
               page.locator(".alarm-floor-outline").get_attribute("d").startswith("M") and
@@ -152,21 +158,24 @@ def browser_tests():
         check("经典版关闭增强层并保留当前设备详情",
               page.locator("#alarmField").evaluate("e=>getComputedStyle(e).display") == "none" and
               "DT3-LYS1-1150" in page.locator(".alarm-detail-title").first.inner_text() and
-              page.locator("#alarmCount").inner_text() == "1")
+              page.locator("#alarmCount").inner_text() == "2")
         page.locator("#alarmBoost").click()
         page.wait_for_function("document.getElementById('alarmField').style.display==='block'")
         check("可即时切回增强版", page.locator("#alarmBoost").get_attribute("aria-pressed") == "true")
-        pin = page.locator(".alarm-pin:visible")
+        pin = page.locator(".alarm-pin.critical:visible")
         check("呼吸光圈启用", pin.evaluate("e=>getComputedStyle(e,'::before').animationName") == "alarm-breathe")
         page.locator("#chkName").evaluate("e=>{e.checked=false;e.dispatchEvent(new Event('change'))}")
         page.locator("#chkDevAll").evaluate("e=>{e.checked=false;e.dispatchEvent(new Event('change'))}")
         check("关闭名称/普通设备图层仍可找到报警", pin.is_visible())
         page.locator('[data-action="back"]').click()
         pin.click()
-        check("直接点击感叹号打开对应详情", "DT3-LYS1-1150" in page.locator(".alarm-detail-title").first.inner_text())
+        # 靠近的设备可能聚合为一个标记：先显示组内列表，再选择目标设备。
+        if page.locator('.alarm-detail-title').count() == 0:
+            page.locator('[data-point="DT3-LYS1-1150"]').click()
+        check("点击感叹号并选择目标设备后打开详情", "DT3-LYS1-1150" in page.locator(".alarm-detail-title").first.inner_text())
         page.locator('[data-action="back"]').click()
         page.locator('[data-tab="history"]').click()
-        check("历史事件独立列出且不增加异常计数", page.locator(".alarm-point").count() == 7 and page.locator("#alarmCount").inner_text() == "1")
+        check("历史事件独立列出且不增加异常计数", page.locator(".alarm-point").count() == 2 and page.locator("#alarmCount").inner_text() == "2")
         page.locator('[data-point="DT2-MD2-1249"]').click()
         check("已订正阶跃保留历史证据", "已订正" in page.locator("#alarmContent").inner_text() and page.locator(".alarm-channel.critical").count() == 0)
         page.wait_for_function("document.getElementById('alarmField').classList.contains('history')")
@@ -183,8 +192,8 @@ def browser_tests():
         check("关闭报警隐藏感叹号并恢复原有浏览", not page.locator("#alarmPanel").is_visible() and page.locator(".alarm-pin:visible").count() == 0)
         # 换回当前故障，覆盖定位、窄屏、减弱动画和键盘关闭。
         page.locator("#alarmBtn").click()
-        check("重新打开报警入口回到异常列表", page.locator(".alarm-point").count() == 1)
-        page.locator(".alarm-point").click()
+        check("重新打开报警入口回到异常列表", page.locator(".alarm-point").count() == 2)
+        page.locator('[data-point="DT3-LYS1-1150"]').click()
         page.emulate_media(reduced_motion="reduce")
         page.wait_for_timeout(300)
         check("减弱动画偏好关闭呼吸与扫描动画",
@@ -216,10 +225,10 @@ def browser_tests():
         check("数据不可用显示失败与重试入口", page.locator('[data-action="retry"]').is_visible())
         page.unroute("**/alarms.json?*")
         page.locator('[data-action="retry"]').click(no_wait_after=True)
-        page.wait_for_function("document.getElementById('alarmCount').textContent==='1'")
-        check("重试后恢复真实报警计数", page.locator(".alarm-point").count() == 1)
+        page.wait_for_function("document.getElementById('alarmCount').textContent==='2'")
+        check("重试后恢复真实报警计数", page.locator(".alarm-point").count() == 2)
         page.goto(url.split("?", 1)[0] + "?v=20261021-alarm111", wait_until="domcontentloaded")
-        page.wait_for_function("window.AlarmVisuals && document.getElementById('alarmCount').textContent==='1'")
+        page.wait_for_function("window.AlarmVisuals && document.getElementById('alarmCount').textContent==='2'")
         page.locator("#alarmBtn").click(no_wait_after=True)
         check("原 v111 地址默认保留经典风格", page.locator("#alarmClassic").get_attribute("aria-pressed") == "true" and not page.evaluate("document.body.classList.contains('alarms-boost')"))
         check("报警交互无页面脚本异常：" + str(errors), not errors)

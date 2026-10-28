@@ -1,7 +1,7 @@
 /* 真实批次报警；场景投影/相机沿用现有 Potree，不依赖全局 THREE。 */
 (function () {
     'use strict';
-    var VERSION = '20261021-alarm112';
+    var VERSION = '20261028-wrap117';
     var data = null, failure = false, opened = false, tab = 'active', selected = null;
     var groupIds = null, pins = [], positions = {}, byId = {}, flight = null, pendingLocate = null, lastFrame = 0;
     var btn = document.getElementById('alarmBtn'), count = document.getElementById('alarmCount');
@@ -47,7 +47,7 @@
         return out.sort(function (a, b) { return b.event.start - a.event.start; });
     }
     function eventTitle(e) {
-        if (e.kind === 'confirmedFault') return tr('已确认故障 · 异常读数段已剔除', 'Confirmed fault · invalid segment excluded');
+        if (e.kind === 'confirmedFault') return tr('已确认故障 · 回绕订正待核查', 'Confirmed fault · inferred wrap correction under review');
         if (e.kind === 'correctedStep') return tr('读数阶跃 · 已订正', 'Reading step · corrected');
         if (e.kind === 'noData') return tr('本批无有效数据 · 待核查', 'No valid batch data · review required');
         if (e.kind === 'invalid') return tr('无效读数 · 待核查', 'Invalid readings · review required');
@@ -77,8 +77,8 @@
         return '<details class="alarm-rules"><summary>' + tr('报警依据与时间范围', 'Rules and data period') + '</summary><p>' +
             tr('仅评估 20 个监测点的液流与径向两路观测。', 'Only sap flow and dendrometer records at the 20 monitored locations are assessed.') +
             '</p><p>' + esc(date(data.span[0])) + ' — ' + esc(date(data.asOf)) + ' UTC+8</p><p>' +
-            tr('采样间隔 30 分钟；连续缺少至少 2 次记录才记为缺测。以批次末判断是否仍异常，已恢复和已订正事件只列入历史。',
-               'Samples are 30 minutes apart. At least 2 consecutive missing samples form a gap. Status is evaluated at batch end; resumed and corrected events are history.') +
+            tr('采样间隔 30 分钟；连续缺少至少 2 次记录才记为缺测。以各通道数据截止时间判断是否仍异常，已恢复和已订正事件只列入历史。',
+               'Samples are 30 minutes apart. At least 2 consecutive missing samples form a gap. Status is evaluated at each channel’s data cutoff; resumed and corrected events are history.') +
             '</p><p>' + tr('已确认故障来源：项目预处理脚本的人工核实记录。数据缺测本身不判定为设备损坏。',
                 'Confirmed faults come from verified preprocessing records. A data gap alone does not establish hardware failure.') +
             '</p></details>';
@@ -129,8 +129,8 @@
     function eventHtml(e) {
         var text = '';
         if (e.kind === 'confirmedFault') text = tr(
-            '项目记录：读数在 0 与 175.926 mm 间异常跳变，随后固定在约 175.9 mm；故障段已剔除。',
-            'Project record: readings jumped between 0 and 175.926 mm, then stayed near 175.9 mm. The invalid segment was excluded.');
+            '项目记录：读数在 0 与 175.926 mm 间异常跳变。曲线按 175.926 mm 回绕推定订正并标注待核查；原始读数保留，报警不自动解除。',
+            'Project record: readings jumped between 0 and 175.926 mm. The chart applies an inferred 175.926 mm wrap correction, marked for review; raw readings are retained and the alert stays active.');
         if (e.kind === 'correctedStep') text = tr('已按人工核实记录订正阶跃：', 'Verified step correction: ') +
             (e.offsetUm / 1000).toFixed(4) + ' mm';
         if (e.kind === 'gap') text = tr('连续缺少 ', 'Consecutive missing samples: ') + e.missing +
@@ -158,7 +158,9 @@
                 return '<section class="alarm-channel ' + c.status + '"><h3><span class="alarm-channel-title">' + icon(key) + channelName(key) + '</span>' +
                     '<span class="alarm-status ' + (c.status === 'ok' ? 'history' : c.status) + '">' + statusText(c.status) +
                     '</span></h3><p class="alarm-note">' + tr('本批有效记录：', 'Valid batch records: ') + c.samples +
-                    '</p><p class="alarm-note">' + tr('最近有效数据：', 'Last valid record: ') + date(c.lastValid) + '</p>' +
+                    '</p><p class="alarm-note">' + tr('本通道数据截至：', 'Channel data through: ') + date(c.asOf || data.asOf) + '</p>' +
+                    '<p class="alarm-note">' + tr('最近有效数据：', 'Last valid record: ') + date(c.lastValid) + '</p>' +
+                    (c.suspectSamples ? '<p class="alarm-note">' + tr('待核查的订正记录：', 'Corrected records under review: ') + c.suspectSamples + '</p>' : '') +
                     active.map(eventHtml).join('') + '</section>';
             }).join('') +
             (events(p, true).length ? '<h3 class="alarm-detail-title">' + tr('历史记录', 'History') +

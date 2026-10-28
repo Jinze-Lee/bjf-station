@@ -24,6 +24,7 @@
 import argparse
 import io
 import json
+import runpy
 import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -201,8 +202,17 @@ def main():
         return 0
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
+    rules = runpy.run_path(str(BASE / "工具/预处理raw数据.py"), run_name="fault_metadata")
+    faults = [{"treeId": tree, "since": int(start.timestamp() * 1000),
+               "quality": "suspect", "description": note}
+              for tree, start, note in rules["STEM_RADIUS_DROP_FROM"]]
+    for tree, start, period in rules["STEM_RADIUS_WRAP_FIXES"]:
+        for fault in faults:
+            if fault["treeId"] == tree:
+                fault["displayCorrection"] = {"type": "inferredWrap", "periodUm": period,
+                                              "since": int(start.timestamp() * 1000)}
     meta = write_observations(OUT, fd, dia, source="measured",
-                              extra={"batches": batches})
+                              extra={"batches": batches, "radialFaults": faults})
     print("\n写出: %s  (%.0f KB)" % (OUT, OUT.stat().st_size / 1024))
     print("这是**全量明文**，不进仓库（.gitignore 已排除 原始数据/全量/）。")
     print()

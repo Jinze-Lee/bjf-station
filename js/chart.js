@@ -61,6 +61,8 @@
 
     var chart = null;
     var current = null;
+    var FAULT_TREE = 'DT3-LYS1-1150';
+    var FAULT_START = Date.UTC(2026, 8, 14, 8, 0);
 
     function t(k) { return window.Lang ? Lang.t(k) : k; }
 
@@ -107,6 +109,24 @@
         return out;
     }
 
+    function radialData(id) {
+        return zeroed(OBS_RAD, id);
+    }
+
+    function radialOptions(id, color) {
+        return id === FAULT_TREE ? {
+            name: t('chart.radFault'), zoneAxis: 'x', dataGrouping: {enabled: false},
+            zones: [{value: FAULT_START}, {color: '#e36c5b', dashStyle: 'ShortDash'}]
+        } : {name: t('chart.rad'), zoneAxis: 'x', zones: [], color: color, dataGrouping: {enabled: true}};
+    }
+
+    function showRadialQuality(id) {
+        var notice = document.getElementById('radialQualityNotice');
+        if (!notice) { return; }
+        notice.hidden = id !== FAULT_TREE;
+        notice.textContent = notice.hidden ? '' : t('chart.radFaultNotice');
+    }
+
     function treeById(id) {
         for (var i = 0; i < TREES.length; i++) {
             if (TREES[i].id === id) { return TREES[i]; }
@@ -120,13 +140,16 @@
         current = id;
 
         chart.series[0].setData(seriesOf(OBS_FD, id), false);
-        chart.series[1].setData(zeroed(OBS_RAD, id), false);
+        chart.series[1].update(radialOptions(id, palette().rad), false);
+        chart.series[1].setData(radialData(id), false);
+        chart.yAxis[0].setTitle({text: window.ChartMetrics && !ChartMetrics.showAxisTitles() ? null : t(id === FAULT_TREE ? 'chart.radFault' : 'chart.rad')}, false);
+        showRadialQuality(id);
         chart.redraw();
 
         /* 同步页面上的树木信息卡与下拉框 */
-        var t = treeById(id);
-        if (t && typeof window.updateTreeInfo === 'function') {
-            window.updateTreeInfo(t);
+        var treeInfo = treeById(id);
+        if (treeInfo && typeof window.updateTreeInfo === 'function') {
+            window.updateTreeInfo(treeInfo);
         }
         var sel = document.getElementById('treeSelect');
         if (sel && sel.value !== id) { sel.value = id; }
@@ -212,6 +235,7 @@
             exporting: { enabled: false },
 
             plotOptions: {
+                series: {gapSize: 3600000, gapUnit: 'value'},
                 area: {
                     fillColor: {
                         linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
@@ -283,11 +307,14 @@
                 data: seriesOf(OBS_FD, first),
                 tooltip: { valueDecimals: 1, valueSuffix: t('chart.fdUnit') }
             }, {
-                name: t('chart.rad'),
+                name: t(first === FAULT_TREE ? 'chart.radFault' : 'chart.rad'),
                 yAxis: 0,
                 color: C.rad,
                 marker: { enabled: false, radius: 3 },
-                data: zeroed(OBS_RAD, first),
+                data: radialData(first),
+                dataGrouping: {enabled: first !== FAULT_TREE},
+                zoneAxis: 'x',
+                zones: first === FAULT_TREE ? radialOptions(first, C.rad).zones : [],
                 tooltip: { valueDecimals: 1, valueSuffix: t('chart.radUnit') }
             }],
 
@@ -317,7 +344,7 @@
                 title: {
                     /* 窄屏收掉：22px 的竖排长文本在手机上要吃掉几十像素宽度，
                      * 而图例已经写明了哪条线是什么。见 js/chart-metrics.js */
-                    text: AXIS_TITLES ? t('chart.rad') : null,
+                    text: AXIS_TITLES ? t(first === FAULT_TREE ? 'chart.radFault' : 'chart.rad') : null,
                     style: { color: C.rad, fontSize: '22px' }
                 },
                 labels: {
@@ -405,6 +432,7 @@
         };
 
         /* 初始化信息卡与下拉框选中项 */
+        showRadialQuality(first);
         var sel0 = document.getElementById('treeSelect');
         if (sel0) { sel0.value = first; }
         if (typeof window.updateTreeInfo === 'function') {

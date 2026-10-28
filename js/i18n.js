@@ -215,7 +215,7 @@ zh: {
     'contact.f.person':     '网站维护',
     'contact.f.location':   '地址',
     'contact.v.location':   '北京市门头沟区东灵山',
-    'site.version':         '网站版本 v2.3',
+    'site.version':         '网站版本 v2.3.1',
     'site.updatedLabel':    '数据更新至',
 
     /* 更新日志弹层。条目正文写在 js/changelog.js 里（中英各一份），
@@ -258,6 +258,8 @@ zh: {
     /* --- 图表（动态） --- */
     'chart.fd':             '液流通量密度',
     'chart.rad':            '径向变化量',
+    'chart.radFault':       '径向变化量（推定回绕订正）',
+    'chart.radFaultNotice': '1150 自 2026-09-14 16:00 起的读数按 175.926 mm 回绕推定订正，红色虚线表示待核查区间。曲线按起点归零；订正不代表设备已修复，原始读数已保留。',
     'chart.fdUnit':         ' g m⁻² s⁻¹',
     'chart.radUnit':        ' μm',
     'chart.zoom':           '缩放',
@@ -510,7 +512,7 @@ en: {
     'contact.f.person':     'Site maintainer',
     'contact.f.location':   'Location',
     'contact.v.location':   'Dongling Mountain, Mentougou District, Beijing, China',
-    'site.version':         'Site version v2.3',
+    'site.version':         'Site version v2.3.1',
     'site.updatedLabel':    'data updated to',
 
     'unlock.title':         'Showing the last {days} days.',
@@ -545,6 +547,8 @@ en: {
 
     'chart.fd':             'Sap flux density',
     'chart.rad':            'Radial change',
+    'chart.radFault':       'Radial change (inferred wrap correction)',
+    'chart.radFaultNotice': 'From 2026-09-14 16:00, readings for sensor 1150 are adjusted using an inferred 175.926 mm wrap. The red dashed segment remains under review; the curve is relative to its first point. Original readings are retained.',
     'chart.fdUnit':         ' g m⁻² s⁻¹',
     'chart.radUnit':        ' μm',
     'chart.zoom':           'Zoom',

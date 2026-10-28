@@ -189,7 +189,7 @@ def cut(series, since):
 def fmt_series(name, data, banner):
     lines = [banner, "var %s = {" % name]
     for k, pts in data.items():
-        body = ",".join("[%d,%s]" % (t, ("%.6g" % v) if v is not None else "null")
+        body = ",".join("[%d,%s]" % (t, ("%.10g" % v) if v is not None else "null")
                         for t, v in pts)
         lines.append("  '%s': [%s]," % (k, body))
     lines.append("};")

@@ -69,6 +69,13 @@ VARS = [
 #              放进来只会和树木数据打架
 SKIP_COLS = {"电压V", "径向生长mm"}
 
+# 同一 1206 气象站的按日导出省略了单位；按列名映射到月度导出的规范名。
+HEADER_ALIASES = {"光照": "光照klux", "空气温度": "空气温度℃", "相对湿度": "相对湿度%",
+                  "降雨量": "降雨量mm", "土壤水分": "土壤水分%", "土壤温度": "土壤温度℃",
+                  "气压": "气压hpa", "风速": "风速m/s", "风向": "风向°",
+                  "PM2.5": "PM2.5ug/m³", "PM10": "PM10ug/m³", "电压": "电压V",
+                  "径向生长": "径向生长mm"}
+
 # 合理量程，超出即视为故障或缺测哨兵值
 RANGES = {
     "light": (0.0, 200.0), "airTemp": (-40.0, 60.0), "rh": (0.0, 100.0),
@@ -174,7 +181,7 @@ def main():
             ws = wb[nm]
             it = ws.iter_rows(values_only=True)
             try:
-                hdr = [str(c).strip() if c is not None else "" for c in next(it)]
+                hdr = [HEADER_ALIASES.get(str(c).strip(), str(c).strip()) if c is not None else "" for c in next(it)]
             except StopIteration:
                 continue
             if "时间" not in hdr:

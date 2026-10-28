@@ -2031,6 +2031,9 @@ body[data-lang="zh"] .net-detail { font-size: 13.5px; font-weight: 400; }
     .device-overview figcaption { padding: 12px 14px; }
 }
 
+.radial-quality-notice { margin: 12px 0; padding: 12px 15px; border-left: 3px solid #e36c5b; background: var(--surface-2); color: var(--text); line-height: 1.6; font-size: 14px; }
+.radial-quality-notice[hidden] { display: none; }
+
 #canopy { padding-top: 40px; }
 .canopy-frame { position: relative; width: 100%; height: 78vh; min-height: 420px;
     border: 1px solid var(--rule-strong); border-radius: 8px; overflow: hidden; background: #14170f; }

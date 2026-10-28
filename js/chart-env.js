@@ -200,6 +200,7 @@
                 yAxis: i,
                 envKey: key,          /* 给 windArrows() 认序列用 */
                 data: copyOf(key),
+                gapSize: 3600000, gapUnit: 'value',
                 tooltip: {
                     valueSuffix: ' ' + unitOf(key),
                     valueDecimals: (key === 'pm25' || key === 'pm10' || key === 'windDir') ? 0 : 1

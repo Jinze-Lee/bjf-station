@@ -177,33 +177,43 @@ STEM_RADIUS_JUMP_FIXES = [
 ]
 
 
+STEM_RADIUS_WRAP_FIXES = [
+    # 1150 的 0 与 175.926 mm 两端反复切换，按回绕推定将高位移回低位。
+    # 仍保留 suspect 标记和报警，等待设备现场核实；原始记录不变。
+    ("DT3-LYS1-1150", datetime(2026, 9, 14, 16, 0, tzinfo=CST), 175926.0),
+]
+
+
 def apply_radius_jump_fix(tid, dt, v_um):
-    """把已知的径向读数阶跃累加订正掉；不涉及的树/时间原样返回。"""
+    """订正已核实阶跃，以及用户要求的 1150 推定回绕。"""
     for tree, start, offset_um, _note in STEM_RADIUS_JUMP_FIXES:
         if tid == tree and dt >= start:
             v_um -= offset_um
+    for tree, start, period_um in STEM_RADIUS_WRAP_FIXES:
+        if tid == tree and dt >= start and v_um >= period_um / 2:
+            v_um -= period_um
     return v_um
 
 
 # ---------------------------------------------------------------------------
-# 配置 2d：径向变化仪的已知**故障段**（整段剔除，不编造数值）
+# 配置 2d：径向变化仪的已知**故障段**（保留原始读数并标注异常）
 #
 # DT3-LYS1-1150 从 2026-09-14 16:00 起读数在 0 与 175.926mm 之间乱跳，之后固定
 # 在 175.9mm（远超径向变化仪正常量程），是传感器/数采故障。这一段没有可信的
-# "真实值"可接（不像阶跃能减去偏移量），所以整段剔除——该树在公开窗口内就没有
-# 数据，页面上会诚实地标成"无数据"，而不是画一条假的平线。
+# 用户要求把两侧接起来；按 175.926 mm 回绕推定，将高位读数减去该幅度。
+# 这是待现场核实的订正，保留原始值、质量标记与报警，不当作确认修复。
 # ---------------------------------------------------------------------------
 STEM_RADIUS_DROP_FROM = [
     # (树号, 起始时间戳(含), 备注)
     ("DT3-LYS1-1150",
      datetime(2026, 9, 14, 16, 0, tzinfo=CST),
      "09-14 16:00 起读数在 0 与 175.926mm 之间乱跳、之后固定在 175.9mm，"
-     "传感器故障，该段全部剔除（不编造数值）"),
+     "疑似回绕，按 175.926mm 订正后仍标异常，等待现场核实"),
 ]
 
 
 def radius_dropped(tid, dt):
-    """该树在该时刻是否落在已知故障段内（是则整点剔除）。"""
+    """该树在该时刻是否落在已知故障段内（保留读数，但标为异常）。"""
     for tree, start, _note in STEM_RADIUS_DROP_FROM:
         if tid == tree and dt >= start:
             return True
@@ -579,8 +589,8 @@ def read_dendro(path, gw2tree, log):
             if t is None or r[i_d] in (None, ""):
                 continue
             if radius_dropped(tid, t):
+                # 异常记录仍保留并标 suspect；按回绕推定做可追溯订正。
                 dropped_pts += 1
-                continue
             try:
                 mm = float(r[i_d])
             except (TypeError, ValueError):
@@ -601,7 +611,7 @@ def read_dendro(path, gw2tree, log):
     if fixed_pts:
         log.append("  按 STEM_RADIUS_JUMP_FIXES 订正了阶跃跳变之后的 %d 个点" % fixed_pts)
     if dropped_pts:
-        log.append("  按 STEM_RADIUS_DROP_FROM 剔除了故障段 %d 个点" % dropped_pts)
+        log.append("  按 STEM_RADIUS_DROP_FROM 标记并保留了故障段 %d 个点" % dropped_pts)
 
     log.append("")
     log.append("  %-16s %10s %10s %10s %7s" % ("树号", "读数最小", "读数最大", "全期变幅", "点数"))
@@ -849,14 +859,15 @@ def main():
     rows = []
     for tid, pts in fd.items():
         for t, v in pts:
-            rows.append((tid, t.isoformat(), "sap_flux_density", "%.2f" % v))
+            rows.append((tid, t.isoformat(), "sap_flux_density", "%.2f" % v, "ok"))
     for tid, pts in dendro.items():
         for t, v in pts:
-            rows.append((tid, t.isoformat(), "stem_radius", "%.1f" % v))
+            rows.append((tid, t.isoformat(), "stem_radius", "%.1f" % v,
+                         "suspect" if radius_dropped(tid, t) else "ok"))
     rows.sort(key=lambda r: (r[1], r[0], r[2]))
 
     with io.open(csv_path, "w", encoding="utf-8", newline="") as f:
-        f.write("tree_id,timestamp,variable,value\n")
+        f.write("tree_id,timestamp,variable,value,quality\n")
         for r in rows:
             f.write(",".join(r) + "\n")
 
@@ -889,7 +900,7 @@ def main():
                               "图表的 shared tooltip 才能并排显示两个变量。"
                               "同格冲突时保留离格点更近的原始点。" % SNAP_MINUTES,
             "stem_radius": "diams(mm) * 1000 -> um; 原始位移读数，零点由传感器安装位置决定，"
-                           "图表按序列首点归零后显示为径向变化量",
+                           "按首点归零；1150 异常段按 175.926mm 回绕推定订正并标 suspect",
         },
         "channel_map": CHANNEL_MAP,
         # notes 只在确有需要说明的情况时才写（如某台设备当期检修、某段数据剔除）。

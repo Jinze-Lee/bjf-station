@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
   "source": "measured",
-  "sourceGeneratedAt": "2026-10-13T02:49:10+08:00",
+  "sourceGeneratedAt": "2026-10-28T13:21:09+08:00",
   "span": [
-    1789459200000,
-    1790064000000
+    1792510200000,
+    1793115000000
   ],
-  "asOf": 1790064000000,
+  "asOf": 1793115000000,
   "timezoneOffsetMin": 480,
   "rules": {
     "sampleMinutes": 30,
     "consecutiveMissing": 2,
-    "reference": "batchEnd",
+    "reference": "channelBatchEnd",
     "correctedEventsAreActive": false
   },
   "provenance": [
@@ -24,8 +24,8 @@
   "summary": {
     "points": 20,
     "channels": 40,
-    "activePoints": 1,
-    "historyPoints": 7
+    "activePoints": 2,
+    "historyPoints": 2
   },
   "points": [
     {
@@ -35,14 +35,20 @@
         "sapflow": {
           "status": "ok",
           "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
           "status": "ok",
-          "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "samples": 336,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         }
       }
     },
@@ -53,14 +59,20 @@
         "sapflow": {
           "status": "ok",
           "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
           "status": "ok",
           "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         }
       }
     },
@@ -71,14 +83,20 @@
         "sapflow": {
           "status": "ok",
           "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
           "status": "ok",
           "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         }
       }
     },
@@ -89,14 +107,20 @@
         "sapflow": {
           "status": "ok",
           "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
           "status": "ok",
-          "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "samples": 335,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         }
       }
     },
@@ -107,14 +131,20 @@
         "sapflow": {
           "status": "ok",
           "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
           "status": "ok",
-          "samples": 329,
-          "lastValid": 1790064000000,
-          "events": []
+          "samples": 335,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         }
       }
     },
@@ -125,14 +155,20 @@
         "sapflow": {
           "status": "ok",
           "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
           "status": "ok",
-          "samples": 335,
-          "lastValid": 1790064000000,
-          "events": []
+          "samples": 337,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         }
       }
     },
@@ -143,14 +179,20 @@
         "sapflow": {
           "status": "ok",
           "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
           "status": "ok",
-          "samples": 334,
-          "lastValid": 1790064000000,
-          "events": []
+          "samples": 337,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         }
       }
     },
@@ -160,24 +202,21 @@
       "channels": {
         "sapflow": {
           "status": "ok",
-          "samples": 334,
-          "lastValid": 1790062200000,
-          "events": [
-            {
-              "kind": "gap",
-              "state": "recovered",
-              "severity": "warning",
-              "start": 1789968600000,
-              "end": 1789972200000,
-              "missing": 2
-            }
-          ]
+          "samples": 337,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
           "status": "ok",
           "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         }
       }
     },
@@ -187,24 +226,21 @@
       "channels": {
         "sapflow": {
           "status": "ok",
-          "samples": 334,
-          "lastValid": 1790062200000,
-          "events": [
-            {
-              "kind": "gap",
-              "state": "recovered",
-              "severity": "warning",
-              "start": 1789968600000,
-              "end": 1789972200000,
-              "missing": 2
-            }
-          ]
+          "samples": 337,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
           "status": "ok",
           "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         }
       }
     },
@@ -214,24 +250,21 @@
       "channels": {
         "sapflow": {
           "status": "ok",
-          "samples": 334,
-          "lastValid": 1790062200000,
-          "events": [
-            {
-              "kind": "gap",
-              "state": "recovered",
-              "severity": "warning",
-              "start": 1789968600000,
-              "end": 1789972200000,
-              "missing": 2
-            }
-          ]
+          "samples": 337,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
           "status": "ok",
           "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         }
       }
     },
@@ -241,24 +274,21 @@
       "channels": {
         "sapflow": {
           "status": "ok",
-          "samples": 334,
-          "lastValid": 1790062200000,
-          "events": [
-            {
-              "kind": "gap",
-              "state": "recovered",
-              "severity": "warning",
-              "start": 1789968600000,
-              "end": 1789972200000,
-              "missing": 2
-            }
-          ]
+          "samples": 337,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
           "status": "ok",
           "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         }
       }
     },
@@ -268,24 +298,21 @@
       "channels": {
         "sapflow": {
           "status": "ok",
-          "samples": 334,
-          "lastValid": 1790062200000,
-          "events": [
-            {
-              "kind": "gap",
-              "state": "recovered",
-              "severity": "warning",
-              "start": 1789968600000,
-              "end": 1789972200000,
-              "missing": 2
-            }
-          ]
+          "samples": 337,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
           "status": "ok",
-          "samples": 336,
-          "lastValid": 1790064000000,
-          "events": []
+          "samples": 337,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         }
       }
     },
@@ -295,23 +322,19 @@
       "channels": {
         "sapflow": {
           "status": "ok",
-          "samples": 334,
-          "lastValid": 1790062200000,
-          "events": [
-            {
-              "kind": "gap",
-              "state": "recovered",
-              "severity": "warning",
-              "start": 1789968600000,
-              "end": 1789972200000,
-              "missing": 2
-            }
-          ]
+          "samples": 337,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
           "status": "ok",
-          "samples": 337,
-          "lastValid": 1790064000000,
+          "samples": 336,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
           "events": [
             {
               "kind": "correctedStep",
@@ -340,7 +363,8 @@
               "offsetUm": 160039.2,
               "source": "STEM_RADIUS_JUMP_FIXES"
             }
-          ]
+          ],
+          "asOf": 1793115000000
         }
       }
     },
@@ -350,23 +374,19 @@
       "channels": {
         "sapflow": {
           "status": "ok",
-          "samples": 334,
-          "lastValid": 1790062200000,
-          "events": [
-            {
-              "kind": "gap",
-              "state": "recovered",
-              "severity": "warning",
-              "start": 1789968600000,
-              "end": 1789972200000,
-              "missing": 2
-            }
-          ]
+          "samples": 337,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
           "status": "ok",
-          "samples": 337,
-          "lastValid": 1790064000000,
+          "samples": 334,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
           "events": [
             {
               "kind": "correctedStep",
@@ -377,7 +397,8 @@
               "offsetUm": 5073.7,
               "source": "STEM_RADIUS_JUMP_FIXES"
             }
-          ]
+          ],
+          "asOf": 1793115000000
         }
       }
     },
@@ -387,15 +408,21 @@
       "channels": {
         "sapflow": {
           "status": "ok",
-          "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "samples": 336,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
           "status": "ok",
           "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         }
       }
     },
@@ -405,15 +432,21 @@
       "channels": {
         "sapflow": {
           "status": "ok",
-          "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "samples": 336,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
           "status": "ok",
           "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         }
       }
     },
@@ -423,15 +456,21 @@
       "channels": {
         "sapflow": {
           "status": "ok",
-          "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "samples": 336,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
           "status": "ok",
           "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         }
       }
     },
@@ -441,14 +480,19 @@
       "channels": {
         "sapflow": {
           "status": "ok",
-          "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "samples": 336,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
           "status": "critical",
           "samples": 0,
           "lastValid": null,
+          "suspectSamples": 337,
+          "lastSuspect": 1793115000000,
           "events": [
             {
               "kind": "confirmedFault",
@@ -458,7 +502,8 @@
               "end": null,
               "source": "STEM_RADIUS_DROP_FROM"
             }
-          ]
+          ],
+          "asOf": 1793115000000
         }
       }
     },
@@ -468,33 +513,53 @@
       "channels": {
         "sapflow": {
           "status": "ok",
-          "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "samples": 336,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
           "status": "ok",
           "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         }
       }
     },
     {
       "id": "DT3-SY2-1138",
-      "status": "ok",
+      "status": "warning",
       "channels": {
         "sapflow": {
           "status": "ok",
-          "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "samples": 336,
+          "lastValid": 1793115000000,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [],
+          "asOf": 1793115000000
         },
         "radial": {
-          "status": "ok",
-          "samples": 337,
-          "lastValid": 1790064000000,
-          "events": []
+          "status": "warning",
+          "samples": 0,
+          "lastValid": null,
+          "suspectSamples": 0,
+          "lastSuspect": null,
+          "events": [
+            {
+              "kind": "noData",
+              "state": "active",
+              "severity": "warning",
+              "start": 1792510200000,
+              "end": null
+            }
+          ],
+          "asOf": 1793115000000
         }
       }
     }

@@ -42,6 +42,10 @@ def assess(points, start, end, fault_start=None):
         raise ValueError("观测时间必须严格递增")
     if any(ts < start or ts > end for ts, _ in valid):
         raise ValueError("观测时间超出公开批次")
+    raw_fault = [p for p in valid if fault_start is not None and p[0] >= fault_start]
+    # 故障段原始读数可供查看，但不能作为有效记录或设备恢复的依据。
+    if fault_start is not None:
+        valid = [p for p in valid if p[0] < fault_start]
     events = []
     for a, b in zip(valid, valid[1:]):
         missing = max(0, round((b[0] - a[0]) / STEP) - 1)
@@ -53,7 +57,7 @@ def assess(points, start, end, fault_start=None):
                            start=start, end=valid[0][0],
                            missing=round((valid[0][0] - start) / STEP)))
     last = valid[-1][0] if valid else None
-    if fault_start is not None and fault_start <= end and (last is None or last <= fault_start):
+    if fault_start is not None and fault_start <= end:
         events.append(dict(kind="confirmedFault", state="active", severity="critical",
                            start=fault_start, end=None, source="STEM_RADIUS_DROP_FROM"))
     elif not valid:
@@ -68,7 +72,9 @@ def assess(points, start, end, fault_start=None):
     active = [e for e in events if e["state"] in ("active", "review")]
     status = "critical" if any(e["severity"] == "critical" for e in active) else (
         "warning" if active else "ok")
-    return dict(status=status, samples=len(valid), lastValid=last, events=events)
+    return dict(status=status, samples=len(valid), lastValid=last,
+                suspectSamples=len(raw_fault), lastSuspect=raw_fault[-1][0] if raw_fault else None,
+                events=events)
 
 
 def build_snapshot():
@@ -89,12 +95,18 @@ def build_snapshot():
         raise ValueError("观测时间范围与元信息不符")
     rules = runpy.run_path(str(BASE / "工具/预处理raw数据.py"), run_name="alarm_rules")
     faults = {tid: int(dt.timestamp() * 1000) for tid, dt, _ in rules["STEM_RADIUS_DROP_FROM"]}
+    # 各设备数据导出截止时间不同；以各观测类型自身的最新记录为批次末，
+    # 不把径向文件未包含的后续半天错误判成全部设备离线。
+    fd_end = max(t for p in fd.values() for t, _ in p)
+    rad_end = max(t for p in rad.values() for t, _ in p)
     points = []
     for tid in ids:
         channels = {
-            "sapflow": assess(fd.get(tid, []), start, end),
-            "radial": assess(rad.get(tid, []), start, end, faults.get(tid)),
+            "sapflow": assess(fd.get(tid, []), start, fd_end),
+            "radial": assess(rad.get(tid, []), start, rad_end, faults.get(tid)),
         }
+        channels["sapflow"]["asOf"] = fd_end
+        channels["radial"]["asOf"] = rad_end
         # 已订正阶跃保留为历史证据，不计作当前故障。来源已在预处理配置中核实。
         for tree, dt, offset, _ in rules["STEM_RADIUS_JUMP_FIXES"]:
             ts = int(dt.timestamp() * 1000)
@@ -109,7 +121,7 @@ def build_snapshot():
         schemaVersion=1, source="measured", sourceGeneratedAt=meta["generatedAt"],
         span=[start, end], asOf=end, timezoneOffsetMin=480,
         rules=dict(sampleMinutes=30, consecutiveMissing=MIN_MISSING,
-                   reference="batchEnd", correctedEventsAreActive=False),
+                   reference="channelBatchEnd", correctedEventsAreActive=False),
         provenance=["js/obs-meta.js", "js/observations.js", "js/trees.js",
                     "工具/预处理raw数据.py:STEM_RADIUS_DROP_FROM",
                     "工具/预处理raw数据.py:STEM_RADIUS_JUMP_FIXES"],
